@@ -7,7 +7,7 @@ export const ROUTES = {
   HOME: "/",
   PLANS: "/plans",
   SERVICES: "/services",
-  MENU: "/services",
+  MENU: "/menu",
   SERVICE_DETAIL: (slug: string) => `/services/${slug}` as const,
   CATEGORIES: "/categories",
   CATEGORY_DETAIL: (slug: string) => `/categories/${slug}` as const,
@@ -56,6 +56,7 @@ export const ROUTES = {
 export const PUBLIC_ROUTES = [
   ROUTES.HOME,
   ROUTES.PLANS,
+  ROUTES.MENU,
   ROUTES.SERVICES,
   ROUTES.CATEGORIES,
   ROUTES.SEARCH,

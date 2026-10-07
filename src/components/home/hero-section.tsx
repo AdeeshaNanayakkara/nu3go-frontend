@@ -317,7 +317,7 @@ export function HeroSection() {
           {/* Primary CTA (Solid Nu3Go Green) */}
           <Link
             ref={ctaBtn1Ref}
-            href={ROUTES.SERVICES}
+            href={ROUTES.PLANS}
             className="w-full sm:w-auto bg-[#36D068] hover:bg-[#2EB959] text-white px-8 sm:px-10 py-3.5 sm:py-4 rounded-none font-bold text-xs sm:text-sm tracking-[0.2em] uppercase transition-all duration-300 shadow-xl shadow-[#36D068]/30 hover:scale-105 active:scale-95 text-center cursor-pointer inline-block"
           >
             SUBSCRIBE NOW
@@ -326,10 +326,10 @@ export function HeroSection() {
           {/* Secondary CTA (White Outline) */}
           <Link
             ref={ctaBtn2Ref}
-            href="/#plans"
+            href={ROUTES.MENU}
             className="w-full sm:w-auto border border-white/90 hover:border-[#E11D48] text-white hover:bg-[#E11D48] hover:text-white px-8 sm:px-10 py-3.5 sm:py-4 rounded-none font-bold text-xs sm:text-sm tracking-[0.2em] uppercase transition-all duration-300 hover:shadow-lg hover:shadow-[#36D068]/20 hover:scale-105 active:scale-95 text-center backdrop-blur-xs cursor-pointer inline-block"
           >
-            EXPLORE PLANS
+            EXPLORE MENU
           </Link>
         </div>
 

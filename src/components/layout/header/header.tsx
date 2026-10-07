@@ -22,6 +22,7 @@ import { useAuthStore } from "@/store/auth.store";
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -32,6 +33,10 @@ export function Header() {
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const logout = useAuthStore((s) => s.logout);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Reset avatar error when user changes
   useEffect(() => {
@@ -93,7 +98,7 @@ export function Header() {
 
   const navItems = [
     { label: "HOME", href: ROUTES.HOME },
-    { label: "OUR MENU", href: "/services" },
+    { label: "OUR MENU", href: ROUTES.MENU },
     { label: "PLANS", href: ROUTES.PLANS },
     { label: "ABOUT", href: "/about" },
     { label: "CONTACT", href: "/contact" },
@@ -219,19 +224,28 @@ export function Header() {
             </nav>
           </div>
 
-          {/* ─── RIGHT: Dashboard Button + Profile Icon (Logged In User) ─── */}
+          {/* ─── RIGHT: Dashboard / Sign In Button + Profile Icon (Logged In User) ─── */}
           <div className="w-auto lg:w-1/4 flex items-center justify-end">
             <div className="flex items-center">
-              {/* Dashboard Button */}
-              <Link
-                href={dashboardHref}
-                className="border border-white/80 hover:border-[#36D068] text-white hover:bg-[#36D068] hover:text-white px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 rounded-xs text-[10px] sm:text-xs xl:text-sm font-bold tracking-wider sm:tracking-[0.16em] uppercase transition-all duration-300 shadow-sm hover:shadow-[#36D068]/30 hover:shadow-lg text-center whitespace-nowrap"
-              >
-                Dashboard
-              </Link>
+              {/* Primary Nav Button (Dashboard if authenticated, Sign In if guest) */}
+              {mounted && isAuthenticated && user ? (
+                <Link
+                  href={dashboardHref}
+                  className="border border-white/80 hover:border-[#36D068] text-white hover:bg-[#36D068] hover:text-white px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 rounded-xs text-[10px] sm:text-xs xl:text-sm font-bold tracking-wider sm:tracking-[0.16em] uppercase transition-all duration-300 shadow-sm hover:shadow-[#36D068]/30 hover:shadow-lg text-center whitespace-nowrap"
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <Link
+                  href={ROUTES.LOGIN}
+                  className="border border-white/80 hover:border-[#36D068] text-white hover:bg-[#36D068] hover:text-white px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 rounded-xs text-[10px] sm:text-xs xl:text-sm font-bold tracking-wider sm:tracking-[0.16em] uppercase transition-all duration-300 shadow-sm hover:shadow-[#36D068]/30 hover:shadow-lg text-center whitespace-nowrap"
+                >
+                  Sign In
+                </Link>
+              )}
 
               {/* Profile Dropdown (Centered in the gap between Dashboard button and UI right end) */}
-              {isAuthenticated && user && (
+              {mounted && isAuthenticated && user && (
                 <div className="flex items-center justify-center px-2.5 sm:px-3.5 lg:px-4">
                   <div ref={profileDropdownRef} className="relative">
                     {/* Profile Avatar Button */}
@@ -368,7 +382,7 @@ export function Header() {
         <div className="lg:hidden absolute top-full left-0 right-0 w-full bg-[#121212]/98 backdrop-blur-2xl border-t border-b border-white/10 shadow-2xl overflow-y-auto max-h-[calc(100vh-80px)] transition-all duration-200 animate-in fade-in slide-in-from-top-2">
           <div className="px-6 py-8 flex flex-col items-center text-center space-y-5">
             {/* Mobile User Profile Section if Authenticated */}
-            {isAuthenticated && user && (
+            {mounted && isAuthenticated && user && (
               <div className="w-full max-w-xs p-3.5 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between text-left">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-10 h-10 rounded-full bg-[#0B3B17] border-2 border-[#36D068] text-[#36D068] flex items-center justify-center font-oswald font-bold text-sm shrink-0">
@@ -427,15 +441,25 @@ export function Header() {
               })}
             </nav>
 
-            {/* Mobile Primary CTA */}
+            {/* Mobile Primary CTA (Dashboard if logged in, Sign In if guest) */}
             <div className="pt-2 w-full max-w-xs space-y-2">
-              <Link
-                href={dashboardHref}
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full block text-center bg-[#36D068] hover:bg-[#2EB959] text-white py-3.5 rounded-xs font-bold tracking-[0.18em] uppercase text-xs shadow-lg shadow-[#36D068]/25 active:scale-[0.99] transition-all"
-              >
-                Dashboard
-              </Link>
+              {mounted && isAuthenticated && user ? (
+                <Link
+                  href={dashboardHref}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full block text-center bg-[#36D068] hover:bg-[#2EB959] text-white py-3.5 rounded-xs font-bold tracking-[0.18em] uppercase text-xs shadow-lg shadow-[#36D068]/25 active:scale-[0.99] transition-all"
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <Link
+                  href={ROUTES.LOGIN}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full block text-center bg-[#36D068] hover:bg-[#2EB959] text-white py-3.5 rounded-xs font-bold tracking-[0.18em] uppercase text-xs shadow-lg shadow-[#36D068]/25 active:scale-[0.99] transition-all"
+                >
+                  Sign In
+                </Link>
+              )}
             </div>
 
             {/* Mobile Social Media Icons */}
