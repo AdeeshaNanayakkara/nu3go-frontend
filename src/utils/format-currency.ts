@@ -1,0 +1,17 @@
+/**
+ * Pure utility: Currency formatting functions.
+ */
+
+/**
+ * Format a number as currency.
+ */
+export function formatCurrency(
+  amount: number,
+  currency = "USD",
+  locale = "en-US",
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+  }).format(amount);
+}

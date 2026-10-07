@@ -1,0 +1,257 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=Oswald:wght@500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/*
+ * ═══════════════════════════════════════════════
+ * Nu3Go — Global Styles & Design Tokens
+ * ═══════════════════════════════════════════════
+ *
+ * This file defines:
+ * 1. Tailwind CSS v4 imports
+ * 2. CSS custom properties (design tokens) for theming
+ * 3. Light and dark theme colors
+ * 4. Global base styles
+ *
+ * shadcn/ui will add its theme variables here when initialized.
+ */
+
+/* ─── Design Tokens (Light Theme) ─── */
+:root {
+  --font-geist-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-geist-mono: 'Geist Mono', monospace;
+  --font-poppins: 'Poppins', sans-serif;
+  --font-oswald: 'Oswald', sans-serif;
+
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+
+  --muted: #f5f5f5;
+  --muted-foreground: #737373;
+
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+
+  --primary: #171717;
+  --primary-foreground: #fafafa;
+
+  --secondary: #f5f5f5;
+  --secondary-foreground: #171717;
+
+  --accent: #f5f5f5;
+  --accent-foreground: #171717;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #fafafa;
+
+  --ring: #171717;
+
+  --radius: 0.625rem;
+
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+}
+
+/* ─── Dark Theme ─── */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+
+  --muted: #262626;
+  --muted-foreground: #a3a3a3;
+
+  --card: #0a0a0a;
+  --card-foreground: #fafafa;
+
+  --popover: #0a0a0a;
+  --popover-foreground: #fafafa;
+
+  --border: #262626;
+  --input: #262626;
+
+  --primary: #fafafa;
+  --primary-foreground: #171717;
+
+  --secondary: #262626;
+  --secondary-foreground: #fafafa;
+
+  --accent: #262626;
+  --accent-foreground: #fafafa;
+
+  --destructive: #dc2626;
+  --destructive-foreground: #fafafa;
+
+  --ring: #d4d4d4;
+
+  --success: #16a34a;
+  --warning: #d97706;
+  --info: #2563eb;
+}
+
+/* ─── Tailwind v4 Theme Tokens ─── */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-poppins: var(--font-poppins);
+  --font-oswald: var(--font-oswald);
+}
+
+/* ─── Global Base Styles ─── */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+
+/* ─── Smooth Scrolling ─── */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ─── Focus Styles ─── */
+*:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* ─── Selection ─── */
+::selection {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* ─── Google Sign-In Button (GIS iframe wrapper) ─── */
+/*
+ * The <GoogleLogin> component with shape="rectangular" and size="large" renders
+ * a 40px high full-width button. We use hardware-accelerated WebKit mask clipping
+ * (-webkit-mask-image and translateZ(0)) to round the iframe corners to 12px,
+ * perfectly matching the Email/Password inputs and Sign In button.
+ */
+
+.gsi-btn-frame {
+  width: 100%;
+  max-width: 100%;
+  height: 40px;
+  border-radius: 12px;
+  overflow: hidden;
+  isolation: isolate;
+  transform: translateZ(0);
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  mask-image: radial-gradient(white, black);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: transparent;
+  box-sizing: border-box;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.gsi-btn-frame:hover {
+  transform: translateY(-1px) translateZ(0);
+  filter: brightness(0.98);
+}
+
+.gsi-btn-frame:active {
+  transform: translateY(0) translateZ(0);
+}
+
+/* Inner container div from GoogleLogin */
+.gsi-btn-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 40px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  box-sizing: border-box !important;
+}
+
+/* Force the GIS iframe and wrapper to span 100% width & 40px height with 12px radius */
+.gsi-btn-container > div,
+.gsi-btn-container iframe {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 40px !important;
+  margin: 0 auto !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+}
+
+/* Loading state — shown while BFF call is in-flight */
+.gsi-loading-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  user-select: none;
+}
+
+.gsi-loading-btn__spinner {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: #5f6368;
+  animation: gsi-spin 0.8s linear infinite;
+}
+
+@keyframes gsi-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 3D Floating Dish Gentle Micro-Animation */
+@keyframes float-subtle {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-7px) rotate(1deg);
+  }
+}
+
+.animate-float-subtle {
+  animation: float-subtle 4.5s ease-in-out infinite;
+}
