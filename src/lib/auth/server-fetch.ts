@@ -17,10 +17,7 @@
 
 import { cookies } from "next/headers";
 import { APP_CONFIG } from "@/constants/config";
-
-const BACKEND_BASE =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://13.201.222.82:80";
-const API_V1 = `${BACKEND_BASE}/api/v1`;
+import { API_V1 } from "@/services/api/backend";
 
 type FetchConfig = RequestInit & {
   params?: Record<string, string | number | boolean | undefined>;

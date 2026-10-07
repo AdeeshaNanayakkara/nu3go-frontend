@@ -21,9 +21,6 @@ export const metadata: Metadata = generatePageMetadata({
  * Server-side fetch of active catalog packages from database
  */
 async function getActivePackages(): Promise<PublicPackage[]> {
-  const backendBase =
-    process.env.NEXT_PUBLIC_BACKEND_URL || "http://13.201.222.82:80";
-
   try {
     const res = await fetch(BACKEND_ENDPOINTS.PUBLIC_PACKAGES.LIST, {
       method: "GET",
@@ -33,19 +30,6 @@ async function getActivePackages(): Promise<PublicPackage[]> {
 
     if (res.ok) {
       const json = await res.json();
-      const list = json?.data?.data || json?.data;
-      if (Array.isArray(list)) return list;
-    }
-
-    // Direct fallback
-    const fallbackRes = await fetch(`${backendBase}/api/v1/public/packages`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      next: { revalidate: 60 },
-    });
-
-    if (fallbackRes.ok) {
-      const json = await fallbackRes.json();
       const list = json?.data?.data || json?.data;
       if (Array.isArray(list)) return list;
     }

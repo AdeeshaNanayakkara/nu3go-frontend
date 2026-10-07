@@ -50,6 +50,7 @@ import {
 import { getRouteType, hasRoleAccess } from "@/middleware/rbac.middleware";
 import { APP_CONFIG } from "@/constants/config";
 import { ROUTES } from "@/constants/routes";
+import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 
 // ─── Edge-Compatible Token Refresh ─────────────────────────────────────────
 
@@ -69,11 +70,8 @@ interface RefreshResult {
 async function attemptTokenRefresh(
   refreshToken: string,
 ): Promise<RefreshResult | null> {
-  const backendBase =
-    process.env.NEXT_PUBLIC_BACKEND_URL || "http://13.201.222.82:80";
-
   try {
-    const res = await fetch(`${backendBase}/api/v1/auth/refresh`, {
+    const res = await fetch(BACKEND_ENDPOINTS.AUTH.REFRESH, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh_token: refreshToken }),

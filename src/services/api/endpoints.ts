@@ -3,7 +3,11 @@
  * Centralized definition of all backend API endpoints.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+import { BACKEND_BASE } from "@/services/api/backend";
+
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ||
+  `${BACKEND_BASE}/api`;
 
 export const API_ENDPOINTS = {
   // ─── Auth ───

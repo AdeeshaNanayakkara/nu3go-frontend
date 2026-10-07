@@ -9,9 +9,12 @@
 import { cookies } from "next/headers";
 import { APP_CONFIG } from "@/constants/config";
 import type { ApiError, ApiResponse } from "@/services/types/api-response";
+import { BACKEND_BASE } from "@/services/api/backend";
 
 const API_INTERNAL_URL =
-  process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+  process.env.API_INTERNAL_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  `${BACKEND_BASE}/api`;
 
 /**
  * Server-side fetch with automatic auth token forwarding.

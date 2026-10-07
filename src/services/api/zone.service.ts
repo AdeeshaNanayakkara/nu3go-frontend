@@ -1,4 +1,5 @@
 import { apiClient } from "@/services/api/client";
+import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 
 export interface ZoneItem {
   id: string;
@@ -44,8 +45,7 @@ export const zoneService = {
     }
 
     try {
-      const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "http://13.201.222.82:80";
-      const res = await fetch(`${backendBase}/api/v1/zones`);
+      const res = await fetch(BACKEND_ENDPOINTS.ZONES.LIST);
       if (res.ok) {
         const json = await res.json();
         if (json?.data && Array.isArray(json.data)) return json.data;

@@ -1,13 +1,13 @@
 /**
  * Backend API base URL and endpoints.
- *
- * Swagger API Documentation: http://13.201.222.82/swagger/index.html#/
- *
  * All backend routes (including auth) live under the /api/v1 base path.
  */
-export const SWAGGER_DOC_URL = "http://13.201.222.82/swagger/index.html#/";
-export const BACKEND_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://13.201.222.82:80";
-const API_V1 = `${BACKEND_BASE}/api/v1`;
+export const BACKEND_BASE = (
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://13.201.222.82:80"
+).replace(/\/+$/, "");
+
+export const API_V1 = `${BACKEND_BASE}/api/v1`;
+export const SWAGGER_DOC_URL = `${BACKEND_BASE}/swagger/index.html#/`;
 
 export const BACKEND_ENDPOINTS = {
   AUTH: {
