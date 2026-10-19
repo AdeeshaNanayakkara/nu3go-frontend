@@ -338,7 +338,19 @@ export function SubscriptionCalendarView({
   useEffect(() => {
     const initialMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     setCurrentMonthDate(initialMonth);
-    setSelectedDateStr(todayYMD);
+    // If today is a weekend, default to upcoming Monday
+    const dow = today.getDay();
+    let initialSelect = todayYMD;
+    if (dow === 6) {
+      const mon = new Date(today);
+      mon.setDate(mon.getDate() + 2);
+      initialSelect = formatYMD(mon);
+    } else if (dow === 0) {
+      const mon = new Date(today);
+      mon.setDate(mon.getDate() + 1);
+      initialSelect = formatYMD(mon);
+    }
+    setSelectedDateStr(initialSelect);
     setCancelSuccessMsg(null);
     setCancelError(null);
   }, [subscription?.id, today, todayYMD]);
@@ -366,40 +378,69 @@ export function SubscriptionCalendarView({
 
   const handleJumpToToday = () => {
     setCurrentMonthDate(new Date(today.getFullYear(), today.getMonth(), 1));
-    setSelectedDateStr(todayYMD);
+    const dow = today.getDay();
+    let target = todayYMD;
+    if (dow === 6) {
+      const mon = new Date(today);
+      mon.setDate(mon.getDate() + 2);
+      target = formatYMD(mon);
+    } else if (dow === 0) {
+      const mon = new Date(today);
+      mon.setDate(mon.getDate() + 1);
+      target = formatYMD(mon);
+    }
+    setSelectedDateStr(target);
   };
 
-  // 5. Construct 7-column Calendar Grid (Mon to Sun) for Current Month
+  // 5. Construct 5-column Weekday Calendar Grid (Mon to Fri) for Current Month
   const calendarGrid = useMemo(() => {
     const firstDayOfMonth = new Date(year, month, 1);
     const lastDayOfMonth = new Date(year, month + 1, 0);
 
-    const firstDayIndex = firstDayOfMonth.getDay();
-    const leadingPadding = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
-
+    // Calculate start day of grid (align to Monday)
+    const firstDow = firstDayOfMonth.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
     const startGridDate = new Date(firstDayOfMonth);
-    startGridDate.setDate(startGridDate.getDate() - leadingPadding);
+    if (firstDow === 0) {
+      startGridDate.setDate(startGridDate.getDate() + 1);
+    } else if (firstDow === 6) {
+      startGridDate.setDate(startGridDate.getDate() + 2);
+    } else if (firstDow > 1) {
+      startGridDate.setDate(startGridDate.getDate() - (firstDow - 1));
+    }
 
-    const lastDayIndex = lastDayOfMonth.getDay();
-    const trailingPadding = lastDayIndex === 0 ? 0 : 7 - lastDayIndex;
-
+    // Calculate end day of grid (align to Friday)
+    const lastDow = lastDayOfMonth.getDay();
     const endGridDate = new Date(lastDayOfMonth);
-    endGridDate.setDate(endGridDate.getDate() + trailingPadding);
+    if (lastDow === 0) {
+      endGridDate.setDate(endGridDate.getDate() - 2);
+    } else if (lastDow === 6) {
+      endGridDate.setDate(endGridDate.getDate() - 1);
+    } else if (lastDow < 5) {
+      endGridDate.setDate(endGridDate.getDate() + (5 - lastDow));
+    }
 
     const cells: Array<{
       date: Date;
       dateStr: string;
       dayNum: number;
       isCurrentMonth: boolean;
-      isWeekend: boolean;
       planItem?: (typeof allPlanDates)[0];
     }> = [];
 
     const cursor = new Date(startGridDate);
     while (cursor <= endGridDate) {
-      const dStr = formatYMD(cursor);
       const dow = cursor.getDay();
-      const isWeekend = dow === 0 || dow === 6;
+      // Skip Saturday (6) and Sunday (0)
+      if (dow === 6) {
+        cursor.setDate(cursor.getDate() + 2);
+        continue;
+      }
+      if (dow === 0) {
+        cursor.setDate(cursor.getDate() + 1);
+        continue;
+      }
+
+      const dStr = formatYMD(cursor);
       const planItem = planDatesMap.get(dStr);
 
       cells.push({
@@ -407,7 +448,6 @@ export function SubscriptionCalendarView({
         dateStr: dStr,
         dayNum: cursor.getDate(),
         isCurrentMonth: cursor.getMonth() === month,
-        isWeekend,
         planItem,
       });
 
@@ -786,19 +826,17 @@ export function SubscriptionCalendarView({
                 </div>
               </div>
 
-              {/* 7-Day Header (Mon - Sun) */}
-              <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center font-oswald text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 pb-1 border-b border-slate-200/70">
+              {/* 5-Day Header (Mon - Fri) */}
+              <div className="grid grid-cols-5 gap-1.5 sm:gap-2 text-center font-oswald text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 pb-1 border-b border-slate-200/70">
                 <div>Mon</div>
                 <div>Tue</div>
                 <div>Wed</div>
                 <div>Thu</div>
                 <div>Fri</div>
-                <div className="text-slate-400">Sat</div>
-                <div className="text-slate-400">Sun</div>
               </div>
 
-              {/* 7-Day Calendar Cells Grid */}
-              <div className="grid grid-cols-7 gap-1 sm:gap-2">
+              {/* 5-Day Calendar Cells Grid */}
+              <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                 {calendarGrid.map((cell, idx) => {
                   const isSelected = selectedDateStr === cell.dateStr;
                   const isInsideCycle = cell.dateStr >= startYMD && cell.dateStr <= dueYMD;
@@ -814,10 +852,6 @@ export function SubscriptionCalendarView({
 
                   if (!cell.isCurrentMonth) {
                     cellBg = "opacity-30 bg-slate-100/50 text-slate-400 border border-transparent";
-                  } else if (cell.isWeekend) {
-                    cellBg = isInsideCycle
-                      ? "bg-slate-100/70 text-slate-400 border border-dashed border-slate-200/80"
-                      : "bg-slate-50/50 text-slate-300 border border-transparent";
                   } else if (isCancelled) {
                     cellBg = "bg-rose-50/90 hover:bg-rose-100 text-rose-800 border border-rose-300/90 shadow-2xs font-semibold";
                   } else if (isDelivery) {
@@ -894,10 +928,6 @@ export function SubscriptionCalendarView({
                           <span className="text-[8px] sm:text-[9px] text-[#15803D] font-medium hidden sm:inline">
                             {isPast ? "Delivered" : "Delivery"}
                           </span>
-                        ) : cell.isWeekend && isInsideCycle ? (
-                          <span className="text-[8px] text-slate-400 font-medium hidden sm:inline">
-                            Rest
-                          </span>
                         ) : null}
                       </div>
                     </button>
@@ -924,10 +954,6 @@ export function SubscriptionCalendarView({
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-md bg-rose-100 border border-rose-300 inline-block" />
                   <span className="text-rose-700 font-medium">Cancelled ({cancelledDaysCount})</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-md bg-slate-100 border border-dashed border-slate-300 inline-block" />
-                  <span>Weekend</span>
                 </div>
               </div>
 
