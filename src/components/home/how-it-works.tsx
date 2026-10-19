@@ -186,8 +186,9 @@ export function HowItWorks() {
               ref={subtitleRef}
               className="text-neutral-300 text-sm sm:text-base leading-relaxed mt-4 max-w-xs font-light will-change-[transform,opacity] mx-auto md:mx-0"
             >
-              Fresh, chef-crafted balanced meals prepared with passion and delivered seamlessly to fuel your active lifestyle.
+              <strong className="font-bold">Breakfast made simple. Subscribe once, and we take care of the rest.</strong><br></br> Choose your weekday subscription and tell us where you want your breakfast delivered.
             </p>
+
           </div>
 
           {/* ─── Columns 2, 3, 4: Interactive Hover Step Cards with Animated DailyGrubs Icons ─── */}

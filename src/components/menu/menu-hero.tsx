@@ -222,7 +222,7 @@ export function MenuHero() {
             "will-change-[transform,opacity]"
           )}
         >
-          Explore our chef-curated selection of macro-balanced, nutrient-dense meals made with fresh organic ingredients and premium proteins.
+          Explore our healthy meals made with fresh organic ingredients and premium proteins.
         </p>
       </div>
 

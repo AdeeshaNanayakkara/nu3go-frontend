@@ -35,6 +35,9 @@ export default function HomePage() {
       {/* ─── Pizzeria-style How It Works Banner ─── */}
       <HowItWorks />
 
+      {/* ─── Sri Lanka's First-Ever Subscription Highlight Section ─── */}
+      <HighlightSection />
+
       {/* ─── Pizzeria-style Menu Categories Showcase ─── */}
       <MenuShowcase />
 
@@ -45,10 +48,9 @@ export default function HomePage() {
       <ContactSection />
 
       {/* ─── Instagram Mosaic Gallery & Ratings Banner ─── */}
-      <InstagramGallery />
+      {/* <InstagramGallery /> */}
 
-      {/* ─── Sri Lanka's First-Ever Subscription Highlight Section ─── */}
-      <HighlightSection />
+      
     </>
   );
 }

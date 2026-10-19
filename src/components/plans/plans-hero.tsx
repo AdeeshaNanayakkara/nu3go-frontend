@@ -116,7 +116,7 @@ export function PlansHero() {
           ref={titleRef}
           className={cn('font-oswald', 'text-5xl', 'sm:text-6xl', 'md:text-7xl', 'lg:text-8xl', 'font-black', 'uppercase', 'text-white', 'tracking-tight', 'leading-none', 'mb-4', 'sm:mb-5', 'drop-shadow-xl', 'will-change-[transform,opacity]')}
         >
-          PLANS
+          FIND YOUR PERFECT PLAN
         </h1>
 
         {/* Descriptive Subtext */}
@@ -124,7 +124,7 @@ export function PlansHero() {
           ref={descRef}
           className={cn('text-white/90', 'text-sm', 'sm:text-base', 'md:text-lg', 'leading-relaxed', 'max-w-2xl', 'mx-auto', 'font-light', 'will-change-[transform,opacity]')}
         >
-          Choose your tailored macro-calculated meal subscription. Freshly cooked by culinary chefs and delivered warm to your doorstep every weekday morning.
+          From balanced everyday breakfasts to extra protein and kid-friendly options, choose a Nu3Go lan that fits your lifestyle, goals, and mornings. 
         </p>
       </div>
 

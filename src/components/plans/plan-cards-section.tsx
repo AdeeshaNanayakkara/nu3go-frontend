@@ -59,11 +59,12 @@ export function PlanCardsSection() {
 
         {/* Description */}
         <p className="text-neutral-600 text-sm sm:text-base md:text-lg font-normal leading-relaxed max-w-2xl mx-auto mb-8">
-          Every Nu3Go meal plan is scientifically formulated around distinct metabolic objectives.
-          Choose your dedicated tier below, select your preferred schedule (Monthly, Weekly, or Hybrid Fuel),
-          and enjoy freshly prepared, chef-crafted breakfast delivered straight to your doorstep every weekday morning.
+          <strong className="font-semibold text-neutral-800">Four ways to start your morning right.</strong> From balanced everyday breakfasts and nourishing
+          school-day meals to high-protein fuel for active lifestyles, there’s a plan designed for the way
+          you live. <strong className="font-semibold text-neutral-800">We prepare it fresh every morning, deliver it to your doorstep, and take the
+            stress out of breakfast.</strong>
         </p>
-
+        
         {/* Trust Badges */}
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm font-semibold text-neutral-700 bg-white py-4 px-6 sm:px-8 rounded-2xl border border-neutral-200 shadow-sm max-w-2xl mx-auto">
           <div className="flex items-center gap-2">
