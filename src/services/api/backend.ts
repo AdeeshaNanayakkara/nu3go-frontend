@@ -126,6 +126,14 @@ export const BACKEND_ENDPOINTS = {
     BILLING_HISTORY: (id: string) => `${API_V1}/subscriptions/${id}/billing-history`,
     RETRY_BILLING: (id: string) => `${API_V1}/subscriptions/${id}/retry-billing`,
   },
+  MEAL_CANCELLATIONS: {
+    CREATE: `${API_V1}/meal-cancellations`,
+    LIST: `${API_V1}/meal-cancellations`,
+    ADMIN_LIST: `${API_V1}/meal-cancellations/admin`,
+    DETAIL: (id: string) => `${API_V1}/meal-cancellations/${id}`,
+    REVERT: (id: string) => `${API_V1}/meal-cancellations/${id}/revert`,
+    SUBSCRIPTION_CANCELLATIONS: (id: string) => `${API_V1}/subscriptions/${id}/meal-cancellations`,
+  },
 } as const;
 
 export type BackendEndpoints = typeof BACKEND_ENDPOINTS;

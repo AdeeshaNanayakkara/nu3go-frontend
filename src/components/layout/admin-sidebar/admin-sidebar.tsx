@@ -18,6 +18,7 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
+  CalendarX,
 } from "lucide-react";
 
 export function AdminSidebar() {
@@ -55,6 +56,7 @@ export function AdminSidebar() {
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Customers", href: "/admin/users", icon: Users },
     { label: "Packages", href: "/admin/packages", icon: Package },
+    { label: "Cancellations", href: "/admin/cancellations", icon: CalendarX },
   ];
 
   const isSettingsActive = pathname.startsWith("/admin/settings");

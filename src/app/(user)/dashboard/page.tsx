@@ -18,7 +18,9 @@ import { QuickActionsHub } from "@/components/dashboard/quick-actions-hub";
 import {
   AlertTriangle,
   Compass,
+  Calendar as CalendarIcon,
 } from "lucide-react";
+import { SubscriptionCalendarView } from "@/components/dashboard/subscription-calendar-modal";
 
 export default function CustomerDashboardPage() {
   const { user } = useAuthStore();
@@ -33,6 +35,9 @@ export default function CustomerDashboardPage() {
   // Modal for cancelling subscription
   const [cancelModalSubId, setCancelModalSubId] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+
+  // Tab mode for active subscription view: plan summary card vs full delivery calendar
+  const [viewTab, setViewTab] = useState<"card" | "calendar">("card");
 
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
@@ -130,6 +135,47 @@ export default function CustomerDashboardPage() {
   const totalInvoicesCount = invoices.length;
   const isPlanActive = activeSubscription && activeSubscription.status?.toUpperCase() === "ACTIVE";
 
+  // Calculate delivery stats dynamically from active subscription dates
+  const { totalPlanDays, daysDeliveredCount, remainingDaysCount } = (() => {
+    if (!isPlanActive || !activeSubscription) {
+      return { totalPlanDays: 20, daysDeliveredCount: 0, remainingDaysCount: 0 };
+    }
+
+    const startStr = activeSubscription.started_at || activeSubscription.created_at;
+    const dueStr = activeSubscription.valid_until || activeSubscription.next_billing_date;
+
+    if (!startStr || !dueStr) {
+      return { totalPlanDays: 20, daysDeliveredCount: 14, remainingDaysCount: 6 };
+    }
+
+    const s = new Date(startStr.split("T")[0]);
+    const d = new Date(dueStr.split("T")[0]);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (isNaN(s.getTime()) || isNaN(d.getTime()) || d <= s) {
+      return { totalPlanDays: 20, daysDeliveredCount: 14, remainingDaysCount: 6 };
+    }
+
+    let total = 0;
+    let delivered = 0;
+    const cur = new Date(s);
+    while (cur <= d) {
+      const dow = cur.getDay();
+      if (dow >= 1 && dow <= 5) {
+        total++;
+        if (cur < today) delivered++;
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    return {
+      totalPlanDays: Math.max(1, total),
+      daysDeliveredCount: delivered,
+      remainingDaysCount: Math.max(0, total - delivered),
+    };
+  })();
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300 font-poppins">
       {/* ─── 1. Welcome Greeting Banner ─── */}
@@ -160,44 +206,95 @@ export default function CustomerDashboardPage() {
         </div>
       </div>
 
-      {/* ─── 2. Active Subscription Card Spotlight ─── */}
-      {subscriptions.length > 1 && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          <span className="text-xs font-semibold text-slate-500 shrink-0">Active Subscriptions ({subscriptions.length}):</span>
-          {subscriptions.map((sub, idx) => (
-            <button
-              key={sub.id}
-              type="button"
-              onClick={() => setSelectedIndex(idx)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-oswald font-bold uppercase tracking-wider transition-all shrink-0 ${selectedIndex === idx
-                  ? "bg-[#36D068] text-black shadow-md shadow-[#36D068]/20"
-                  : "bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs"
-                }`}
-            >
-              {getPackageName(sub)}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* ─── 2. Active Subscription Card & Delivery Calendar Spotlight ─── */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {subscriptions.length > 1 ? (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <span className="text-xs font-semibold text-slate-500 shrink-0">
+                Active Subscriptions ({subscriptions.length}):
+              </span>
+              {subscriptions.map((sub, idx) => (
+                <button
+                  key={sub.id}
+                  type="button"
+                  onClick={() => setSelectedIndex(idx)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-oswald font-bold uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
+                    selectedIndex === idx
+                      ? "bg-[#36D068] text-black shadow-md shadow-[#36D068]/20"
+                      : "bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs"
+                  }`}
+                >
+                  {getPackageName(sub)}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div />
+          )}
 
-      <ActivePlanCard
-        subscription={activeSubscription}
-        packageName={getPackageName(activeSubscription)}
-        planDurationLabel={getPlanLabel(activeSubscription)}
-        totalDays={20}
-        daysDelivered={isPlanActive ? 14 : 0}
-        deliveryAddress={defaultAddress}
-        onToggleAutoRenew={handleToggleAutoRenew}
-        onCancelPlan={
-          activeSubscription ? () => setCancelModalSubId(activeSubscription.id) : undefined
-        }
-        isLoading={isLoading}
-      />
+          {/* View Mode Toggle (Summary vs Calendar) */}
+          {isPlanActive && (
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl w-fit self-start sm:self-center shrink-0">
+              <button
+                type="button"
+                onClick={() => setViewTab("card")}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-oswald text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  viewTab === "card"
+                    ? "bg-white text-neutral-900 shadow-xs"
+                    : "text-slate-600 hover:text-neutral-900"
+                }`}
+              >
+                <span>Plan Summary</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setViewTab("calendar")}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-oswald text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  viewTab === "calendar"
+                    ? "bg-white text-neutral-900 shadow-xs"
+                    : "text-slate-600 hover:text-neutral-900"
+                }`}
+              >
+                <CalendarIcon className="w-3.5 h-3.5 text-[#15803D]" />
+                <span>Delivery Calendar</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Inline View: Calendar OR Plan Card */}
+        {viewTab === "calendar" && isPlanActive ? (
+          <SubscriptionCalendarView
+            subscription={activeSubscription}
+            packageName={getPackageName(activeSubscription)}
+            planDurationLabel={getPlanLabel(activeSubscription)}
+            deliveryAddress={defaultAddress}
+            onBackToOverview={() => setViewTab("card")}
+          />
+        ) : (
+          <ActivePlanCard
+            subscription={activeSubscription}
+            packageName={getPackageName(activeSubscription)}
+            planDurationLabel={getPlanLabel(activeSubscription)}
+            totalDays={totalPlanDays}
+            daysDelivered={daysDeliveredCount}
+            deliveryAddress={defaultAddress}
+            onToggleAutoRenew={handleToggleAutoRenew}
+            onCancelPlan={
+              activeSubscription ? () => setCancelModalSubId(activeSubscription.id) : undefined
+            }
+            onOpenCalendar={() => setViewTab("calendar")}
+            isLoading={isLoading}
+          />
+        )}
+      </div>
 
       {/* ─── 3. Key Performance Metric Cards ─── */}
       <KpiMetricCards
-        totalMealsDelivered={isPlanActive ? 14 : 0}
-        remainingDays={isPlanActive ? 6 : 0}
+        totalMealsDelivered={daysDeliveredCount}
+        remainingDays={remainingDaysCount}
         dailyProteinAvg={42}
         totalInvoicesCount={totalInvoicesCount}
       />
