@@ -112,7 +112,7 @@ export function ContactSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative w-full bg-[white] py-20 sm:py-24 lg:py-28 select-none overflow-hidden"
+      className="relative w-full bg-[#F7F6F2] py-20 sm:py-24 lg:py-28 select-none overflow-hidden"
     >
       <div className="max-w-[1360px] mx-auto px-6 sm:px-8 lg:px-12 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
