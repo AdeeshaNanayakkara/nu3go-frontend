@@ -233,14 +233,14 @@ export function DeliveryLocations() {
             ref={titleRef}
             className="font-oswald text-3xl sm:text-5xl lg:text-6xl font-black uppercase text-neutral-900 tracking-tight leading-[1.08] mb-4 will-change-[transform,opacity]"
           >
-            FIND NU3GO NEAR YOU
+            No More Skipping Breakfast, Colombo..
           </h2>
 
           <p
             ref={descRef}
             className="text-neutral-600 text-sm sm:text-base leading-relaxed max-w-xl mx-auto font-normal will-change-[transform,opacity]"
           >
-            Freshly prepared balanced meals delivered on schedule every morning across our dedicated metropolitan kitchen hubs.
+            Your weekday breakfast is on us  including delivery. We currently offer <strong className="font-bold">free breakfast delivery</strong> across selected areas in Colombo and surrounding locations.
           </p>
         </div>
 
