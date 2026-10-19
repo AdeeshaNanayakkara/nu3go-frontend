@@ -45,7 +45,7 @@ export default function HomePage() {
       <ContactSection />
 
       {/* ─── Instagram Mosaic Gallery & Ratings Banner ─── */}
-      <InstagramGallery />
+      {/* <InstagramGallery /> */}
 
       {/* ─── Sri Lanka's First-Ever Subscription Highlight Section ─── */}
       <HighlightSection />

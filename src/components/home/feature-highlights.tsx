@@ -17,7 +17,7 @@ const features = [
     alt: "Fresh Organic Ingredients",
     title: "FRESH",
     description:
-      "Prepared fresh for your weekday mornings.",
+      "Prepared fresh for your weekday mornings. Every meal is crafted to give you crisp, vibrant flavor right when you start your day.",
     isCenter: false,
   },
   {
@@ -26,7 +26,7 @@ const features = [
     alt: "Chef Crafted Meals",
     title: "HEALTHY",
     description:
-      "Balanced breakfast options made for busy lifestyles.",
+      "Balanced breakfast options made for busy lifestyles. Each portion is designed to deliver clean nutrients and keep your energy steady. ",
     isCenter: true,
   },
   {
@@ -35,7 +35,7 @@ const features = [
     alt: "Signature Healthy Recipes",
     title: 'EVERY DAY',
     description:
-      "Monday to Friday, without the daily hassle.",
+      "Monday to Friday, without the daily hassle. Skip the morning prep and let us fuel your workweek seamlessly.",
     isCenter: false,
   },
 ];

@@ -193,11 +193,11 @@ export function HighlightSection() {
               ref={headingRef}
               className="font-oswald text-3xl sm:text-4xl md:text-5xl lg:text-[44px] xl:text-[50px] font-black uppercase text-neutral-900 tracking-tight leading-[1.08] mb-4 sm:mb-5 will-change-[transform,opacity]"
             >
-              SRI LANKA&apos;S FIRST-EVER{" "}
+              BUILDING SRI LANKA’S{" "}
               <span className="text-[#36D068] block sm:inline">
-                SUBSCRIPTION-BASED
+                #1 
               </span>{" "}
-              HEALTHY BREAKFAST SERVICE!
+              BREAKFAST SUBSCRIPTION SERVICE.
             </h2>
 
             {/* Body Copy */}
@@ -205,7 +205,7 @@ export function HighlightSection() {
               ref={descRef}
               className="text-neutral-600 text-sm sm:text-base lg:text-lg leading-relaxed max-w-xl font-light mb-6 sm:mb-8 mx-auto lg:mx-0 will-change-[transform,opacity]"
             >
-              Skip the morning rush, grocery shopping, and meal prep. Receive chef-crafted, calorie-counted, macro-balanced healthy breakfast bowls and wraps delivered warm and fresh to your doorstep before 7:30 AM every weekday.
+              Your mornings are busy enough. Let nu3go take care of breakfast with fresh, healthy meals prepared for your workday and delivered straight to your office / home every weekday.
             </p>
 
             {/* Action Buttons (Centered on mobile, left on desktop) */}
