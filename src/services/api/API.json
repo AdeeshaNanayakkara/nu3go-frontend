@@ -10,6 +10,1568 @@
     "host": "13.201.222.82:80",
     "basePath": "/api/v1",
     "paths": {
+        "/api/v1/analytics/customers/engagement": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Meal cancellations and optional meal requests for delivery dates in the range, plus a current snapshot of active subscriptions by plan type, billing cycle and auto-renew.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Customers"
+                ],
+                "summary": "Admin: Customer engagement metrics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_customeranalytics.EngagementRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/customers/funnel": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "For customers registered in the range: registered → verified → subscribed → activated (first subscription started) → renewed (≥2 paid invoices).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Customers"
+                ],
+                "summary": "Admin: Customer conversion funnel",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_customeranalytics.FunnelRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/customers/growth": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "New customers, first-time subscribers, churned customers, running total and active subscribers per bucket. Granularity defaults to day (≤31 days), week (≤92 days) or month.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Customers"
+                ],
+                "summary": "Admin: Customer growth time series",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "day",
+                            "week",
+                            "month"
+                        ],
+                        "type": "string",
+                        "description": "Bucket size",
+                        "name": "granularity",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_customeranalytics.GrowthRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/customers/status-breakdown": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Current snapshot placing each customer in one state, by precedence: active → payment_failed → pending → lapsed → never_subscribed.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Customers"
+                ],
+                "summary": "Admin: Customer subscription status breakdown",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_customeranalytics.StatusBreakdownRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/customers/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "KPI cards for the range, each compared with the previous period of equal length. Active/churn figures are reconstructed from subscription service windows (started_at → valid_until/cancelled_at). Dates are inclusive, Asia/Colombo; defaults to the last 30 days.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Customers"
+                ],
+                "summary": "Admin: Customer analytics stat cards",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_customeranalytics.SummaryRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/customers/top": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Customers ranked by revenue, paid invoices or meal cancellations within the range. Only customers with a non-zero value for the sort metric are listed.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Customers"
+                ],
+                "summary": "Admin: Top customers leaderboard",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "revenue",
+                            "paid_invoices",
+                            "cancellations"
+                        ],
+                        "type": "string",
+                        "default": "revenue",
+                        "description": "Sort metric",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_customeranalytics.TopCustomersRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/deliveries/breakdown": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delivery volume, completion and cancellations in the range split by plan type, package or weekday.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Deliveries"
+                ],
+                "summary": "Admin: Delivery breakdown",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "plan_type",
+                            "package",
+                            "weekday"
+                        ],
+                        "type": "string",
+                        "default": "plan_type",
+                        "description": "Dimension",
+                        "name": "by",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_deliveryanalytics.BreakdownRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/deliveries/forecast": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Expected deliveries for each of the next N days starting today, split into FIXED and CUSTOM, with known cancellations and optional meal swaps. Uses ACTIVE subscriptions and assumes auto-renewing FIXED plans renew.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Deliveries"
+                ],
+                "summary": "Admin: Upcoming delivery forecast",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 7,
+                        "description": "Days to forecast (1–30)",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_deliveryanalytics.ForecastRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/deliveries/optional-meals": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "The most requested optional meals for delivery dates in the range, excluding cancelled requests.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Deliveries"
+                ],
+                "summary": "Admin: Optional meal popularity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Number of meals (1–50)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_deliveryanalytics.OptionalMealsRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/deliveries/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delivery KPIs for the range, each compared with the previous period of equal length. Expected deliveries are scheduled meals minus cancellations, rebuilt from every started subscription. Completion and missed only count closed days (before today); today's open work is pending_today. Late-marked = marked delivered after the delivery date. Dates are inclusive, Asia/Colombo; defaults to the last 30 days.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Deliveries"
+                ],
+                "summary": "Admin: Delivery analytics stat cards",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_deliveryanalytics.SummaryRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/deliveries/trend": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Scheduled, cancelled, expected, delivered and missed deliveries plus optional meal swaps per bucket, up to today. Granularity defaults to day (≤31 days), week (≤92 days) or month.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Deliveries"
+                ],
+                "summary": "Admin: Delivery trend",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "day",
+                            "week",
+                            "month"
+                        ],
+                        "type": "string",
+                        "description": "Bucket size",
+                        "name": "granularity",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_deliveryanalytics.TrendRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/sales/breakdown": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Net revenue in the range split by package, subscription plan, billing cycle or plan type, largest first, with share of total.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Sales"
+                ],
+                "summary": "Admin: Revenue breakdown",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "package",
+                            "plan",
+                            "billing_cycle",
+                            "plan_type"
+                        ],
+                        "type": "string",
+                        "default": "package",
+                        "description": "Dimension",
+                        "name": "by",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_salesanalytics.BreakdownRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/sales/cohorts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Customers grouped by the month of their first paid invoice; for each following month, how many paid again (retention %) and their net revenue. Covers the last N months including the current one.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Sales"
+                ],
+                "summary": "Admin: Revenue retention cohorts",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 6,
+                        "description": "Number of monthly cohorts (3–12)",
+                        "name": "months",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_salesanalytics.CohortsRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/sales/discounts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Every discount redeemed on PAID invoices in the range: redemptions, unique customers, total and average discount, and net revenue of the discounted invoices.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Sales"
+                ],
+                "summary": "Admin: Discount performance",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_salesanalytics.DiscountsRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/sales/payments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "First-checkout payment outcomes and recurring billing success in the range, the top recurring failure reasons, and the monthly recurring value of subscriptions currently in PAYMENT_FAILED.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Sales"
+                ],
+                "summary": "Admin: Payment health",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_salesanalytics.PaymentsRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/sales/revenue": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Gross, discounts, net, wallet credit, cash collected and invoice count per bucket, with net revenue split into new (a subscription's first paid invoice) and renewal. Granularity defaults to day (≤31 days), week (≤92 days) or month.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Sales"
+                ],
+                "summary": "Admin: Revenue time series",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "day",
+                            "week",
+                            "month"
+                        ],
+                        "type": "string",
+                        "description": "Bucket size",
+                        "name": "granularity",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_salesanalytics.RevenueRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/sales/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Revenue KPIs for the range, each compared with the previous period of equal length. Revenue is recognised on PAID invoices by paid date: gross = subtotal, net = after discounts, cash collected = net minus wallet credit. MRR is the monthly-normalised recurring price of FIXED subscriptions in service at the end of each period. Refunds are wallet credits from meal cancellations. Dates are inclusive, Asia/Colombo; defaults to the last 30 days.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics - Sales"
+                ],
+                "summary": "Admin: Sales analytics stat cards",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_salesanalytics.SummaryRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/deliveries": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns every active subscription (FIXED and CUSTOM) expected to receive a delivery on the given date, with delivered status.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Deliveries"
+                ],
+                "summary": "Admin: Get the delivery list for a date",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Delivery date (YYYY-MM-DD)",
+                        "name": "date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_delivery.ListDeliveriesRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Marks one or many subscriptions delivered for a single date in one batched request.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Deliveries"
+                ],
+                "summary": "Admin: Mark deliveries as delivered",
+                "parameters": [
+                    {
+                        "description": "Delivery date and subscription IDs",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_delivery.MarkDeliveredReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_delivery.MarkDeliveredRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/deliveries/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Deliveries"
+                ],
+                "summary": "Admin: Undo a marked delivery",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Delivery marker ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/invoices": {
             "get": {
                 "security": [
@@ -1177,6 +2739,403 @@
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/optional-meal-requests": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Optional Meal Requests"
+                ],
+                "summary": "Admin: List all optional meal requests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by subscription ID",
+                        "name": "subscription_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by user ID",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date",
+                        "name": "date_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date",
+                        "name": "date_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Is cancelled",
+                        "name": "is_cancelled",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_optionalmealrequest.ListOptionalMealRequestsRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Customers can request the pre-configured optional meal for a subscription on a given delivery date. Auto-confirmed on creation.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Optional Meal Requests"
+                ],
+                "summary": "Request an optional meal",
+                "parameters": [
+                    {
+                        "description": "Request details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_optionalmealrequest.CreateOptionalMealRequestReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_optionalmealrequest.OptionalMealRequestRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/optional-meal-requests/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Optional Meal Requests"
+                ],
+                "summary": "Get an optional meal request by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_optionalmealrequest.OptionalMealRequestRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Optional Meal Requests"
+                ],
+                "summary": "Admin: Hard delete an optional meal request",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/optional-meal-requests/{id}/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Customers (owner) or admins can cancel a request before its delivery date passes.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Optional Meal Requests"
+                ],
+                "summary": "Cancel an optional meal request",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
                         }
                     },
                     "404": {
@@ -3152,6 +5111,106 @@
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/internal_domain_mealcancellation.ListCancellationsRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/subscriptions/{id}/optional-meal-requests": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Optional Meal Requests"
+                ],
+                "summary": "List optional meal requests for a subscription",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subscription ID",
+                        "name": "id",
+                        "in": "path"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date",
+                        "name": "date_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date",
+                        "name": "date_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Is cancelled (Admin only)",
+                        "name": "is_cancelled",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_optionalmealrequest.ListOptionalMealRequestsRes"
                                         }
                                     }
                                 }
@@ -6950,6 +9009,720 @@
                 }
             }
         },
+        "internal_domain_customeranalytics.BillingCycleCountRes": {
+            "type": "object",
+            "properties": {
+                "active_subscriptions": {
+                    "type": "integer",
+                    "example": 90
+                },
+                "billing_cycle": {
+                    "type": "string",
+                    "example": "MONTHLY"
+                }
+            }
+        },
+        "internal_domain_customeranalytics.EngagementRes": {
+            "type": "object",
+            "properties": {
+                "active_customers": {
+                    "type": "integer",
+                    "example": 180
+                },
+                "auto_renew_pct": {
+                    "type": "number",
+                    "example": 78.33
+                },
+                "by_billing_cycle": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_customeranalytics.BillingCycleCountRes"
+                    }
+                },
+                "by_plan_type": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_customeranalytics.PlanTypeCountRes"
+                    }
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "LKR"
+                },
+                "from": {
+                    "type": "string",
+                    "example": "2026-09-23"
+                },
+                "meal_cancellations": {
+                    "$ref": "#/definitions/internal_domain_customeranalytics.MealCancellationEngagementRes"
+                },
+                "optional_meal_requests": {
+                    "$ref": "#/definitions/internal_domain_customeranalytics.OptionalMealEngagementRes"
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-10-22"
+                }
+            }
+        },
+        "internal_domain_customeranalytics.FunnelRes": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string",
+                    "example": "2026-09-23"
+                },
+                "steps": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_customeranalytics.FunnelStepRes"
+                    }
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-10-22"
+                }
+            }
+        },
+        "internal_domain_customeranalytics.FunnelStepRes": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer",
+                    "example": 64
+                },
+                "key": {
+                    "type": "string",
+                    "example": "activated"
+                },
+                "pct_of_first": {
+                    "type": "number",
+                    "example": 53.33
+                },
+                "pct_of_prev": {
+                    "type": "number",
+                    "example": 88.89
+                }
+            }
+        },
+        "internal_domain_customeranalytics.GrowthPointRes": {
+            "type": "object",
+            "properties": {
+                "active_subscribers": {
+                    "type": "integer",
+                    "example": 181
+                },
+                "bucket": {
+                    "type": "string",
+                    "example": "2026-10-05"
+                },
+                "churned": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "new_customers": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "new_subscribers": {
+                    "type": "integer",
+                    "example": 7
+                },
+                "total_customers": {
+                    "type": "integer",
+                    "example": 340
+                }
+            }
+        },
+        "internal_domain_customeranalytics.GrowthRes": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string",
+                    "example": "2026-09-23"
+                },
+                "granularity": {
+                    "enum": [
+                        "day",
+                        "week",
+                        "month"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/nu3go_internal_shared_analytics.Granularity"
+                        }
+                    ],
+                    "example": "week"
+                },
+                "points": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_customeranalytics.GrowthPointRes"
+                    }
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-10-22"
+                }
+            }
+        },
+        "internal_domain_customeranalytics.MealCancellationEngagementRes": {
+            "type": "object",
+            "properties": {
+                "by_refund_tier": {
+                    "$ref": "#/definitions/internal_domain_customeranalytics.RefundTierCountsRes"
+                },
+                "per_active_customer": {
+                    "type": "number",
+                    "example": 0.47
+                },
+                "refund_total": {
+                    "type": "number",
+                    "example": 42500
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 85
+                },
+                "unique_customers": {
+                    "type": "integer",
+                    "example": 40
+                }
+            }
+        },
+        "internal_domain_customeranalytics.OptionalMealEngagementRes": {
+            "type": "object",
+            "properties": {
+                "adoption_pct": {
+                    "type": "number",
+                    "example": 52.78
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 210
+                },
+                "unique_customers": {
+                    "type": "integer",
+                    "example": 95
+                }
+            }
+        },
+        "internal_domain_customeranalytics.PlanTypeCountRes": {
+            "type": "object",
+            "properties": {
+                "active_subscriptions": {
+                    "type": "integer",
+                    "example": 120
+                },
+                "plan_type": {
+                    "type": "string",
+                    "example": "FIXED"
+                }
+            }
+        },
+        "internal_domain_customeranalytics.RefundTierCountsRes": {
+            "type": "object",
+            "properties": {
+                "FULL": {
+                    "type": "integer",
+                    "example": 50
+                },
+                "HALF": {
+                    "type": "integer",
+                    "example": 25
+                },
+                "NONE": {
+                    "type": "integer",
+                    "example": 10
+                }
+            }
+        },
+        "internal_domain_customeranalytics.SegmentRes": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer",
+                    "example": 180
+                },
+                "key": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "pct": {
+                    "type": "number",
+                    "example": 52.94
+                }
+            }
+        },
+        "internal_domain_customeranalytics.StatusBreakdownRes": {
+            "type": "object",
+            "properties": {
+                "inactive_accounts": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "segments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_customeranalytics.SegmentRes"
+                    }
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 340
+                }
+            }
+        },
+        "internal_domain_customeranalytics.SummaryRes": {
+            "type": "object",
+            "properties": {
+                "active_subscribers": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "avg_lifetime_value": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "churn_rate_pct": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "churned_customers": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "conversion_rate_pct": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "LKR"
+                },
+                "new_customers": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "range": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.RangeRes"
+                },
+                "total_customers": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "wallet_liability": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                }
+            }
+        },
+        "internal_domain_customeranalytics.TopCustomerRes": {
+            "type": "object",
+            "properties": {
+                "cancellations": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "email": {
+                    "type": "string",
+                    "example": "jane@example.com"
+                },
+                "joined_at": {
+                    "type": "string"
+                },
+                "last_paid_at": {
+                    "type": "string"
+                },
+                "paid_invoices": {
+                    "type": "integer",
+                    "example": 6
+                },
+                "revenue": {
+                    "type": "number",
+                    "example": 45200
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ],
+                    "example": "active"
+                },
+                "user_id": {
+                    "type": "string",
+                    "example": "01928c3e-5b7a-7cc0-9d1e-2f3a4b5c6d7e"
+                }
+            }
+        },
+        "internal_domain_customeranalytics.TopCustomersRes": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_customeranalytics.TopCustomerRes"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/nu3go_internal_shared_pagination.OffsetMeta"
+                }
+            }
+        },
+        "internal_domain_delivery.DeliveryListItemRes": {
+            "type": "object",
+            "properties": {
+                "customer_email": {
+                    "type": "string"
+                },
+                "delivered": {
+                    "type": "boolean"
+                },
+                "delivered_at": {
+                    "type": "string"
+                },
+                "delivery_id": {
+                    "type": "string"
+                },
+                "location_address": {
+                    "type": "string"
+                },
+                "location_id": {
+                    "type": "string"
+                },
+                "plan_type": {
+                    "type": "string"
+                },
+                "subscription_id": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_delivery.ListDeliveriesRes": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_delivery.DeliveryListItemRes"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/nu3go_internal_shared_pagination.OffsetMeta"
+                }
+            }
+        },
+        "internal_domain_delivery.MarkDeliveredReq": {
+            "type": "object",
+            "required": [
+                "delivery_date",
+                "subscription_ids"
+            ],
+            "properties": {
+                "delivery_date": {
+                    "type": "string",
+                    "example": "2026-10-27"
+                },
+                "subscription_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "internal_domain_delivery.MarkDeliveredRes": {
+            "type": "object",
+            "properties": {
+                "already_marked": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "delivery_date": {
+                    "type": "string"
+                },
+                "invalid": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "marked": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "internal_domain_deliveryanalytics.BreakdownItemRes": {
+            "type": "object",
+            "properties": {
+                "cancelled": {
+                    "type": "integer",
+                    "example": 14
+                },
+                "completion_rate_pct": {
+                    "type": "number",
+                    "example": 97.97
+                },
+                "delivered": {
+                    "type": "integer",
+                    "example": 290
+                },
+                "expected": {
+                    "type": "integer",
+                    "example": 300
+                },
+                "key": {
+                    "type": "string",
+                    "example": "FIXED"
+                },
+                "label": {
+                    "type": "string",
+                    "example": "FIXED"
+                },
+                "missed": {
+                    "type": "integer",
+                    "example": 6
+                },
+                "optional_swaps": {
+                    "type": "integer",
+                    "example": 40
+                },
+                "share_pct": {
+                    "type": "number",
+                    "example": 72.5
+                }
+            }
+        },
+        "internal_domain_deliveryanalytics.BreakdownRes": {
+            "type": "object",
+            "properties": {
+                "by": {
+                    "type": "string",
+                    "enum": [
+                        "plan_type",
+                        "package",
+                        "weekday"
+                    ],
+                    "example": "plan_type"
+                },
+                "from": {
+                    "type": "string",
+                    "example": "2026-09-23"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_deliveryanalytics.BreakdownItemRes"
+                    }
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-10-22"
+                }
+            }
+        },
+        "internal_domain_deliveryanalytics.ForecastDayRes": {
+            "type": "object",
+            "properties": {
+                "cancelled": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "custom": {
+                    "type": "integer",
+                    "example": 28
+                },
+                "date": {
+                    "type": "string",
+                    "example": "2026-10-23"
+                },
+                "expected": {
+                    "type": "integer",
+                    "example": 118
+                },
+                "fixed": {
+                    "type": "integer",
+                    "example": 90
+                },
+                "optional_swaps": {
+                    "type": "integer",
+                    "example": 21
+                },
+                "weekday": {
+                    "type": "string",
+                    "example": "FRIDAY"
+                }
+            }
+        },
+        "internal_domain_deliveryanalytics.ForecastRes": {
+            "type": "object",
+            "properties": {
+                "days": {
+                    "type": "integer",
+                    "example": 7
+                },
+                "points": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_deliveryanalytics.ForecastDayRes"
+                    }
+                },
+                "total_expected": {
+                    "type": "integer",
+                    "example": 590
+                }
+            }
+        },
+        "internal_domain_deliveryanalytics.OptionalMealItemRes": {
+            "type": "object",
+            "properties": {
+                "meal_id": {
+                    "type": "string",
+                    "example": "01928c3e-5b7a-7cc0-9d1e-2f3a4b5c6d7e"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Grilled Chicken Bowl"
+                },
+                "requests": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "unique_customers": {
+                    "type": "integer",
+                    "example": 30
+                }
+            }
+        },
+        "internal_domain_deliveryanalytics.OptionalMealsRes": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string",
+                    "example": "2026-09-23"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_deliveryanalytics.OptionalMealItemRes"
+                    }
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-10-22"
+                }
+            }
+        },
+        "internal_domain_deliveryanalytics.SummaryRes": {
+            "type": "object",
+            "properties": {
+                "avg_daily_deliveries": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "cancellation_rate_pct": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "completion_rate_pct": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "delivered": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "expected_deliveries": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "late_marked_pct": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "meal_cancellations": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "missed": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "optional_swaps": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "pending_today": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "range": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.RangeRes"
+                }
+            }
+        },
+        "internal_domain_deliveryanalytics.TrendPointRes": {
+            "type": "object",
+            "properties": {
+                "bucket": {
+                    "type": "string",
+                    "example": "2026-10-05"
+                },
+                "cancelled": {
+                    "type": "integer",
+                    "example": 6
+                },
+                "completion_rate_pct": {
+                    "type": "number",
+                    "example": 96.49
+                },
+                "delivered": {
+                    "type": "integer",
+                    "example": 110
+                },
+                "expected": {
+                    "type": "integer",
+                    "example": 114
+                },
+                "missed": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "optional_swaps": {
+                    "type": "integer",
+                    "example": 18
+                },
+                "scheduled": {
+                    "type": "integer",
+                    "example": 120
+                }
+            }
+        },
+        "internal_domain_deliveryanalytics.TrendRes": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string",
+                    "example": "2026-09-23"
+                },
+                "granularity": {
+                    "enum": [
+                        "day",
+                        "week",
+                        "month"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/nu3go_internal_shared_analytics.Granularity"
+                        }
+                    ],
+                    "example": "week"
+                },
+                "points": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_deliveryanalytics.TrendPointRes"
+                    }
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-10-22"
+                }
+            }
+        },
         "internal_domain_discount.AssignPackagesReq": {
             "type": "object",
             "required": [
@@ -7867,10 +10640,6 @@
                     "type": "string",
                     "example": "uuid"
                 },
-                "emergency_optional_meal_change_id": {
-                    "type": "string",
-                    "example": "uuid"
-                },
                 "meal_id": {
                     "type": "string",
                     "example": "uuid"
@@ -7888,9 +10657,6 @@
                     "$ref": "#/definitions/nu3go_internal_domain_meal.WeekDay"
                 },
                 "emergency_meal_change_id": {
-                    "type": "string"
-                },
-                "emergency_optional_meal_change_id": {
                     "type": "string"
                 },
                 "meal_id": {
@@ -7954,6 +10720,77 @@
                     "maximum": 3,
                     "minimum": 1,
                     "example": 2
+                }
+            }
+        },
+        "internal_domain_optionalmealrequest.CreateOptionalMealRequestReq": {
+            "type": "object",
+            "required": [
+                "delivery_date",
+                "meal_id",
+                "subscription_id"
+            ],
+            "properties": {
+                "delivery_date": {
+                    "type": "string",
+                    "example": "2026-10-27"
+                },
+                "meal_id": {
+                    "type": "string",
+                    "example": "223e4567-e89b-12d3-a456-426614174000"
+                },
+                "subscription_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                }
+            }
+        },
+        "internal_domain_optionalmealrequest.ListOptionalMealRequestsRes": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_optionalmealrequest.OptionalMealRequestRes"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/nu3go_internal_shared_pagination.OffsetMeta"
+                }
+            }
+        },
+        "internal_domain_optionalmealrequest.OptionalMealRequestRes": {
+            "type": "object",
+            "properties": {
+                "cancelled_at": {
+                    "type": "string"
+                },
+                "cancelled_by_user_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "day": {
+                    "type": "string"
+                },
+                "delivery_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "meal_id": {
+                    "type": "string"
+                },
+                "menu_id": {
+                    "type": "string"
+                },
+                "requested_by_user_id": {
+                    "type": "string"
+                },
+                "subscription_id": {
+                    "type": "string"
                 }
             }
         },
@@ -8024,6 +10861,425 @@
             "x-enum-varnames": [
                 "ProviderPayhere"
             ]
+        },
+        "internal_domain_salesanalytics.AtRiskRes": {
+            "type": "object",
+            "properties": {
+                "monthly_value": {
+                    "type": "number",
+                    "example": 13500
+                },
+                "subscriptions": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "internal_domain_salesanalytics.BreakdownItemRes": {
+            "type": "object",
+            "properties": {
+                "customers": {
+                    "type": "integer",
+                    "example": 14
+                },
+                "invoices": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "key": {
+                    "type": "string",
+                    "example": "01928c3e-5b7a-7cc0-9d1e-2f3a4b5c6d7e"
+                },
+                "label": {
+                    "type": "string",
+                    "example": "Keto Weekly"
+                },
+                "revenue": {
+                    "type": "number",
+                    "example": 80000
+                },
+                "share_pct": {
+                    "type": "number",
+                    "example": 66.67
+                }
+            }
+        },
+        "internal_domain_salesanalytics.BreakdownRes": {
+            "type": "object",
+            "properties": {
+                "by": {
+                    "type": "string",
+                    "enum": [
+                        "package",
+                        "plan",
+                        "billing_cycle",
+                        "plan_type"
+                    ],
+                    "example": "package"
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "LKR"
+                },
+                "from": {
+                    "type": "string",
+                    "example": "2026-09-23"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_salesanalytics.BreakdownItemRes"
+                    }
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-10-22"
+                },
+                "total_revenue": {
+                    "type": "number",
+                    "example": 120000
+                }
+            }
+        },
+        "internal_domain_salesanalytics.CheckoutHealthRes": {
+            "type": "object",
+            "properties": {
+                "failed": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "pending": {
+                    "type": "integer",
+                    "example": 6
+                },
+                "success": {
+                    "type": "integer",
+                    "example": 40
+                },
+                "success_rate_pct": {
+                    "type": "number",
+                    "example": 80
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 50
+                }
+            }
+        },
+        "internal_domain_salesanalytics.CohortPeriodRes": {
+            "type": "object",
+            "properties": {
+                "active_customers": {
+                    "type": "integer",
+                    "example": 18
+                },
+                "offset": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "retention_pct": {
+                    "type": "number",
+                    "example": 75
+                },
+                "revenue": {
+                    "type": "number",
+                    "example": 81000
+                }
+            }
+        },
+        "internal_domain_salesanalytics.CohortRowRes": {
+            "type": "object",
+            "properties": {
+                "cohort": {
+                    "type": "string",
+                    "example": "2026-05"
+                },
+                "customers": {
+                    "type": "integer",
+                    "example": 24
+                },
+                "periods": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_salesanalytics.CohortPeriodRes"
+                    }
+                }
+            }
+        },
+        "internal_domain_salesanalytics.CohortsRes": {
+            "type": "object",
+            "properties": {
+                "cohorts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_salesanalytics.CohortRowRes"
+                    }
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "LKR"
+                },
+                "months": {
+                    "type": "integer",
+                    "example": 6
+                }
+            }
+        },
+        "internal_domain_salesanalytics.DiscountItemRes": {
+            "type": "object",
+            "properties": {
+                "avg_discount": {
+                    "type": "number",
+                    "example": 450
+                },
+                "coupon_code": {
+                    "type": "string",
+                    "example": "LAUNCH10"
+                },
+                "discount_id": {
+                    "type": "string",
+                    "example": "01928c3e-5b7a-7cc0-9d1e-2f3a4b5c6d7e"
+                },
+                "discount_total": {
+                    "type": "number",
+                    "example": 11250
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Launch 10%"
+                },
+                "net_revenue": {
+                    "type": "number",
+                    "example": 101250
+                },
+                "percentage": {
+                    "type": "number",
+                    "example": 10
+                },
+                "redemptions": {
+                    "type": "integer",
+                    "example": 25
+                },
+                "unique_customers": {
+                    "type": "integer",
+                    "example": 25
+                }
+            }
+        },
+        "internal_domain_salesanalytics.DiscountsRes": {
+            "type": "object",
+            "properties": {
+                "currency": {
+                    "type": "string",
+                    "example": "LKR"
+                },
+                "from": {
+                    "type": "string",
+                    "example": "2026-09-23"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_salesanalytics.DiscountItemRes"
+                    }
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-10-22"
+                },
+                "total_discount": {
+                    "type": "number",
+                    "example": 11250
+                }
+            }
+        },
+        "internal_domain_salesanalytics.FailureReasonRes": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "Insufficient funds"
+                }
+            }
+        },
+        "internal_domain_salesanalytics.PaymentsRes": {
+            "type": "object",
+            "properties": {
+                "at_risk": {
+                    "$ref": "#/definitions/internal_domain_salesanalytics.AtRiskRes"
+                },
+                "checkout": {
+                    "$ref": "#/definitions/internal_domain_salesanalytics.CheckoutHealthRes"
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "LKR"
+                },
+                "from": {
+                    "type": "string",
+                    "example": "2026-09-23"
+                },
+                "renewals": {
+                    "$ref": "#/definitions/internal_domain_salesanalytics.RenewalHealthRes"
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-10-22"
+                },
+                "top_failure_reasons": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_salesanalytics.FailureReasonRes"
+                    }
+                }
+            }
+        },
+        "internal_domain_salesanalytics.RenewalHealthRes": {
+            "type": "object",
+            "properties": {
+                "attempts": {
+                    "type": "integer",
+                    "example": 120
+                },
+                "failures": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "success_rate_pct": {
+                    "type": "number",
+                    "example": 93.33
+                },
+                "successes": {
+                    "type": "integer",
+                    "example": 112
+                }
+            }
+        },
+        "internal_domain_salesanalytics.RevenuePointRes": {
+            "type": "object",
+            "properties": {
+                "bucket": {
+                    "type": "string",
+                    "example": "2026-10-05"
+                },
+                "cash_collected": {
+                    "type": "number",
+                    "example": 117500
+                },
+                "discounts": {
+                    "type": "number",
+                    "example": 5000
+                },
+                "gross": {
+                    "type": "number",
+                    "example": 125000
+                },
+                "invoices": {
+                    "type": "integer",
+                    "example": 28
+                },
+                "net": {
+                    "type": "number",
+                    "example": 120000
+                },
+                "new_revenue": {
+                    "type": "number",
+                    "example": 40000
+                },
+                "renewal_revenue": {
+                    "type": "number",
+                    "example": 80000
+                },
+                "wallet_credit": {
+                    "type": "number",
+                    "example": 2500
+                }
+            }
+        },
+        "internal_domain_salesanalytics.RevenueRes": {
+            "type": "object",
+            "properties": {
+                "currency": {
+                    "type": "string",
+                    "example": "LKR"
+                },
+                "from": {
+                    "type": "string",
+                    "example": "2026-09-23"
+                },
+                "granularity": {
+                    "enum": [
+                        "day",
+                        "week",
+                        "month"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/nu3go_internal_shared_analytics.Granularity"
+                        }
+                    ],
+                    "example": "week"
+                },
+                "points": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_salesanalytics.RevenuePointRes"
+                    }
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-10-22"
+                }
+            }
+        },
+        "internal_domain_salesanalytics.SummaryRes": {
+            "type": "object",
+            "properties": {
+                "arpu": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "avg_invoice_value": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "cash_collected": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "LKR"
+                },
+                "discounts_given": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "gross_revenue": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "mrr": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "net_revenue": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "paid_invoices": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "range": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.RangeRes"
+                },
+                "refunds_issued": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "renewal_success_rate_pct": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                },
+                "wallet_credit_used": {
+                    "$ref": "#/definitions/nu3go_internal_shared_analytics.StatCard"
+                }
+            }
         },
         "internal_domain_subscription.CheckoutRes": {
             "type": "object",
@@ -8870,6 +12126,83 @@
             "x-enum-varnames": [
                 "RoleAdmin",
                 "RoleCustomer"
+            ]
+        },
+        "nu3go_internal_shared_analytics.Granularity": {
+            "type": "string",
+            "enum": [
+                "day",
+                "week",
+                "month"
+            ],
+            "x-enum-varnames": [
+                "GranularityDay",
+                "GranularityWeek",
+                "GranularityMonth"
+            ]
+        },
+        "nu3go_internal_shared_analytics.RangeRes": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string",
+                    "example": "2026-09-23"
+                },
+                "previous_from": {
+                    "type": "string",
+                    "example": "2026-08-24"
+                },
+                "previous_to": {
+                    "type": "string",
+                    "example": "2026-09-22"
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-10-22"
+                }
+            }
+        },
+        "nu3go_internal_shared_analytics.StatCard": {
+            "type": "object",
+            "properties": {
+                "change_pct": {
+                    "type": "number",
+                    "example": 40
+                },
+                "previous_value": {
+                    "type": "number",
+                    "example": 30
+                },
+                "trend": {
+                    "enum": [
+                        "up",
+                        "down",
+                        "flat"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/nu3go_internal_shared_analytics.Trend"
+                        }
+                    ],
+                    "example": "up"
+                },
+                "value": {
+                    "type": "number",
+                    "example": 42
+                }
+            }
+        },
+        "nu3go_internal_shared_analytics.Trend": {
+            "type": "string",
+            "enum": [
+                "up",
+                "down",
+                "flat"
+            ],
+            "x-enum-varnames": [
+                "TrendUp",
+                "TrendDown",
+                "TrendFlat"
             ]
         },
         "nu3go_internal_shared_apperr.AppError": {

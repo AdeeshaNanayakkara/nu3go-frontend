@@ -3,25 +3,38 @@
 import {
   Utensils,
   CalendarCheck,
-  Zap,
+  Wallet,
   CreditCard,
   TrendingUp,
   Award,
 } from "lucide-react";
+import { useMemo } from "react";
 
 interface KpiMetricCardsProps {
   totalMealsDelivered?: number;
   remainingDays?: number;
-  dailyProteinAvg?: number;
+  walletBalance?: number;
+  dailyProteinAvg?: number; // legacy prop
   totalInvoicesCount?: number;
+  isLoading?: boolean;
 }
 
 export function KpiMetricCards({
   totalMealsDelivered = 12,
   remainingDays = 8,
-  dailyProteinAvg = 42,
+  walletBalance = 0,
+  dailyProteinAvg,
   totalInvoicesCount = 3,
+  isLoading = false,
 }: KpiMetricCardsProps) {
+  const formattedBalance = useMemo(() => {
+    const val = Number(walletBalance ?? 0);
+    if (isNaN(val)) return "LKR 0";
+    return val % 1 === 0
+      ? `LKR ${val.toLocaleString("en-US")}`
+      : `LKR ${val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }, [walletBalance]);
+
   const cards = [
     {
       title: "Meals Delivered",
@@ -42,10 +55,10 @@ export function KpiMetricCards({
       border: "border-blue-200",
     },
     {
-      title: "Avg. Protein Target",
-      value: `${dailyProteinAvg}g`,
-      subtitle: "Per athletic breakfast",
-      icon: Zap,
+      title: "Wallet Balance",
+      value: formattedBalance,
+      subtitle: "Available store credit",
+      icon: Wallet,
       bg: "bg-amber-50",
       accent: "text-amber-700",
       border: "border-amber-200",

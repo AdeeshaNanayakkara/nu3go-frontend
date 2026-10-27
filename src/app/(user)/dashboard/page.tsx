@@ -10,6 +10,11 @@ import {
 import { invoiceService, type InvoiceItem } from "@/services/api/invoice.service";
 import { locationService, type LocationItem } from "@/services/api/location.service";
 import { packageService, type PublicPackage } from "@/services/api/package.service";
+import {
+  subscriptionPlanService,
+  type SubscriptionPlan,
+} from "@/services/api/subscription-plan.service";
+import { walletService } from "@/services/api/wallet.service";
 import { ActivePlanCard } from "@/components/dashboard/active-plan-card";
 import { NextMealCard } from "@/components/dashboard/next-meal-card";
 import { KpiMetricCards } from "@/components/dashboard/kpi-metric-cards";
@@ -30,6 +35,8 @@ export default function CustomerDashboardPage() {
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [packages, setPackages] = useState<PublicPackage[]>([]);
+  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
 
   // Modal for cancelling subscription
@@ -42,10 +49,12 @@ export default function CustomerDashboardPage() {
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [allSubs, locsData, pkgsData] = await Promise.all([
+      const [allSubs, locsData, pkgsData, plansData, balanceData] = await Promise.all([
         subscriptionService.getSubscriptions(),
         locationService.getLocations().catch(() => []),
         packageService.getPublicPackages().catch(() => []),
+        subscriptionPlanService.getPublicSubscriptionPlans().catch(() => []),
+        walletService.getBalance().catch(() => 0),
       ]);
 
       // Only filter active subscriptions
@@ -60,6 +69,8 @@ export default function CustomerDashboardPage() {
       setInvoices(activeInvoices);
       setLocations(locsData || []);
       setPackages(pkgsData || []);
+      setSubscriptionPlans(plansData || []);
+      setWalletBalance(balanceData ?? 0);
     } catch (err) {
       console.error("[Dashboard] Error loading data:", err);
     } finally {
@@ -74,24 +85,143 @@ export default function CustomerDashboardPage() {
   // Primary active subscription
   const activeSubscription = subscriptions[selectedIndex] || subscriptions[0] || null;
 
-  // Resolve package & plan details
-  const getPackageName = (sub: SubscriptionResItem | null) => {
-    if (!sub) return "Chef-Crafted Meal Plan";
-    if (sub.package_name) return sub.package_name;
-    if (sub.package?.name) return sub.package.name;
-    if (sub.package_id) {
-      const found = packages.find((p) => p.id === sub.package_id);
-      if (found?.name) return found.name;
+  // Resolve package details
+  const getPackageDetails = (sub: SubscriptionResItem | null) => {
+    if (!sub) return { id: "", name: "Chef-Crafted Meal Plan" };
+    if (sub.package_name) return { id: sub.package_id || "", name: sub.package_name };
+    if (sub.package?.name) return { id: sub.package.id || sub.package_id || "", name: sub.package.name };
+
+    const pkgId = sub.package_id || (sub as any).packageId;
+    if (pkgId) {
+      const found = packages.find((p) => p.id === pkgId);
+      if (found?.name) return { id: found.id, name: found.name };
     }
-    return "Chef-Crafted Meal Plan";
+
+    // Try finding which package contains this plan
+    const planId = sub.subscription_plan_id || (sub as any).plan_id || (sub as any).planId;
+    if (planId) {
+      const foundByPlan = packages.find((p) =>
+        p.plans?.some((pl) => pl.plan_id === planId || (pl as any).id === planId)
+      );
+      if (foundByPlan?.name) return { id: foundByPlan.id, name: foundByPlan.name };
+    }
+
+    return { id: "", name: "Chef-Crafted Meal Plan" };
   };
 
-  const getPlanLabel = (sub: SubscriptionResItem | null) => {
-    if (!sub) return "Monthly (20 Weekdays)";
-    if (sub.plan_name) return sub.plan_name;
-    if (sub.plan?.name) return sub.plan.name;
-    return "Monthly (20 Weekdays)";
+  const getPackageName = (sub: SubscriptionResItem | null) => getPackageDetails(sub).name;
+
+  // Resolve plan details
+  const getPlanDetails = (sub: SubscriptionResItem | null) => {
+    if (!sub) {
+      return {
+        name: "Monthly Plan",
+        durationLabel: "20 Weekdays",
+        billingCycle: "MONTHLY",
+        durationLimit: 20,
+        type: "Fixed Duration",
+        fullLabel: "Monthly (20 Weekdays)",
+      };
+    }
+
+    if (sub.plan_name) {
+      return {
+        name: sub.plan_name,
+        durationLabel: sub.plan_name,
+        billingCycle: "MONTHLY",
+        durationLimit: 20,
+        type: "Fixed Duration",
+        fullLabel: sub.plan_name,
+      };
+    }
+    if (sub.plan?.name) {
+      return {
+        name: sub.plan.name,
+        durationLabel: sub.plan.name,
+        billingCycle: "MONTHLY",
+        durationLimit: 20,
+        type: "Fixed Duration",
+        fullLabel: sub.plan.name,
+      };
+    }
+
+    const planId = sub.subscription_plan_id || (sub as any).plan_id || (sub as any).planId;
+    const pkgId = sub.package_id || (sub as any).packageId;
+
+    // 1. Matched package plans
+    if (pkgId) {
+      const foundPkg = packages.find((p) => p.id === pkgId);
+      if (foundPkg?.plans) {
+        const found = foundPkg.plans.find(
+          (pl) => pl.plan_id === planId || (pl as any).id === planId
+        );
+        if (found) {
+          const duration = found.duration_limit
+            ? `${found.duration_limit} Weekdays`
+            : found.billing_cycle || "";
+          return {
+            name: found.name,
+            durationLabel: duration,
+            billingCycle: found.billing_cycle || "MONTHLY",
+            durationLimit: found.duration_limit || 20,
+            type: found.type || "Fixed Duration",
+            fullLabel: duration ? `${found.name} (${duration})` : found.name,
+          };
+        }
+      }
+    }
+
+    // 2. All package plans
+    for (const pkg of packages) {
+      if (pkg.plans) {
+        const found = pkg.plans.find(
+          (pl) => pl.plan_id === planId || (pl as any).id === planId
+        );
+        if (found) {
+          const duration = found.duration_limit
+            ? `${found.duration_limit} Weekdays`
+            : found.billing_cycle || "";
+          return {
+            name: found.name,
+            durationLabel: duration,
+            billingCycle: found.billing_cycle || "MONTHLY",
+            durationLimit: found.duration_limit || 20,
+            type: found.type || "Fixed Duration",
+            fullLabel: duration ? `${found.name} (${duration})` : found.name,
+          };
+        }
+      }
+    }
+
+    // 3. Public subscription plans
+    if (planId && subscriptionPlans.length > 0) {
+      const found = subscriptionPlans.find((sp) => sp.id === planId);
+      if (found) {
+        const duration = found.duration_limit
+          ? `${found.duration_limit} Weekdays`
+          : found.billing_cycle || "";
+        return {
+          name: found.name,
+          durationLabel: duration,
+          billingCycle: found.billing_cycle || "MONTHLY",
+          durationLimit: found.duration_limit || 20,
+          type: found.type || "Fixed Duration",
+          fullLabel: duration ? `${found.name} (${duration})` : found.name,
+        };
+      }
+    }
+
+    return {
+      name: "Standard Meal Plan",
+      durationLabel: "20 Weekdays",
+      billingCycle: "MONTHLY",
+      durationLimit: 20,
+      type: "Fixed Duration",
+      fullLabel: "Monthly (20 Weekdays)",
+    };
   };
+
+  const getPlanLabel = (sub: SubscriptionResItem | null) => getPlanDetails(sub).fullLabel;
 
   // Default address
   const defaultAddress =
@@ -214,20 +344,25 @@ export default function CustomerDashboardPage() {
               <span className="text-xs font-semibold text-slate-500 shrink-0">
                 Active Subscriptions ({subscriptions.length}):
               </span>
-              {subscriptions.map((sub, idx) => (
-                <button
-                  key={sub.id}
-                  type="button"
-                  onClick={() => setSelectedIndex(idx)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-oswald font-bold uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
-                    selectedIndex === idx
-                      ? "bg-[#36D068] text-black shadow-md shadow-[#36D068]/20"
-                      : "bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs"
-                  }`}
-                >
-                  {getPackageName(sub)}
-                </button>
-              ))}
+              {subscriptions.map((sub, idx) => {
+                const pkgName = getPackageName(sub);
+                const planInfo = getPlanDetails(sub);
+                return (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() => setSelectedIndex(idx)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-oswald font-bold uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
+                      selectedIndex === idx
+                        ? "bg-[#36D068] text-black shadow-md shadow-[#36D068]/20"
+                        : "bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs"
+                    }`}
+                  >
+                    <span>{pkgName}</span>
+                    <span className="opacity-70 font-normal ml-1">• {planInfo.name}</span>
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <div />
@@ -258,7 +393,7 @@ export default function CustomerDashboardPage() {
                 }`}
               >
                 <CalendarIcon className="w-3.5 h-3.5 text-[#15803D]" />
-                <span>Delivery Calendar</span>
+                <span>Meal Cancellations and Optional Meal Requests</span>
               </button>
             </div>
           )}
@@ -269,6 +404,7 @@ export default function CustomerDashboardPage() {
           <SubscriptionCalendarView
             subscription={activeSubscription}
             packageName={getPackageName(activeSubscription)}
+            planName={getPlanDetails(activeSubscription).name}
             planDurationLabel={getPlanLabel(activeSubscription)}
             deliveryAddress={defaultAddress}
             onBackToOverview={() => setViewTab("card")}
@@ -277,7 +413,10 @@ export default function CustomerDashboardPage() {
           <ActivePlanCard
             subscription={activeSubscription}
             packageName={getPackageName(activeSubscription)}
+            planName={getPlanDetails(activeSubscription).name}
             planDurationLabel={getPlanLabel(activeSubscription)}
+            planType={getPlanDetails(activeSubscription).type}
+            billingCycle={getPlanDetails(activeSubscription).billingCycle}
             totalDays={totalPlanDays}
             daysDelivered={daysDeliveredCount}
             deliveryAddress={defaultAddress}
@@ -295,8 +434,9 @@ export default function CustomerDashboardPage() {
       <KpiMetricCards
         totalMealsDelivered={daysDeliveredCount}
         remainingDays={remainingDaysCount}
-        dailyProteinAvg={42}
+        walletBalance={walletBalance}
         totalInvoicesCount={totalInvoicesCount}
+        isLoading={isLoading}
       />
 
       {/* ─── 4. Two-Column Showcase (Tomorrow's Meal + Recent Invoices) ─── */}

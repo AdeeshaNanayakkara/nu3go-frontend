@@ -31,10 +31,19 @@ import {
   mealCancellationService,
   type MealCancellationRes,
 } from "@/services/api/meal-cancellation.service";
+import {
+  optionalMealRequestService,
+  type OptionalMealRequestRes,
+} from "@/services/api/optional-meal-request.service";
+import {
+  packageService,
+  type PublicPackage,
+} from "@/services/api/package.service";
 
 export interface SubscriptionCalendarViewProps {
   subscription: SubscriptionResItem | null;
   packageName?: string;
+  planName?: string;
   planDurationLabel?: string;
   deliveryAddress?: string;
   onBackToOverview?: () => void;
@@ -97,6 +106,7 @@ const PRESET_REASONS = [
 export function SubscriptionCalendarView({
   subscription,
   packageName = "Chef-Crafted Meal Plan",
+  planName = "Monthly Plan",
   planDurationLabel = "Monthly (20 Weekdays)",
   deliveryAddress = "Primary Address",
   onBackToOverview,
@@ -110,22 +120,38 @@ export function SubscriptionCalendarView({
   // Cancellation State
   const [cancellations, setCancellations] = useState<MealCancellationRes[]>([]);
   const [isLoadingCancellations, setIsLoadingCancellations] = useState(false);
-  const [cancelDialogDate, setCancelDialogDate] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [selectedChip, setSelectedChip] = useState<string | null>(null);
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
-  const [cancelSuccessMsg, setCancelSuccessMsg] = useState<string | null>(null);
+
+  // Date Action Popup State (supports Cancel Meal & Optional Meal Request)
+  const [actionModalDate, setActionModalDate] = useState<string | null>(null);
+  const [actionModalView, setActionModalView] = useState<"choose" | "cancel" | "optional">("choose");
+
+  // Optional Meal Requests State
+  const [optionalRequests, setOptionalRequests] = useState<OptionalMealRequestRes[]>([]);
+  const [isLoadingOptionalRequests, setIsLoadingOptionalRequests] = useState(false);
+  const [isSubmittingOptional, setIsSubmittingOptional] = useState(false);
+  const [optionalError, setOptionalError] = useState<string | null>(null);
+
+  // Package & Menus State
+  const [packageDetail, setPackageDetail] = useState<PublicPackage | null>(null);
+  const [isLoadingPackage, setIsLoadingPackage] = useState(false);
+
+  // Global Feedback Alert Message (for both cancellations & optional meal requests)
+  const [feedbackSuccessMsg, setFeedbackSuccessMsg] = useState<string | null>(null);
 
   const handleBack = onBackToOverview || onClose;
 
-  // Close reason prompt on ESC key
+  // Close action modal on ESC key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (cancelDialogDate) {
-          setCancelDialogDate(null);
+        if (actionModalDate) {
+          setActionModalDate(null);
           setCancelError(null);
+          setOptionalError(null);
         } else if (handleBack) {
           handleBack();
         }
@@ -133,7 +159,7 @@ export function SubscriptionCalendarView({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [cancelDialogDate, handleBack]);
+  }, [actionModalDate, handleBack]);
 
   // Fetch cancellations for this subscription
   useEffect(() => {
@@ -160,6 +186,57 @@ export function SubscriptionCalendarView({
     };
   }, [subscription?.id]);
 
+  // Fetch optional meal requests for this subscription
+  useEffect(() => {
+    if (!subscription?.id) return;
+    let isMounted = true;
+    setIsLoadingOptionalRequests(true);
+
+    optionalMealRequestService
+      .getSubscriptionRequests(subscription.id)
+      .then((items) => {
+        if (isMounted) {
+          setOptionalRequests(items || []);
+        }
+      })
+      .catch((err) => {
+        console.warn("[SubscriptionCalendarView] Error loading optional meal requests:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingOptionalRequests(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [subscription?.id]);
+
+  // Fetch package details (menus and meal slots) for this subscription
+  const resolvedPackageId = subscription?.package_id || subscription?.package?.id;
+  useEffect(() => {
+    if (!resolvedPackageId) return;
+    let isMounted = true;
+    setIsLoadingPackage(true);
+
+    packageService
+      .getPublicPackageDetail(resolvedPackageId)
+      .then((pkg) => {
+        if (isMounted && pkg) {
+          setPackageDetail(pkg);
+        }
+      })
+      .catch((err) => {
+        console.warn("[SubscriptionCalendarView] Error loading package detail:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingPackage(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [resolvedPackageId]);
+
   // Map of cancellations keyed by YYYY-MM-DD
   const cancellationsMap = useMemo(() => {
     const map = new Map<string, MealCancellationRes>();
@@ -171,6 +248,18 @@ export function SubscriptionCalendarView({
     }
     return map;
   }, [cancellations]);
+
+  // Map of active optional meal requests keyed by YYYY-MM-DD
+  const optionalRequestsMap = useMemo(() => {
+    const map = new Map<string, OptionalMealRequestRes>();
+    for (const req of optionalRequests) {
+      if (req.delivery_date && !req.cancelled_at) {
+        const ymd = req.delivery_date.split("T")[0];
+        map.set(ymd, req);
+      }
+    }
+    return map;
+  }, [optionalRequests]);
 
   // Today reference
   const today = useMemo(() => {
@@ -351,8 +440,10 @@ export function SubscriptionCalendarView({
       initialSelect = formatYMD(mon);
     }
     setSelectedDateStr(initialSelect);
-    setCancelSuccessMsg(null);
+    setFeedbackSuccessMsg(null);
+    setActionModalDate(null);
     setCancelError(null);
+    setOptionalError(null);
   }, [subscription?.id, today, todayYMD]);
 
   const year = currentMonthDate.getFullYear();
@@ -517,15 +608,62 @@ export function SubscriptionCalendarView({
     return weeks;
   }, [allPlanDates]);
 
-  // Open Cancel Dialog for a Date
-  const handleOpenCancelDialog = (dateStr: string) => {
-    setCancelDialogDate(dateStr);
+  // Resolve available optional meal for a specific date from package menus
+  const getOptionalMealForDate = (dateStr: string) => {
+    const availableMenus = packageDetail?.menus || (subscription?.package as any)?.menus;
+    if (!availableMenus || !Array.isArray(availableMenus) || availableMenus.length === 0) return null;
+    const parsed = parseDateYMD(dateStr);
+    if (!parsed) return null;
+
+    const dow = parsed.getDay();
+    const dayNames: ("SUNDAY" | "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY")[] = [
+      "SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"
+    ];
+    const weekdayName = dayNames[dow];
+    if (dow < 1 || dow > 5) return null;
+
+    // Delivery index among scheduled delivery weekdays in plan
+    const deliveryDays = allPlanDates.filter((d) => d.isDeliveryDay);
+    const deliveryIndex = deliveryDays.findIndex((d) => d.dateStr === dateStr);
+    const weekIndex = deliveryIndex >= 0 ? Math.floor(deliveryIndex / 5) : 0;
+
+    const menus = [...availableMenus].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
+    const activeMenu = menus[weekIndex % menus.length] || menus[0];
+
+    if (!activeMenu?.meals || !Array.isArray(activeMenu.meals)) return null;
+    const slot = activeMenu.meals.find(
+      (m: any) => m.day && String(m.day).toUpperCase() === weekdayName
+    );
+    if (!slot) return null;
+
+    const optMealObj = slot.optional_meal;
+    const optMealId = optMealObj?.id || slot.optional_meal_id;
+    if (optMealId) {
+      return {
+        id: String(optMealId),
+        name: optMealObj?.name || "Chef's Daily Alternative",
+        description: optMealObj?.description,
+        image_url: optMealObj?.image_url,
+      };
+    }
+    return null;
+  };
+
+  // Open Date Action Dialog (defaulting to choose between Cancel Meal & Optional Meal Request)
+  const handleOpenActionModal = (
+    dateStr: string,
+    initialView: "choose" | "cancel" | "optional" = "choose"
+  ) => {
+    setActionModalDate(dateStr);
+    setActionModalView(initialView);
+    setSelectedDateStr(dateStr);
     setCancelReason("");
     setSelectedChip(null);
     setCancelError(null);
+    setOptionalError(null);
   };
 
-  // Select quick reason chip
+  // Select quick reason chip for cancellation
   const handleSelectChip = (chip: { label: string; value: string }) => {
     setSelectedChip(chip.label);
     if (chip.value !== "Other") {
@@ -537,7 +675,7 @@ export function SubscriptionCalendarView({
 
   // Submit cancellation to POST /api/v1/meal-cancellations
   const handleConfirmCancelMeal = async () => {
-    if (!cancelDialogDate || !subscription?.id) {
+    if (!actionModalDate || !subscription?.id) {
       setCancelError("Subscription details or date are missing.");
       return;
     }
@@ -554,14 +692,14 @@ export function SubscriptionCalendarView({
     try {
       const result = await mealCancellationService.cancelMeal({
         subscription_id: subscription.id,
-        delivery_date: cancelDialogDate,
+        delivery_date: actionModalDate,
         reason: finalReason,
       });
 
       const newRecord: MealCancellationRes = {
         id: result?.id || `cancel-${Date.now()}`,
         subscription_id: subscription.id,
-        delivery_date: cancelDialogDate,
+        delivery_date: actionModalDate,
         reason: finalReason,
         refund_amount: result?.refund_amount,
         refund_tier: result?.refund_tier,
@@ -569,15 +707,15 @@ export function SubscriptionCalendarView({
       };
 
       setCancellations((prev) => [
-        ...prev.filter((c) => c.delivery_date.split("T")[0] !== cancelDialogDate),
+        ...prev.filter((c) => c.delivery_date.split("T")[0] !== actionModalDate),
         newRecord,
       ]);
 
-      const parsedCancelDate = parseDateYMD(cancelDialogDate);
-      setCancelSuccessMsg(
-        `Meal delivery for ${parsedCancelDate ? formatDisplayDate(parsedCancelDate) : cancelDialogDate} was cancelled successfully.`
+      const parsedCancelDate = parseDateYMD(actionModalDate);
+      setFeedbackSuccessMsg(
+        `Meal delivery for ${parsedCancelDate ? formatDisplayDate(parsedCancelDate) : actionModalDate} was cancelled successfully.`
       );
-      setCancelDialogDate(null);
+      setActionModalDate(null);
       setCancelReason("");
       setSelectedChip(null);
     } catch (err: any) {
@@ -591,6 +729,108 @@ export function SubscriptionCalendarView({
       setCancelError(msg);
     } finally {
       setIsSubmittingCancel(false);
+    }
+  };
+
+  // Submit optional meal request to POST /api/v1/optional-meal-requests
+  const handleRequestOptionalMeal = async (mealId: string) => {
+    if (!actionModalDate || !subscription?.id) {
+      setOptionalError("Subscription details or date are missing.");
+      return;
+    }
+
+    if (!mealId) {
+      setOptionalError("Meal ID is missing for this optional meal request.");
+      return;
+    }
+
+    const cleanDate = actionModalDate.split("T")[0].trim();
+
+    setIsSubmittingOptional(true);
+    setOptionalError(null);
+
+    try {
+      const result = await optionalMealRequestService.createRequest({
+        subscription_id: subscription.id,
+        delivery_date: cleanDate,
+        meal_id: mealId,
+      });
+
+      const newRecord: OptionalMealRequestRes = {
+        id: result?.id || `opt-${Date.now()}`,
+        subscription_id: subscription.id,
+        delivery_date: cleanDate,
+        meal_id: mealId,
+        created_at: result?.created_at || new Date().toISOString(),
+      };
+
+      setOptionalRequests((prev) => [
+        ...prev.filter((r) => r.delivery_date.split("T")[0] !== cleanDate),
+        newRecord,
+      ]);
+
+      const parsedDate = parseDateYMD(cleanDate);
+      setFeedbackSuccessMsg(
+        `Optional meal requested successfully for ${parsedDate ? formatDisplayDate(parsedDate) : cleanDate}.`
+      );
+      setActionModalDate(null);
+
+      // Re-sync with backend in background to ensure all fields are fresh
+      optionalMealRequestService
+        .getSubscriptionRequests(subscription.id)
+        .then((items) => {
+          if (items && items.length > 0) {
+            setOptionalRequests(items);
+          }
+        })
+        .catch(() => {});
+    } catch (err: any) {
+      console.error("[SubscriptionCalendarView] Optional meal request error:", err);
+      const msg =
+        err?.message ||
+        err?.error?.message ||
+        err?.response?.data?.error?.message ||
+        err?.response?.data?.message ||
+        "Could not submit optional meal request. Please try again.";
+      setOptionalError(msg);
+    } finally {
+      setIsSubmittingOptional(false);
+    }
+  };
+
+  // Cancel an existing optional meal request via POST /api/v1/optional-meal-requests/{id}/cancel
+  const handleCancelOptionalMeal = async (requestId: string) => {
+    if (!actionModalDate) return;
+    setIsSubmittingOptional(true);
+    setOptionalError(null);
+
+    try {
+      await optionalMealRequestService.cancelRequest(requestId);
+
+      setOptionalRequests((prev) =>
+        prev.map((r) =>
+          r.id === requestId
+            ? { ...r, cancelled_at: new Date().toISOString() }
+            : r
+        )
+      );
+
+      const parsedDate = parseDateYMD(actionModalDate);
+      setFeedbackSuccessMsg(
+        `Optional meal request for ${parsedDate ? formatDisplayDate(parsedDate) : actionModalDate} cancelled. Standard meal restored.`
+      );
+      setActionModalDate(null);
+    } catch (err: any) {
+      console.error("[SubscriptionCalendarView] Cancel optional request error:", err);
+      const msg =
+        err?.message ||
+        err?.error?.message ||
+        err?.response?.data?.error?.message ||
+        err?.response?.data?.message ||
+        "Could not cancel optional meal request.";
+      setOptionalError(msg);
+    } finally {
+      setIsSubmittingOptional(false);
     }
   };
 
@@ -622,12 +862,14 @@ export function SubscriptionCalendarView({
               )}
             </div>
 
-            <h2 className="font-oswald text-2xl sm:text-3xl font-black uppercase text-white tracking-tight leading-tight">
-              {packageName}
-            </h2>
-            <p className="text-xs sm:text-sm text-white/80 font-normal">
-              {planDurationLabel} • Scheduled Delivery Calendar (Start to Due Date)
-            </p>
+            <div className="space-y-1">
+              <h2 className="font-oswald text-2xl sm:text-3xl font-black uppercase text-white tracking-tight leading-tight">
+                {packageName}
+              </h2>
+              <p className="text-xs sm:text-sm text-white/80 font-normal">
+                {planName || planDurationLabel} • Scheduled Weekday Delivery Calendar (Start to Due Date)
+              </p>
+            </div>
           </div>
 
           {/* Back to Plan Summary Action */}
@@ -714,15 +956,15 @@ export function SubscriptionCalendarView({
       </div>
 
       {/* ─── Success Feedback Alert ─── */}
-      {cancelSuccessMsg && (
+      {feedbackSuccessMsg && (
         <div className="mx-5 sm:mx-6 mt-4 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300/80 text-emerald-900 flex items-center justify-between gap-3 animate-in fade-in duration-200">
           <div className="flex items-center gap-2.5 text-xs sm:text-sm font-medium">
             <CheckCircle2 className="w-4 h-4 text-[#15803D] shrink-0" />
-            <span>{cancelSuccessMsg}</span>
+            <span>{feedbackSuccessMsg}</span>
           </div>
           <button
             type="button"
-            onClick={() => setCancelSuccessMsg(null)}
+            onClick={() => setFeedbackSuccessMsg(null)}
             className="text-emerald-700 hover:text-emerald-900 p-1 rounded-lg hover:bg-emerald-100 cursor-pointer"
           >
             <X className="w-4 h-4" />
@@ -847,6 +1089,14 @@ export function SubscriptionCalendarView({
                   const isDue = cell.dateStr === dueYMD;
                   const isCancelled = Boolean(planItem?.isCancelled);
                   const isPast = planItem?.status === "delivered";
+                  const hasOptionalReq = optionalRequestsMap.has(cell.dateStr);
+                  const isNotDeliveredDate =
+                    Boolean(subscription?.id) &&
+                    cell.isCurrentMonth &&
+                    isInsideCycle &&
+                    isDelivery &&
+                    !isCancelled &&
+                    !isPast;
 
                   let cellBg = "bg-white/40 text-slate-400 border border-transparent";
 
@@ -854,6 +1104,8 @@ export function SubscriptionCalendarView({
                     cellBg = "opacity-30 bg-slate-100/50 text-slate-400 border border-transparent";
                   } else if (isCancelled) {
                     cellBg = "bg-rose-50/90 hover:bg-rose-100 text-rose-800 border border-rose-300/90 shadow-2xs font-semibold";
+                  } else if (hasOptionalReq) {
+                    cellBg = "bg-purple-50/90 hover:bg-purple-100 text-purple-900 border border-purple-300 shadow-2xs font-semibold";
                   } else if (isDelivery) {
                     if (isToday) {
                       cellBg = "bg-emerald-50 text-neutral-900 border-2 border-[#36D068] shadow-md shadow-[#36D068]/20 ring-2 ring-[#36D068]/20 font-black";
@@ -876,7 +1128,12 @@ export function SubscriptionCalendarView({
                     <button
                       key={`${cell.dateStr}-${idx}`}
                       type="button"
-                      onClick={() => setSelectedDateStr(cell.dateStr)}
+                      onClick={() => {
+                        setSelectedDateStr(cell.dateStr);
+                        if (isNotDeliveredDate) {
+                          handleOpenActionModal(cell.dateStr, "choose");
+                        }
+                      }}
                       className={`h-14 sm:h-16 rounded-2xl p-1 sm:p-1.5 transition-all flex flex-col justify-between items-center relative cursor-pointer ${cellBg}`}
                     >
                       <div className="w-full flex items-center justify-between">
@@ -894,6 +1151,8 @@ export function SubscriptionCalendarView({
 
                         {isCancelled ? (
                           <CalendarX className="w-3 h-3 text-rose-600" />
+                        ) : hasOptionalReq ? (
+                          <Sparkles className="w-3 h-3 text-purple-600" />
                         ) : isDelivery ? (
                           <span>
                             {isPast ? (
@@ -911,6 +1170,10 @@ export function SubscriptionCalendarView({
                         {isCancelled ? (
                           <span className="font-oswald text-[8px] sm:text-[9px] font-bold uppercase px-1 py-0.2 rounded-md bg-rose-600 text-white">
                             Cancelled
+                          </span>
+                        ) : hasOptionalReq ? (
+                          <span className="font-oswald text-[8px] sm:text-[9px] font-bold uppercase px-1 py-0.2 rounded-md bg-purple-600 text-white flex items-center gap-0.5">
+                            <Sparkles className="w-2 h-2 text-amber-300" /> Optional
                           </span>
                         ) : isStart ? (
                           <span className="font-oswald text-[8px] sm:text-[9px] font-bold uppercase px-1 py-0.2 rounded-md bg-[#15803D] text-white">
@@ -952,6 +1215,10 @@ export function SubscriptionCalendarView({
                   <span>Upcoming ({remainingDaysCount})</span>
                 </div>
                 <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-md bg-purple-100 border border-purple-300 inline-block" />
+                  <span className="text-purple-700 font-medium">Optional Meal</span>
+                </div>
+                <div className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-md bg-rose-100 border border-rose-300 inline-block" />
                   <span className="text-rose-700 font-medium">Cancelled ({cancelledDaysCount})</span>
                 </div>
@@ -968,6 +1235,8 @@ export function SubscriptionCalendarView({
                 className={`p-4 sm:p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all duration-200 ${
                   selectedInfo.isCancelled
                     ? "bg-rose-50/70 border-rose-200 text-rose-950"
+                    : optionalRequestsMap.has(selectedInfo.dateStr)
+                    ? "bg-purple-50/70 border-purple-200 text-purple-950"
                     : "bg-slate-50 border-slate-200 text-slate-900"
                 }`}
               >
@@ -980,6 +1249,10 @@ export function SubscriptionCalendarView({
                     {selectedInfo.isCancelled ? (
                       <span className="px-2.5 py-0.5 rounded-full bg-rose-600 text-white font-oswald text-[11px] font-bold uppercase tracking-wider inline-flex items-center gap-1">
                         <Ban className="w-3 h-3" /> Meal Delivery Cancelled
+                      </span>
+                    ) : optionalRequestsMap.has(selectedInfo.dateStr) ? (
+                      <span className="px-2.5 py-0.5 rounded-full bg-purple-600 text-white font-oswald text-[11px] font-bold uppercase tracking-wider inline-flex items-center gap-1 shadow-2xs">
+                        <Sparkles className="w-3 h-3 text-amber-300" /> Optional Meal Requested
                       </span>
                     ) : selectedInfo.planItem?.isDeliveryDay ? (
                       selectedInfo.planItem.status === "delivered" ? (
@@ -1058,11 +1331,11 @@ export function SubscriptionCalendarView({
                   ) : selectedInfo.isCancellable ? (
                     <button
                       type="button"
-                      onClick={() => handleOpenCancelDialog(selectedInfo.dateStr)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 hover:border-rose-400 font-oswald text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-2xs hover:shadow active:scale-95"
+                      onClick={() => handleOpenActionModal(selectedInfo.dateStr, "choose")}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white font-oswald text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm hover:shadow active:scale-95"
                     >
-                      <CalendarX className="w-4 h-4 text-rose-600" />
-                      <span>Cancel Meal Delivery</span>
+                      <Utensils className="w-4 h-4 text-[#36D068]" />
+                      <span>Meal Options (Cancel / Optional)</span>
                     </button>
                   ) : selectedInfo.isPast ? (
                     <span className="text-xs font-oswald font-bold uppercase tracking-wide text-[#15803D] bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
@@ -1178,6 +1451,10 @@ export function SubscriptionCalendarView({
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-600 text-white font-oswald text-[10px] font-bold uppercase tracking-wider">
                                 <Ban className="w-3 h-3" /> Cancelled
                               </span>
+                            ) : optionalRequestsMap.has(d.dateStr) ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-600 text-white font-oswald text-[10px] font-bold uppercase tracking-wider">
+                                <Sparkles className="w-3 h-3 text-amber-300" /> Optional
+                              </span>
                             ) : isPast ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-[#15803D] font-oswald text-[10px] font-bold uppercase tracking-wider">
                                 <Check className="w-3 h-3" /> Delivered
@@ -1195,11 +1472,12 @@ export function SubscriptionCalendarView({
                             {isCancellable && (
                               <button
                                 type="button"
-                                onClick={() => handleOpenCancelDialog(d.dateStr)}
-                                className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                                title="Cancel meal delivery for this date"
+                                onClick={() => handleOpenActionModal(d.dateStr, "choose")}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-neutral-900 hover:text-white text-slate-700 transition-all text-[11px] font-oswald font-bold uppercase tracking-wider cursor-pointer border border-slate-200"
+                                title="Manage delivery options for this date"
                               >
-                                <CalendarX className="w-4 h-4" />
+                                <Utensils className="w-3 h-3 text-[#15803D]" />
+                                <span>Options</span>
                               </button>
                             )}
                           </div>
@@ -1235,29 +1513,47 @@ export function SubscriptionCalendarView({
         )}
       </div>
 
-      {/* ─── CANCELLATION REASON PROMPT (Contained Within Card) ─── */}
-      {cancelDialogDate && (
+      {/* ─── DATE ACTION MODAL (Cancel Meal & Optional Meal Request) ─── */}
+      {actionModalDate && (
         <div className="absolute inset-0 z-40 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div
-            className="w-full max-w-lg bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 space-y-5 animate-in zoom-in-95 duration-150 font-poppins"
+            className="w-full max-w-lg bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 space-y-5 animate-in zoom-in-95 duration-150 font-poppins max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Dialog Header */}
-            <div className="flex items-start justify-between gap-3">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
-                  <CalendarX className="w-5 h-5" />
+                <div
+                  className={`w-10 h-10 rounded-2xl border flex items-center justify-center shrink-0 ${
+                    actionModalView === "cancel"
+                      ? "bg-rose-50 border-rose-200 text-rose-600"
+                      : actionModalView === "optional"
+                      ? "bg-purple-50 border-purple-200 text-purple-600"
+                      : "bg-emerald-50 border-emerald-200 text-[#15803D]"
+                  }`}
+                >
+                  {actionModalView === "cancel" ? (
+                    <CalendarX className="w-5 h-5" />
+                  ) : actionModalView === "optional" ? (
+                    <Sparkles className="w-5 h-5" />
+                  ) : (
+                    <Utensils className="w-5 h-5" />
+                  )}
                 </div>
                 <div>
                   <h3 className="font-oswald text-xl font-bold uppercase text-neutral-900 tracking-tight">
-                    Cancel Meal Delivery
+                    {actionModalView === "cancel"
+                      ? "Cancel Meal Delivery"
+                      : actionModalView === "optional"
+                      ? "Optional Meal Request"
+                      : "Meal Delivery Options"}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    Date:{" "}
+                    Delivery Date:{" "}
                     <strong className="text-neutral-900 font-semibold">
-                      {parseDateYMD(cancelDialogDate)
-                        ? formatDisplayDate(parseDateYMD(cancelDialogDate)!)
-                        : cancelDialogDate}
+                      {parseDateYMD(actionModalDate)
+                        ? formatDisplayDate(parseDateYMD(actionModalDate)!)
+                        : actionModalDate}
                     </strong>
                   </p>
                 </div>
@@ -1266,112 +1562,425 @@ export function SubscriptionCalendarView({
               <button
                 type="button"
                 onClick={() => {
-                  setCancelDialogDate(null);
+                  setActionModalDate(null);
                   setCancelError(null);
+                  setOptionalError(null);
                 }}
-                disabled={isSubmittingCancel}
+                disabled={isSubmittingCancel || isSubmittingOptional}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Informational Notice */}
-            <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200/90 text-amber-900 text-xs flex items-start gap-2.5">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium">
-                  Meal prep is planned in advance. Cancelling skips this delivery date and applies refund/credit per your subscription policy.
-                </p>
-              </div>
-            </div>
+            {/* Step / Option Switcher (when inside Cancel or Optional view) */}
+            {actionModalView !== "choose" && (
+              <div className="flex items-center justify-between pb-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActionModalView("choose");
+                    setCancelError(null);
+                    setOptionalError(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-oswald font-bold uppercase tracking-wider text-slate-500 hover:text-neutral-900 transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Choose Another Option</span>
+                </button>
 
-            {/* Reason Selector Chips */}
-            <div className="space-y-2">
-              <label className="block text-xs font-oswald font-bold uppercase tracking-wider text-slate-700">
-                Select a Reason:
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {PRESET_REASONS.map((chip) => {
-                  const isSelected = selectedChip === chip.label;
-                  return (
-                    <button
-                      key={chip.label}
-                      type="button"
-                      onClick={() => handleSelectChip(chip)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                        isSelected
-                          ? "bg-neutral-900 text-white shadow-xs font-semibold"
-                          : "bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60"
-                      }`}
-                    >
-                      {chip.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Detailed Reason Textarea */}
-            <div className="space-y-1.5">
-              <label
-                htmlFor="cancel-reason-input"
-                className="block text-xs font-oswald font-bold uppercase tracking-wider text-slate-700"
-              >
-                Cancellation Reason / Comments: <span className="text-rose-500">*</span>
-              </label>
-              <textarea
-                id="cancel-reason-input"
-                rows={3}
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="e.g. Traveling out of town for business trip..."
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-neutral-900 focus:outline-hidden text-xs sm:text-sm text-neutral-900 placeholder:text-slate-400 transition-all resize-none"
-                disabled={isSubmittingCancel}
-              />
-            </div>
-
-            {/* Error Message */}
-            {cancelError && (
-              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>{cancelError}</span>
+                <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl text-[11px] font-oswald font-bold uppercase">
+                  <button
+                    type="button"
+                    onClick={() => setActionModalView("cancel")}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      actionModalView === "cancel"
+                        ? "bg-white text-rose-700 shadow-2xs"
+                        : "text-slate-500 hover:text-neutral-900"
+                    }`}
+                  >
+                    Cancel Meal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActionModalView("optional")}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      actionModalView === "optional"
+                        ? "bg-white text-purple-700 shadow-2xs"
+                        : "text-slate-500 hover:text-neutral-900"
+                    }`}
+                  >
+                    Optional Meal
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => {
-                  setCancelDialogDate(null);
-                  setCancelError(null);
-                }}
-                disabled={isSubmittingCancel}
-                className="px-4 py-2.5 rounded-xl text-xs font-oswald font-bold uppercase tracking-wider text-slate-600 hover:text-neutral-900 hover:bg-slate-100 transition-all cursor-pointer"
-              >
-                Keep My Meal
-              </button>
+            {/* ─── OPTION SELECTION VIEW (Choose Between Cancel or Optional) ─── */}
+            {actionModalView === "choose" && (
+              <div className="space-y-3.5 py-1">
+                <p className="text-xs text-slate-600 font-medium">
+                  Please select an action for this scheduled delivery date:
+                </p>
 
-              <button
-                type="button"
-                onClick={handleConfirmCancelMeal}
-                disabled={isSubmittingCancel || !cancelReason.trim()}
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-rose-300 text-white font-oswald text-xs font-bold uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer disabled:cursor-not-allowed"
-              >
-                {isSubmittingCancel ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Cancelling...</span>
-                  </>
-                ) : (
-                  <>
-                    <CalendarX className="w-4 h-4" />
-                    <span>Confirm Cancellation</span>
-                  </>
+                <div className="grid grid-cols-1 gap-3">
+                  {/* Option 1: Cancel Meal */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActionModalView("cancel");
+                      setCancelError(null);
+                    }}
+                    className="w-full p-4 rounded-2xl border-2 border-slate-200 hover:border-rose-300 bg-white hover:bg-rose-50/50 transition-all flex items-center justify-between gap-3 text-left group cursor-pointer shadow-2xs hover:shadow-md"
+                  >
+                    <div className="flex items-start gap-3.5">
+                      <div className="w-11 h-11 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0 group-hover:scale-105 transition-transform">
+                        <CalendarX className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <h4 className="font-oswald text-base font-bold uppercase text-neutral-900 group-hover:text-rose-700 transition-colors">
+                          Cancel Meal Delivery
+                        </h4>
+                        <p className="text-xs text-slate-500">
+                          Skip meal delivery for this date. Kitchen cutoff rules and policy apply.
+                        </p>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-rose-600 group-hover:translate-x-1 transition-all shrink-0" />
+                  </button>
+
+                  {/* Option 2: Optional Meal Request */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActionModalView("optional");
+                      setOptionalError(null);
+                    }}
+                    className="w-full p-4 rounded-2xl border-2 border-slate-200 hover:border-purple-300 bg-white hover:bg-purple-50/50 transition-all flex items-center justify-between gap-3 text-left group cursor-pointer shadow-2xs hover:shadow-md"
+                  >
+                    <div className="flex items-start gap-3.5">
+                      <div className="w-11 h-11 rounded-2xl bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-600 shrink-0 group-hover:scale-105 transition-transform">
+                        <Sparkles className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <h4 className="font-oswald text-base font-bold uppercase text-neutral-900 group-hover:text-purple-700 transition-colors">
+                          Optional Meal Request
+                        </h4>
+                        <p className="text-xs text-slate-500">
+                          View and request the chef&apos;s alternative optional dish for this date.
+                        </p>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-purple-600 group-hover:translate-x-1 transition-all shrink-0" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ─── OPTION 1 CONTENT: CANCEL MEAL DELIVERY ─── */}
+            {actionModalView === "cancel" && (
+              <div className="space-y-4">
+                {/* Informational Notice */}
+                <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200/90 text-amber-900 text-xs flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">
+                      Meal prep is planned in advance. Cancelling skips this delivery date and applies refund/credit per your subscription policy.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Reason Selector Chips */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-oswald font-bold uppercase tracking-wider text-slate-700">
+                    Select a Reason:
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PRESET_REASONS.map((chip) => {
+                      const isSelected = selectedChip === chip.label;
+                      return (
+                        <button
+                          key={chip.label}
+                          type="button"
+                          onClick={() => handleSelectChip(chip)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-neutral-900 text-white shadow-xs font-semibold"
+                              : "bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60"
+                          }`}
+                        >
+                          {chip.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Detailed Reason Textarea */}
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="cancel-reason-input"
+                    className="block text-xs font-oswald font-bold uppercase tracking-wider text-slate-700"
+                  >
+                    Cancellation Reason / Comments: <span className="text-rose-500">*</span>
+                  </label>
+                  <textarea
+                    id="cancel-reason-input"
+                    rows={3}
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    placeholder="e.g. Traveling out of town for business trip..."
+                    className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-neutral-900 focus:outline-hidden text-xs sm:text-sm text-neutral-900 placeholder:text-slate-400 transition-all resize-none"
+                    disabled={isSubmittingCancel}
+                  />
+                </div>
+
+                {/* Error Message */}
+                {cancelError && (
+                  <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>{cancelError}</span>
+                  </div>
                 )}
-              </button>
-            </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setActionModalView("choose")}
+                    disabled={isSubmittingCancel}
+                    className="px-4 py-2.5 rounded-xl text-xs font-oswald font-bold uppercase tracking-wider text-slate-600 hover:text-neutral-900 hover:bg-slate-100 transition-all cursor-pointer"
+                  >
+                    Back to Options
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmCancelMeal}
+                    disabled={isSubmittingCancel || !cancelReason.trim()}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-rose-300 text-white font-oswald text-xs font-bold uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {isSubmittingCancel ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Cancelling...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CalendarX className="w-4 h-4" />
+                        <span>Confirm Cancellation</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ─── OPTION 2 CONTENT: OPTIONAL MEAL REQUEST ─── */}
+            {actionModalView === "optional" && (
+              <div className="space-y-4">
+                {/* Optional Request Error */}
+                {optionalError && (
+                  <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>{optionalError}</span>
+                  </div>
+                )}
+
+                {/* Scenario A: An active optional meal request already exists on this date */}
+                {optionalRequestsMap.get(actionModalDate) ? (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-2xl bg-purple-50 border border-purple-200 text-purple-950 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
+                        <h4 className="font-oswald text-sm font-bold uppercase tracking-wide text-purple-900">
+                          Optional Meal Request Active
+                        </h4>
+                      </div>
+                      <p className="text-xs text-purple-800 leading-relaxed">
+                        You have already submitted an optional meal request for this date. The kitchen will prepare the chef&apos;s alternative dish instead of your regular meal.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => setActionModalView("choose")}
+                        className="px-4 py-2.5 rounded-xl text-xs font-oswald font-bold uppercase tracking-wider text-slate-600 hover:text-neutral-900 hover:bg-slate-100 transition-all cursor-pointer"
+                      >
+                        Back
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const req = optionalRequestsMap.get(actionModalDate);
+                          if (req?.id) handleCancelOptionalMeal(req.id);
+                        }}
+                        disabled={isSubmittingOptional}
+                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-rose-600 text-white font-oswald text-xs font-bold uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        {isSubmittingOptional ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Reverting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Ban className="w-4 h-4" />
+                            <span>Cancel Optional Meal (Keep Regular)</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Scenario B & C: Check if optional meal is configured for this weekday */
+                  (() => {
+                    if (isLoadingPackage) {
+                      return (
+                        <div className="p-8 flex flex-col items-center justify-center gap-3 text-slate-500 text-center">
+                          <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+                          <span className="text-xs font-medium">Checking menu alternative dishes...</span>
+                        </div>
+                      );
+                    }
+
+                    const optMeal = getOptionalMealForDate(actionModalDate);
+
+                    if (optMeal) {
+                      return (
+                        <div className="space-y-4">
+                          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="font-oswald text-[11px] font-bold uppercase tracking-wider text-purple-700 bg-purple-100 border border-purple-200 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                                <Sparkles className="w-3 h-3 text-purple-600" />
+                                Chef&apos;s Daily Alternative
+                              </span>
+                              <span className="text-[11px] text-slate-400 font-medium">Available</span>
+                            </div>
+
+                            {optMeal.image_url && (
+                              <div className="relative w-full h-44 rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={optMeal.image_url}
+                                  alt={optMeal.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            )}
+
+                            <div>
+                              <h4 className="font-oswald text-lg font-bold uppercase text-neutral-900">
+                                {optMeal.name}
+                              </h4>
+                              {optMeal.description && (
+                                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                                  {optMeal.description}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Request Details Preview */}
+                            <div className="p-3.5 rounded-xl bg-purple-50/80 border border-purple-200/80 text-purple-950 text-xs space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-purple-600 shrink-0" />
+                                <span className="font-oswald font-bold uppercase tracking-wide">
+                                  Request Details to Submit:
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
+                                <div>
+                                  <span className="text-purple-700/80 font-medium block">Delivery Date:</span>
+                                  <strong className="text-purple-950">
+                                    {parseDateYMD(actionModalDate) ? formatDisplayDate(parseDateYMD(actionModalDate)!) : actionModalDate}
+                                  </strong>
+                                </div>
+                                <div>
+                                  <span className="text-purple-700/80 font-medium block">Selected Dish:</span>
+                                  <strong className="text-purple-950 truncate block">{optMeal.name}</strong>
+                                </div>
+                              </div>
+                              <p className="text-[11px] text-purple-800 border-t border-purple-200/60 pt-1.5 leading-relaxed">
+                                Clicking &quot;Confirm Optional Meal Request&quot; will submit this alternative dish to your active subscription schedule.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                            <button
+                              type="button"
+                              onClick={() => setActionModalView("choose")}
+                              disabled={isSubmittingOptional}
+                              className="px-4 py-2.5 rounded-xl text-xs font-oswald font-bold uppercase tracking-wider text-slate-600 hover:text-neutral-900 hover:bg-slate-100 transition-all cursor-pointer"
+                            >
+                              Back
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRequestOptionalMeal(optMeal.id)}
+                              disabled={isSubmittingOptional}
+                              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] disabled:bg-emerald-300 text-white font-oswald text-xs font-bold uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+                            >
+                              {isSubmittingOptional ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <span>Submitting Request...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="w-4 h-4" />
+                                  <span>Confirm Optional Meal Request</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Scenario C: No optional meal available on this date
+                    return (
+                      <div className="space-y-4">
+                        <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 text-center space-y-3">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mx-auto">
+                            <Utensils className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h4 className="font-oswald text-base font-bold uppercase text-neutral-900">
+                              No Optional Meals Available for this Date
+                            </h4>
+                            <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 leading-relaxed">
+                              There is no alternative or optional meal configured for this weekday in your current meal plan. Your regular chef-crafted meal will be prepared and delivered as scheduled.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                          <button
+                            type="button"
+                            onClick={() => setActionModalView("choose")}
+                            className="px-4 py-2.5 rounded-xl text-xs font-oswald font-bold uppercase tracking-wider text-slate-600 hover:text-neutral-900 hover:bg-slate-100 transition-all cursor-pointer"
+                          >
+                            Back to Options
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setActionModalDate(null)}
+                            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white font-oswald text-xs font-bold uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer"
+                          >
+                            Keep Regular Meal
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -59,7 +59,38 @@ export interface SubscriptionPlanApiResponse<T> {
 
 export const subscriptionPlanService = {
   /**
-   * Fetch all subscription plans with optional filters
+   * Fetch user/public subscription plans via /api/v1/subscription-plans
+   */
+  async getPublicSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+    try {
+      const response = await apiClient.get<any>("/api/v1/subscription-plans", {
+        params: { limit: 100 },
+        skipAuthRedirect: true,
+      });
+      const resBody = response.data;
+      if (!resBody) return [];
+      if (Array.isArray(resBody)) return resBody;
+      if (resBody && typeof resBody === "object") {
+        if ("data" in resBody && resBody.data) {
+          const payloadData = resBody.data;
+          if (Array.isArray(payloadData)) return payloadData;
+          if (
+            typeof payloadData === "object" &&
+            "data" in payloadData &&
+            Array.isArray(payloadData.data)
+          ) {
+            return payloadData.data;
+          }
+        }
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  },
+
+  /**
+   * Fetch all subscription plans with optional filters (Admin)
    */
   async getSubscriptionPlans(
     params?: GetSubscriptionPlansParams,

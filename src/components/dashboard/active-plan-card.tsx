@@ -20,7 +20,10 @@ import { SubscriptionResItem } from "@/services/api/subscription.service";
 interface ActivePlanCardProps {
   subscription: SubscriptionResItem | null;
   packageName?: string;
+  planName?: string;
   planDurationLabel?: string;
+  planType?: string;
+  billingCycle?: string;
   totalDays?: number;
   daysDelivered?: number;
   deliveryAddress?: string;
@@ -33,7 +36,10 @@ interface ActivePlanCardProps {
 export function ActivePlanCard({
   subscription,
   packageName = "Nu3 Power Athletic",
+  planName = "Monthly Plan",
   planDurationLabel = "Monthly (20 Weekdays)",
+  planType = "Fixed Duration",
+  billingCycle = "MONTHLY",
   totalDays = 20,
   daysDelivered = 12,
   deliveryAddress,
@@ -150,18 +156,17 @@ export function ActivePlanCard({
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-oswald text-xs font-bold uppercase tracking-wider text-[#15803D] bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full shadow-2xs">
-                Active Meal Plan
-              </span>
-              <span className="text-xs text-slate-400 font-mono">
-                ID: {subscription.id.slice(0, 8)}...
+              <span className="font-oswald text-[11px] font-bold uppercase tracking-wider text-[#15803D] bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full shadow-2xs inline-flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#36D068] animate-pulse" />
+                Active Subscription
               </span>
             </div>
+
             <h2 className="font-oswald text-2xl sm:text-3xl font-black uppercase text-neutral-900 tracking-tight leading-tight group-hover:text-[#15803D] transition-colors">
               {packageName}
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 font-medium">
-              {planDurationLabel} • Weekdays Morning Delivery
+              {planName || planDurationLabel} • Weekdays Morning Delivery
             </p>
           </div>
 
@@ -176,7 +181,7 @@ export function ActivePlanCard({
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100/90 text-[#15803D] border border-emerald-200 text-xs font-oswald font-bold uppercase tracking-wider transition-all shadow-2xs cursor-pointer hover:scale-105 active:scale-95"
             >
               <Calendar className="w-3.5 h-3.5 text-[#15803D]" />
-              <span>View Calendar</span>
+              <span>Meal Cancellations and Optional Meal Requests</span>
             </button>
 
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-[#15803D] font-oswald text-xs font-bold uppercase tracking-wider shadow-2xs">
@@ -285,7 +290,7 @@ export function ActivePlanCard({
             className="inline-flex items-center gap-2 text-xs font-oswald font-bold uppercase tracking-wider text-[#15803D] hover:text-[#36D068] transition-colors cursor-pointer group/link"
           >
             <Calendar className="w-4 h-4 text-[#36D068] group-hover/link:scale-110 transition-transform" />
-            <span>View All Plan Dates in Calendar (Start to Due)</span>
+            <span>Meal Cancellations and Optional Meal Requests (Start to Due)</span>
             <ChevronRight className="w-4 h-4 group-hover/link:translate-x-0.5 transition-transform" />
           </button>
 

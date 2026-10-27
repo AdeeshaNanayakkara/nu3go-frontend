@@ -134,6 +134,18 @@ export const BACKEND_ENDPOINTS = {
     REVERT: (id: string) => `${API_V1}/meal-cancellations/${id}/revert`,
     SUBSCRIPTION_CANCELLATIONS: (id: string) => `${API_V1}/subscriptions/${id}/meal-cancellations`,
   },
+  OPTIONAL_MEAL_REQUESTS: {
+    CREATE: `${API_V1}/optional-meal-requests`,
+    LIST: `${API_V1}/optional-meal-requests`,
+    DETAIL: (id: string) => `${API_V1}/optional-meal-requests/${id}`,
+    CANCEL: (id: string) => `${API_V1}/optional-meal-requests/${id}/cancel`,
+    DELETE: (id: string) => `${API_V1}/optional-meal-requests/${id}`,
+    SUBSCRIPTION_REQUESTS: (id: string) => `${API_V1}/subscriptions/${id}/optional-meal-requests`,
+  },
+  WALLET: {
+    BALANCE: `${API_V1}/wallet/balance`,
+    TRANSACTIONS: `${API_V1}/wallet/transactions`,
+  },
 } as const;
 
 export type BackendEndpoints = typeof BACKEND_ENDPOINTS;
