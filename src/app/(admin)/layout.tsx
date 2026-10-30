@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { AdminSidebar } from "@/components/layout/admin-sidebar/admin-sidebar";
 import { useBackToHome } from "@/hooks/use-back-to-home";
 
@@ -27,7 +27,9 @@ export default function AdminLayout({
 
   return (
     <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-slate-50 text-slate-900 font-poppins">
-      <AdminSidebar />
+      <Suspense fallback={<div className="hidden lg:block w-64 h-screen bg-white shrink-0" />}>
+        <AdminSidebar />
+      </Suspense>
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto bg-slate-50/50">
         <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>

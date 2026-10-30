@@ -37,6 +37,10 @@ export function formatUserFriendlyError(error: unknown, options: FriendlyErrorOp
   const msgLower = rawMessage.toLowerCase();
 
   // ─── 1. Specific Business & System Rule Translations ───
+  if (msgLower.includes("future delivery") || msgLower.includes("cannot mark a future delivery")) {
+    return "Cannot mark a future delivery as delivered. Please wait until the scheduled delivery date.";
+  }
+
   if (msgLower.includes("3 menus")) {
     return "A package must have exactly 3 configured menus before it can be set to Active. Please create 3 menus for this package first.";
   }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   adminService,
   type AdminUserItem,
@@ -22,9 +23,27 @@ import {
   MoreHorizontal,
   X,
   UserX,
+  BarChart3,
+  Layers,
 } from "lucide-react";
+import { CustomerEngagementOverview } from "@/components/admin/customer-engagement-overview";
+import { CustomerStatusBreakdown } from "@/components/admin/customer-status-breakdown";
+import { CustomerOverviewSummary } from "@/components/admin/customer-overview-summary";
+import { CustomerLeaderboard } from "@/components/admin/customer-leaderboard";
 
-export default function AdminUsersPage() {
+function AdminUsersContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const viewQuery = searchParams.get("view");
+  const activeView =
+    viewQuery === "subscriptions"
+      ? "subscriptions"
+      : viewQuery === "engagement"
+      ? "engagement"
+      : viewQuery === "leaderboard"
+      ? "leaderboard"
+      : "overview"; // default view is overview
+
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta>({
     has_next: false,
@@ -44,6 +63,7 @@ export default function AdminUsersPage() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
 
   // User Status Update state
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
@@ -149,10 +169,6 @@ export default function AdminUsersPage() {
   const startRow = totalRows === 0 ? 0 : (page - 1) * limit + 1;
   const endRow = Math.min(page * limit, totalRows);
 
-  // Quick stats
-  const adminCount = users.filter((u) => (u.role || "").toUpperCase() === "ADMIN").length;
-  const customerCount = users.length - adminCount;
-
   return (
     <div className="space-y-8 font-poppins text-slate-900 relative">
       {/* ─── SYSTEM TOAST NOTIFICATION OVERLAY ─── */}
@@ -187,13 +203,33 @@ export default function AdminUsersPage() {
             <span className="bg-[#36D068]/15 text-[#36D068] text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">
               Admin Portal
             </span>
-            <span className="text-slate-500 text-xs font-medium">Customer Accounts</span>
+            <span className="text-slate-500 text-xs font-medium">
+              {activeView === "overview"
+                ? "Customer Analytics Summary"
+                : activeView === "engagement"
+                ? "Engagement Analytics"
+                : activeView === "leaderboard"
+                ? "Customer Leaderboard"
+                : "Subscriptions & Status Breakdown"}
+            </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-            Customer Management
+            {activeView === "overview"
+              ? "Customer Overview"
+              : activeView === "engagement"
+              ? "Customer Engagement"
+              : activeView === "leaderboard"
+              ? "Customer Leaderboard"
+              : "Customer Subscriptions"}
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Manage registered customer profiles, verification statuses, and account access.
+            {activeView === "overview"
+              ? "High-level customer analytics stat cards, conversion, LTV, churn rates, and period-over-period comparisons."
+              : activeView === "engagement"
+              ? "Live customer engagement metrics, renewal retention rates, cancellation patterns, and optional meal requests."
+              : activeView === "leaderboard"
+              ? "Top customer rankings by revenue generated, completed paid invoices, and meal cancellation volume."
+              : "Customer subscription status breakdown by precedence (Active, Payment Failed, Pending, Lapsed, Never Subscribed) and account directory."}
           </p>
         </div>
 
@@ -202,7 +238,7 @@ export default function AdminUsersPage() {
             type="button"
             onClick={fetchUsers}
             disabled={isLoading}
-            className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-all flex items-center gap-2 border border-slate-200 shadow-sm disabled:opacity-50"
+            className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-all flex items-center gap-2 border border-slate-200 shadow-sm disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
             <span>Refresh</span>
@@ -210,47 +246,30 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      {/* Quick Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200/80 p-4 rounded-2xl flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-xs text-slate-500 font-medium block">Total Registered Users</span>
-              <span className="text-xl font-bold text-slate-900">{totalRows}</span>
-            </div>
-          </div>
-        </div>
+      {/* ─── Tab Content ─── */}
+      {activeView === "overview" ? (
+        /* Customer Overview Summary (/api/v1/analytics/customers/summary) */
+        <CustomerOverviewSummary totalRegisteredUsers={totalRows} />
+      ) : activeView === "engagement" ? (
+        /* Customer Details & Engagement Overview (/api/v1/analytics/customers/engagement) */
+        <CustomerEngagementOverview totalRegisteredUsers={totalRows} />
+      ) : activeView === "leaderboard" ? (
+        /* Customer Leaderboard (/api/v1/analytics/customers/top) */
+        <CustomerLeaderboard />
+      ) : (
+        <div className="space-y-6">
+          {/* ─── Customer Subscription Status Breakdown (/api/v1/analytics/customers/status-breakdown) ─── */}
+          <CustomerStatusBreakdown
+            selectedSegment={selectedSegment}
+            onSelectSegment={(seg) => {
+              setSelectedSegment(seg);
+              if (seg === "active") setStatusFilter("ACTIVE");
+              else if (seg === null) setStatusFilter("ALL");
+            }}
+          />
 
-        <div className="bg-white border border-slate-200/80 p-4 rounded-2xl flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600 border border-purple-100">
-              <Shield className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-xs text-slate-500 font-medium block">Page Admins</span>
-              <span className="text-xl font-bold text-slate-900">{adminCount}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 p-4 rounded-2xl flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[#36D068]/10 text-[#36D068] border border-[#36D068]/20">
-              <UserCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-xs text-slate-500 font-medium block">Page Customers</span>
-              <span className="text-xl font-bold text-slate-900">{customerCount}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters & Search Bar */}
-      <div className="bg-white border border-slate-200/80 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
+          {/* Filters & Search Bar */}
+          <div className="bg-white border border-slate-200/80 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
         {/* Search */}
         <div className="relative w-full md:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -582,6 +601,23 @@ export default function AdminUsersPage() {
           </div>
         </div>
       )}
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function AdminUsersPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-16 shadow-sm text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-[#36D068] border-t-transparent rounded-full mx-auto mb-3" />
+          <p className="text-slate-500 text-sm font-medium">Loading Customer Management...</p>
+        </div>
+      }
+    >
+      <AdminUsersContent />
+    </Suspense>
   );
 }

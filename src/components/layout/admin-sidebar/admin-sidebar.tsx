@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import {
   LayoutDashboard,
   Users,
-  UtensilsCrossed,
-  ShoppingBag,
   Package,
   Settings,
   LogOut,
@@ -18,25 +16,163 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   CalendarX,
+  BarChart3,
+  Layers,
+  PieChart,
+  Trophy,
+  Truck,
+  CalendarClock,
+  TrendingUp,
+  UtensilsCrossed,
+  CircleDollarSign,
+  Tag,
+  CreditCard,
+  Grid,
 } from "lucide-react";
+
+const customerSubItems = [
+  {
+    label: "Overview",
+    href: "/admin/users?view=overview",
+    description: "Analytics summary & KPI cards",
+    icon: PieChart,
+  },
+  {
+    label: "Engagement",
+    href: "/admin/users?view=engagement",
+    description: "Engagement details & metrics",
+    icon: BarChart3,
+  },
+  {
+    label: "Subscriptions",
+    href: "/admin/users?view=subscriptions",
+    description: "Active subscribers & directory",
+    icon: Layers,
+  },
+  {
+    label: "Leaderboard",
+    href: "/admin/users?view=leaderboard",
+    description: "Top customers by revenue & orders",
+    icon: Trophy,
+  },
+];
+
+const deliverySubItems = [
+  {
+    label: "Overview",
+    href: "/admin/deliveries?view=overview",
+    description: "Delivery analytics summary & KPIs",
+    icon: PieChart,
+  },
+  {
+    label: "Forecast",
+    href: "/admin/deliveries?view=forecast",
+    description: "Upcoming demand & kitchen preparation",
+    icon: CalendarClock,
+  },
+  {
+    label: "Trend",
+    href: "/admin/deliveries?view=trend",
+    description: "Delivery fulfillment volume over time",
+    icon: TrendingUp,
+  },
+  {
+    label: "Breakdown",
+    href: "/admin/deliveries?view=breakdown",
+    description: "Volume by plan type, package & weekday",
+    icon: Layers,
+  },
+  {
+    label: "Optional Meals",
+    href: "/admin/deliveries?view=optional-meals",
+    description: "Meal swap popularity & customer preferences",
+    icon: UtensilsCrossed,
+  },
+  {
+    label: "Deliveries",
+    href: "/admin/deliveries?view=deliveries",
+    description: "Daily delivery schedule & fulfillment",
+    icon: Truck,
+  },
+];
+
+const salesSubItems = [
+  {
+    label: "Overview",
+    href: "/admin/sales?view=overview",
+    description: "Revenue KPIs & sales summary",
+    icon: PieChart,
+  },
+  {
+    label: "Revenue",
+    href: "/admin/sales?view=revenue",
+    description: "Revenue time series & renewal splits",
+    icon: TrendingUp,
+  },
+  {
+    label: "Breakdown",
+    href: "/admin/sales?view=breakdown",
+    description: "Revenue split by package & plan type",
+    icon: Layers,
+  },
+  {
+    label: "Discounts",
+    href: "/admin/sales?view=discounts",
+    description: "Coupon redemptions & campaign ROI",
+    icon: Tag,
+  },
+  {
+    label: "Payments",
+    href: "/admin/sales?view=payments",
+    description: "Payment health & recurring failures",
+    icon: CreditCard,
+  },
+  {
+    label: "Cohorts",
+    href: "/admin/sales?view=cohorts",
+    description: "Revenue retention & cohort matrix",
+    icon: Grid,
+  },
+];
 
 export function AdminSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentView = searchParams?.get("view") || "overview";
   const { user, logout } = useAuthStore();
 
   // Responsive state
   const [isCollapsed, setIsCollapsed] = useState(false); // Desktop collapse
   const [isMobileOpen, setIsMobileOpen] = useState(false); // Mobile drawer open
 
+  // Customer item accordion state (visible ONLY when clicked)
+  const [isCustomerOpen, setIsCustomerOpen] = useState(() => pathname.startsWith("/admin/users"));
+  // Delivery item accordion state (visible ONLY when clicked)
+  const [isDeliveryOpen, setIsDeliveryOpen] = useState(() => pathname.startsWith("/admin/deliveries"));
+  // Sales item accordion state (visible ONLY when clicked)
+  const [isSalesOpen, setIsSalesOpen] = useState(() => pathname.startsWith("/admin/sales"));
+
   // Logout modal state
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Close mobile drawer on route change
+  // Sync drawer & accordions on route change
   useEffect(() => {
-    setIsMobileOpen(false);
+    const timer = setTimeout(() => {
+      setIsMobileOpen(false);
+      if (pathname.startsWith("/admin/users")) {
+        setIsCustomerOpen(true);
+      }
+      if (pathname.startsWith("/admin/deliveries")) {
+        setIsDeliveryOpen(true);
+      }
+      if (pathname.startsWith("/admin/sales")) {
+        setIsSalesOpen(true);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [pathname]);
 
   const handleLogoutConfirm = async () => {
@@ -55,6 +191,8 @@ export function AdminSidebar() {
   const navItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Customers", href: "/admin/users", icon: Users },
+    { label: "Deliveries", href: "/admin/deliveries", icon: Truck },
+    { label: "Sales", href: "/admin/sales", icon: CircleDollarSign },
     { label: "Packages", href: "/admin/packages", icon: Package },
     { label: "Cancellations", href: "/admin/cancellations", icon: CalendarX },
   ];
@@ -99,13 +237,240 @@ export function AdminSidebar() {
       </div>
 
       {/* Main Navigation Links */}
-      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
+      <nav className="flex-1 p-3 space-y-1.5 overflow-visible">
         {navItems.map((item) => {
           const Icon = item.icon;
+          const isCustomer = item.label === "Customers";
+          const isDelivery = item.label === "Deliveries";
+          const isSales = item.label === "Sales";
           const isActive =
             item.href === "/admin"
               ? pathname === "/admin"
               : pathname.startsWith(item.href);
+
+          if (isCustomer) {
+            return (
+              <div key={item.href} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (collapsed) {
+                      setIsCollapsed(false);
+                    }
+                    setIsCustomerOpen((prev) => !prev);
+                  }}
+                  title={collapsed ? item.label : undefined}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all cursor-pointer ${
+                    collapsed ? "justify-center px-0" : ""
+                  } ${
+                    isActive
+                      ? "bg-[#36D068] text-white shadow-md shadow-[#36D068]/20"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
+                  }`}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <Icon className="w-5 h-5 shrink-0" />
+                    {!collapsed && <span className="truncate">{item.label}</span>}
+                  </div>
+                  {!collapsed && (
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                        isCustomerOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  )}
+                </button>
+
+                {/* Sub-attributes under Customers: ONLY visible when clicked */}
+                {isCustomerOpen && !collapsed && (
+                  <div className="ml-7 pl-2.5 border-l-2 border-slate-100 space-y-1 mt-1.5 animate-in slide-in-from-top-1 fade-in duration-150">
+                    {customerSubItems.map((sub) => {
+                      const SubIcon = sub.icon;
+                      const isSubActive =
+                        pathname === "/admin/users" &&
+                        (sub.href.includes(`view=${currentView}`) ||
+                          (!searchParams?.get("view") && sub.href.includes("view=overview")));
+
+                      return (
+                        <Link
+                          key={sub.label}
+                          href={sub.href}
+                          onClick={() => setIsMobileOpen(false)}
+                          className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            isSubActive
+                              ? "bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/60"
+                              : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/70"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <SubIcon
+                              className={`w-3.5 h-3.5 ${
+                                isSubActive ? "text-emerald-700" : "text-slate-400"
+                              }`}
+                            />
+                            <span>{sub.label}</span>
+                          </div>
+                          {isSubActive && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#36D068]" />
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          if (isDelivery) {
+            return (
+              <div key={item.href} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (collapsed) {
+                      setIsCollapsed(false);
+                    }
+                    setIsDeliveryOpen((prev) => !prev);
+                  }}
+                  title={collapsed ? item.label : undefined}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all cursor-pointer ${
+                    collapsed ? "justify-center px-0" : ""
+                  } ${
+                    isActive
+                      ? "bg-[#36D068] text-white shadow-md shadow-[#36D068]/20"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
+                  }`}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <Icon className="w-5 h-5 shrink-0" />
+                    {!collapsed && <span className="truncate">{item.label}</span>}
+                  </div>
+                  {!collapsed && (
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                        isDeliveryOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  )}
+                </button>
+
+                {/* Sub-attributes under Deliveries: ONLY visible when clicked */}
+                {isDeliveryOpen && !collapsed && (
+                  <div className="ml-7 pl-2.5 border-l-2 border-slate-100 space-y-1 mt-1.5 animate-in slide-in-from-top-1 fade-in duration-150">
+                    {deliverySubItems.map((sub) => {
+                      const SubIcon = sub.icon;
+                      const deliveryCurrentView = searchParams?.get("view") || "overview";
+                      const isSubActive =
+                        pathname === "/admin/deliveries" &&
+                        (sub.href.includes(`view=${deliveryCurrentView}`) ||
+                          (!searchParams?.get("view") && sub.href.includes("view=overview")));
+
+                      return (
+                        <Link
+                          key={sub.label}
+                          href={sub.href}
+                          onClick={() => setIsMobileOpen(false)}
+                          className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            isSubActive
+                              ? "bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/60"
+                              : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/70"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <SubIcon
+                              className={`w-3.5 h-3.5 ${
+                                isSubActive ? "text-emerald-700" : "text-slate-400"
+                              }`}
+                            />
+                            <span>{sub.label}</span>
+                          </div>
+                          {isSubActive && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#36D068]" />
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          if (isSales) {
+            return (
+              <div key={item.href} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (collapsed) {
+                      setIsCollapsed(false);
+                    }
+                    setIsSalesOpen((prev) => !prev);
+                  }}
+                  title={collapsed ? item.label : undefined}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all cursor-pointer ${
+                    collapsed ? "justify-center px-0" : ""
+                  } ${
+                    isActive
+                      ? "bg-[#36D068] text-white shadow-md shadow-[#36D068]/20"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
+                  }`}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <Icon className="w-5 h-5 shrink-0" />
+                    {!collapsed && <span className="truncate">{item.label}</span>}
+                  </div>
+                  {!collapsed && (
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                        isSalesOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  )}
+                </button>
+
+                {/* Sub-attributes under Sales: ONLY visible when clicked */}
+                {isSalesOpen && !collapsed && (
+                  <div className="ml-7 pl-2.5 border-l-2 border-slate-100 space-y-1 mt-1.5 animate-in slide-in-from-top-1 fade-in duration-150">
+                    {salesSubItems.map((sub) => {
+                      const SubIcon = sub.icon;
+                      const salesCurrentView = searchParams?.get("view") || "overview";
+                      const isSubActive =
+                        pathname === "/admin/sales" &&
+                        (sub.href.includes(`view=${salesCurrentView}`) ||
+                          (!searchParams?.get("view") && sub.href.includes("view=overview")));
+
+                      return (
+                        <Link
+                          key={sub.label}
+                          href={sub.href}
+                          onClick={() => setIsMobileOpen(false)}
+                          className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            isSubActive
+                              ? "bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/60"
+                              : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/70"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <SubIcon
+                              className={`w-3.5 h-3.5 ${
+                                isSubActive ? "text-emerald-700" : "text-slate-400"
+                              }`}
+                            />
+                            <span>{sub.label}</span>
+                          </div>
+                          {isSubActive && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#36D068]" />
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
 
           return (
             <Link
@@ -208,7 +573,7 @@ export function AdminSidebar() {
 
       {/* ─── DESKTOP SIDEBAR (visible on screens >= lg) ─── */}
       <aside
-        className={`hidden lg:flex flex-col h-screen font-poppins bg-white border-r border-slate-200/80 shadow-sm shrink-0 sticky top-0 transition-all duration-300 relative group/sidebar ${isCollapsed ? "w-20" : "w-64"
+        className={`hidden lg:flex flex-col h-screen font-poppins bg-white border-r border-slate-200/80 shadow-sm shrink-0 sticky top-0 transition-all duration-300 relative z-30 group/sidebar ${isCollapsed ? "w-20" : "w-64"
           }`}
       >
         {renderSidebarContent(isCollapsed)}

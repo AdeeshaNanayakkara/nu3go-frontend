@@ -299,8 +299,8 @@ export function HeroSection() {
           ref={headlineRef}
           className="font-oswald text-4xl sm:text-6xl md:text-7xl lg:text-[84px] font-extrabold tracking-tight uppercase text-white leading-[1.05] drop-shadow-lg will-change-transform"
         >
-          HEALTHY INSIDE, <br />
-          <span className="text-white">FRESH OUTSIDE</span>
+          YOUR BREAKFAST <br />
+          <span className="text-white">SORTED. EVERY WEEKDAY.</span>
         </h1>
 
         {/* Subtitle */}
@@ -341,11 +341,10 @@ export function HeroSection() {
               <button
                 key={slide.name}
                 onClick={() => goToSlide(index)}
-                className={`group relative h-2 transition-all duration-300 rounded-full cursor-pointer focus:outline-hidden ${
-                  isActive
+                className={`group relative h-2 transition-all duration-300 rounded-full cursor-pointer focus:outline-hidden ${isActive
                     ? "w-9 sm:w-11 bg-[#36D068] shadow-md shadow-[#36D068]/50"
                     : "w-2.5 sm:w-3 bg-white/35 hover:bg-white/60"
-                }`}
+                  }`}
                 aria-label={`Go to slide ${index + 1}`}
               />
             );

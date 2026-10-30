@@ -146,6 +146,31 @@ export const BACKEND_ENDPOINTS = {
     BALANCE: `${API_V1}/wallet/balance`,
     TRANSACTIONS: `${API_V1}/wallet/transactions`,
   },
+  DELIVERIES: {
+    LIST: `${API_V1}/deliveries`,
+    MARK: `${API_V1}/deliveries`,
+    UNDO: (id: string) => `${API_V1}/deliveries/${id}`,
+  },
+  ANALYTICS: {
+    CUSTOMERS_ENGAGEMENT: `${API_V1}/analytics/customers/engagement`,
+    CUSTOMERS_SUMMARY: `${API_V1}/analytics/customers/summary`,
+    CUSTOMERS_STATUS_BREAKDOWN: `${API_V1}/analytics/customers/status-breakdown`,
+    CUSTOMERS_GROWTH: `${API_V1}/analytics/customers/growth`,
+    CUSTOMERS_TOP: `${API_V1}/analytics/customers/top`,
+    CUSTOMERS_FUNNEL: `${API_V1}/analytics/customers/funnel`,
+    DELIVERIES_SUMMARY: `${API_V1}/analytics/deliveries/summary`,
+    DELIVERIES_FORECAST: `${API_V1}/analytics/deliveries/forecast`,
+    DELIVERIES_OPTIONAL_MEALS: `${API_V1}/analytics/deliveries/optional-meals`,
+    DELIVERIES_TREND: `${API_V1}/analytics/deliveries/trend`,
+    DELIVERIES_BREAKDOWN: `${API_V1}/analytics/deliveries/breakdown`,
+    SALES_SUMMARY: `${API_V1}/analytics/sales/summary`,
+    SALES_REVENUE: `${API_V1}/analytics/sales/revenue`,
+    SALES_BREAKDOWN: `${API_V1}/analytics/sales/breakdown`,
+    SALES_PAYMENTS: `${API_V1}/analytics/sales/payments`,
+    SALES_DISCOUNTS: `${API_V1}/analytics/sales/discounts`,
+    SALES_COHORTS: `${API_V1}/analytics/sales/cohorts`,
+  },
 } as const;
 
 export type BackendEndpoints = typeof BACKEND_ENDPOINTS;
+
