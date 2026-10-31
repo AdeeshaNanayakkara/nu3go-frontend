@@ -22,10 +22,12 @@ import { RecentInvoicesTable } from "@/components/dashboard/recent-invoices-tabl
 import { QuickActionsHub } from "@/components/dashboard/quick-actions-hub";
 import {
   AlertTriangle,
+  AlertCircle,
   Compass,
   Calendar as CalendarIcon,
 } from "lucide-react";
 import { SubscriptionCalendarView } from "@/components/dashboard/subscription-calendar-modal";
+import { userService, type BillingProfileRes } from "@/services/api/user.service";
 
 export default function CustomerDashboardPage() {
   const { user } = useAuthStore();
@@ -37,6 +39,7 @@ export default function CustomerDashboardPage() {
   const [packages, setPackages] = useState<PublicPackage[]>([]);
   const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
   const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [billingProfile, setBillingProfile] = useState<BillingProfileRes | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Modal for cancelling subscription
@@ -49,12 +52,13 @@ export default function CustomerDashboardPage() {
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [allSubs, locsData, pkgsData, plansData, balanceData] = await Promise.all([
+      const [allSubs, locsData, pkgsData, plansData, balanceData, profileData] = await Promise.all([
         subscriptionService.getSubscriptions(),
         locationService.getLocations().catch(() => []),
         packageService.getPublicPackages().catch(() => []),
         subscriptionPlanService.getPublicSubscriptionPlans().catch(() => []),
         walletService.getBalance().catch(() => 0),
+        userService.getBillingProfile().catch(() => null),
       ]);
 
       // Only filter active subscriptions
@@ -71,6 +75,7 @@ export default function CustomerDashboardPage() {
       setPackages(pkgsData || []);
       setSubscriptionPlans(plansData || []);
       setWalletBalance(balanceData ?? 0);
+      setBillingProfile(profileData || null);
     } catch (err) {
       console.error("[Dashboard] Error loading data:", err);
     } finally {
@@ -79,7 +84,10 @@ export default function CustomerDashboardPage() {
   }, []);
 
   useEffect(() => {
-    fetchDashboardData();
+    const timer = setTimeout(() => {
+      fetchDashboardData();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchDashboardData]);
 
   // Primary active subscription
@@ -91,17 +99,17 @@ export default function CustomerDashboardPage() {
     if (sub.package_name) return { id: sub.package_id || "", name: sub.package_name };
     if (sub.package?.name) return { id: sub.package.id || sub.package_id || "", name: sub.package.name };
 
-    const pkgId = sub.package_id || (sub as any).packageId;
+    const pkgId = sub.package_id || (sub as unknown as Record<string, unknown>).packageId;
     if (pkgId) {
       const found = packages.find((p) => p.id === pkgId);
       if (found?.name) return { id: found.id, name: found.name };
     }
 
     // Try finding which package contains this plan
-    const planId = sub.subscription_plan_id || (sub as any).plan_id || (sub as any).planId;
+    const planId = sub.subscription_plan_id || (sub as unknown as Record<string, unknown>).plan_id || (sub as unknown as Record<string, unknown>).planId;
     if (planId) {
       const foundByPlan = packages.find((p) =>
-        p.plans?.some((pl) => pl.plan_id === planId || (pl as any).id === planId)
+        p.plans?.some((pl) => pl.plan_id === planId || (pl as unknown as Record<string, unknown>).id === planId)
       );
       if (foundByPlan?.name) return { id: foundByPlan.id, name: foundByPlan.name };
     }
@@ -145,15 +153,15 @@ export default function CustomerDashboardPage() {
       };
     }
 
-    const planId = sub.subscription_plan_id || (sub as any).plan_id || (sub as any).planId;
-    const pkgId = sub.package_id || (sub as any).packageId;
+    const planId = sub.subscription_plan_id || (sub as unknown as Record<string, unknown>).plan_id || (sub as unknown as Record<string, unknown>).planId;
+    const pkgId = sub.package_id || (sub as unknown as Record<string, unknown>).packageId;
 
     // 1. Matched package plans
     if (pkgId) {
       const foundPkg = packages.find((p) => p.id === pkgId);
       if (foundPkg?.plans) {
         const found = foundPkg.plans.find(
-          (pl) => pl.plan_id === planId || (pl as any).id === planId
+          (pl) => pl.plan_id === planId || (pl as unknown as Record<string, unknown>).id === planId
         );
         if (found) {
           const duration = found.duration_limit
@@ -175,7 +183,7 @@ export default function CustomerDashboardPage() {
     for (const pkg of packages) {
       if (pkg.plans) {
         const found = pkg.plans.find(
-          (pl) => pl.plan_id === planId || (pl as any).id === planId
+          (pl) => pl.plan_id === planId || (pl as unknown as Record<string, unknown>).id === planId
         );
         if (found) {
           const duration = found.duration_limit
@@ -227,7 +235,9 @@ export default function CustomerDashboardPage() {
   const defaultAddress =
     locations.find((l) => l.is_default)?.address ||
     locations[0]?.address ||
-    "Colombo 03 • Doorstep Delivery";
+    (billingProfile?.address
+      ? `${billingProfile.address}${billingProfile.city ? `, ${billingProfile.city}` : ""}`
+      : "Colombo 03 • Doorstep Delivery");
 
   const handleToggleAutoRenew = async (enabled: boolean) => {
     if (!activeSubscription) return;
@@ -255,11 +265,13 @@ export default function CustomerDashboardPage() {
     }
   };
 
-  const displayName = user?.name
-    ? user.name
-    : user?.email
-      ? user.email.split("@")[0]
-      : "Customer";
+  const displayName = billingProfile?.first_name
+    ? `${billingProfile.first_name} ${billingProfile.last_name || ""}`.trim()
+    : user?.name
+      ? user.name
+      : user?.email
+        ? user.email.split("@")[0]
+        : "Customer";
 
   // Calculate stats
   const totalInvoicesCount = invoices.length;
@@ -335,6 +347,45 @@ export default function CustomerDashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* Profile completion prompt if address or phone is missing */}
+      {billingProfile && !billingProfile.profile_complete && (
+        <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-950">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-5 h-5 text-amber-700" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-bold font-oswald uppercase tracking-wider text-amber-900">
+                  Action Required: Registration Details Incomplete
+                </p>
+                <span className="px-2 py-0.5 rounded-full bg-amber-600/20 text-amber-900 font-oswald text-[10px] font-bold">
+                  {Math.round(
+                    ([
+                      Boolean(billingProfile.first_name?.trim()),
+                      Boolean(billingProfile.last_name?.trim()),
+                      Boolean(user?.email?.trim()),
+                      Boolean(billingProfile.phone?.trim() && billingProfile.phone.trim().length >= 7),
+                      Boolean(billingProfile.address?.trim() && billingProfile.address.trim().length >= 3),
+                      Boolean(billingProfile.city?.trim() && billingProfile.city.trim().length >= 2),
+                    ].filter(Boolean).length / 6) * 100
+                  )}% Complete
+                </span>
+              </div>
+              <p className="text-xs text-amber-800/90 font-medium mt-0.5">
+                Complete your delivery street address and contact phone on your profile to activate morning deliveries.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/profile"
+            className="self-start sm:self-auto px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-oswald text-xs font-bold uppercase tracking-wider transition-all shadow-xs shrink-0"
+          >
+            Complete Profile Details →
+          </Link>
+        </div>
+      )}
 
       {/* ─── 2. Active Subscription Card & Delivery Calendar Spotlight ─── */}
       <div className="space-y-4">

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
-import { APP_CONFIG } from "@/constants/config";
 
 /**
  * POST /api/auth/register
@@ -14,17 +13,28 @@ import { APP_CONFIG } from "@/constants/config";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, role } = body;
+    const { first_name, last_name, email, phone, address, city, password, role } = body;
 
-    if (!email || !password) {
+    if (!first_name || !last_name || !email || !phone || !address || !city || !password) {
       return NextResponse.json(
-        { success: false, error: { message: "Email and password are required." } },
+        {
+          success: false,
+          error: { message: "All fields (first name, last name, email, phone, address, city, password) are required." },
+        },
         { status: 400 }
       );
     }
 
     // Build backend payload — role is optional (defaults to CUSTOMER)
-    const payload: Record<string, string> = { email, password };
+    const payload: Record<string, string> = {
+      first_name,
+      last_name,
+      email,
+      phone,
+      address,
+      city,
+      password,
+    };
     if (role) payload.role = role;
 
     const backendRes = await fetch(BACKEND_ENDPOINTS.AUTH.REGISTER, {

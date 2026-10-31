@@ -26,6 +26,10 @@ import {
   Lock,
   Package as PackageIcon,
   Clock,
+  User,
+  Mail,
+  Phone,
+  ExternalLink,
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
 import {
@@ -37,7 +41,9 @@ import {
   subscriptionService,
   triggerPayHereCheckout,
   type SubscriptionLocationInput,
+  type CreateSubscriptionReq,
 } from "@/services/api/subscription.service";
+import { userService, type BillingProfileRes } from "@/services/api/user.service";
 import { OpenStreetMapPicker } from "@/components/ui/open-street-map-picker";
 import { cn } from "@/lib/utils";
 
@@ -128,7 +134,7 @@ export function SubscribeModal({
   price,
 }: SubscribeModalProps) {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
+  const { user, setUser } = useAuthStore();
 
   // Detect custom vs fixed plan
   const isCustomPlan = useMemo(() => {
@@ -166,8 +172,18 @@ export function SubscribeModal({
     return basePriceNum / defaultDays;
   }, [basePriceNum, defaultDays]);
 
-  // Modal Step: "SET_LOCATION" | "CHECKOUT" | "CONFIRMATION"
-  const [step, setStep] = useState<"SET_LOCATION" | "CHECKOUT" | "CONFIRMATION">("CHECKOUT");
+  // Modal Step: "PROFILE_REQUIRED" | "SET_LOCATION" | "CHECKOUT" | "CONFIRMATION"
+  const [step, setStep] = useState<"PROFILE_REQUIRED" | "SET_LOCATION" | "CHECKOUT" | "CONFIRMATION">("CHECKOUT");
+
+  // Profile Details State from /api/v1/me/profile
+  const [billingProfile, setBillingProfile] = useState<BillingProfileRes | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [profFirstName, setProfFirstName] = useState("");
+  const [profLastName, setProfLastName] = useState("");
+  const [profPhone, setProfPhone] = useState("");
+  const [profAddress, setProfAddress] = useState("");
+  const [profCity, setProfCity] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Auto renewal state (Default is OFF)
   const [autoRenew, setAutoRenew] = useState(false);
@@ -208,59 +224,216 @@ export function SubscribeModal({
     return formatYMD(tomorrow);
   }, []);
 
-  // Load locations and zones whenever modal opens
+  // 6 Criteria Profile Fulfillment Checklist
+  const profileChecklist = useMemo(() => {
+    const fName = profFirstName.trim();
+    const lName = profLastName.trim();
+    const email = user?.email || "";
+    const ph = profPhone.trim();
+    const addr = profAddress.trim();
+    const ct = profCity.trim();
+
+    return [
+      {
+        id: "first_name",
+        label: "First Name",
+        category: "Identity",
+        value: fName,
+        isComplete: fName.length > 0,
+        icon: User,
+        hint: "Recipient first name",
+      },
+      {
+        id: "last_name",
+        label: "Last Name",
+        category: "Identity",
+        value: lName,
+        isComplete: lName.length > 0,
+        icon: User,
+        hint: "Family surname",
+      },
+      {
+        id: "email",
+        label: "Email Address",
+        category: "Account",
+        value: email,
+        isComplete: Boolean(email && email.includes("@")),
+        icon: Mail,
+        hint: "Account login (locked)",
+        locked: true,
+      },
+      {
+        id: "phone",
+        label: "Phone Number",
+        category: "Contact",
+        value: ph,
+        isComplete: ph.length >= 7,
+        icon: Phone,
+        hint: "Driver drop-off SMS (7+ digits)",
+      },
+      {
+        id: "address",
+        label: "Street Address",
+        category: "Delivery",
+        value: addr,
+        isComplete: addr.length >= 3,
+        icon: MapPin,
+        hint: "Morning delivery drop-off",
+      },
+      {
+        id: "city",
+        label: "City / Region",
+        category: "Delivery",
+        value: ct,
+        isComplete: ct.length >= 2,
+        icon: Building2,
+        hint: "Delivery zone / city",
+      },
+    ];
+  }, [profFirstName, profLastName, user?.email, profPhone, profAddress, profCity]);
+
+  const completedProfileCount = profileChecklist.filter((c) => c.isComplete).length;
+  const profileCompletionPercentage = Math.round((completedProfileCount / profileChecklist.length) * 100);
+  const isProfile100Percent = completedProfileCount === profileChecklist.length;
+
+  // Helper to evaluate 100% fulfillment strictly
+  const checkProfileFulfillment = (
+    fName: string,
+    lName: string,
+    ph: string,
+    addr: string,
+    ct: string,
+    email?: string
+  ): boolean => {
+    return (
+      Boolean(fName.trim()) &&
+      Boolean(lName.trim()) &&
+      Boolean(email && email.includes("@")) &&
+      Boolean(ph.trim().length >= 7) &&
+      Boolean(addr.trim().length >= 3) &&
+      Boolean(ct.trim().length >= 2)
+    );
+  };
+
+  // Load profile, locations, and zones whenever modal opens
   useEffect(() => {
     if (!isOpen) return;
 
-    setErrorMessage(null);
-    setSuccessMessage(null);
-    setSubmittingStep("");
-    setSelectedDatesMap({});
+    const resetTimer = setTimeout(() => {
+      setErrorMessage(null);
+      setSuccessMessage(null);
+      setSubmittingStep("");
+      setSelectedDatesMap({});
+    }, 0);
 
     async function loadData() {
       if (!user) return;
       setIsLoadingLocations(true);
-      try {
-        // Fetch saved delivery locations
-        const locations = await locationService.getLocations();
-        setUserLocations(locations);
+      setIsLoadingProfile(true);
 
-        // Fetch available delivery zones
-        const zones = await zoneService.getZones();
-        if (zones && zones.length > 0) {
-          setActiveZones(zones);
-          setSelectedZone(zones[0].name);
+      try {
+        // 1. Fetch user profile from /api/v1/me/profile
+        const profileData = await userService.getBillingProfile();
+        setBillingProfile(profileData);
+
+        const fName = profileData?.first_name || "";
+        const lName = profileData?.last_name || "";
+        const ph = profileData?.phone || "";
+        const addr = profileData?.address || "";
+        const ct = profileData?.city || "";
+
+        setProfFirstName(fName);
+        setProfLastName(lName);
+        setProfPhone(ph);
+        setProfAddress(addr);
+        setProfCity(ct);
+
+        // Check if profile fulfills 100% of registration details
+        const isFulfill100 = checkProfileFulfillment(fName, lName, ph, addr, ct, user?.email);
+
+        // 2. Fetch locations and delivery zones
+        let locations: LocationItem[] = [];
+        try {
+          locations = await locationService.getLocations();
+          setUserLocations(locations);
+        } catch (locErr) {
+          console.warn("Could not load user locations:", locErr);
         }
 
-        if (locations.length === 0) {
-          // If customer has no saved locations, automatically show Set Location UI!
-          setStep("SET_LOCATION");
-        } else {
-          // If locations exist, preselect default or first location and go to Checkout step
-          const defaultLoc =
-            locations.find((l) => l.is_default) || locations[0];
+        try {
+          const zones = await zoneService.getZones();
+          if (zones && zones.length > 0) {
+            setActiveZones(zones);
+            setSelectedZone(zones[0].name);
+          }
+        } catch (zoneErr) {
+          console.warn("Could not load zones:", zoneErr);
+        }
+
+        // 3. ENFORCE 100% PROFILE FULFILLMENT FIRST!
+        if (!isFulfill100) {
+          // If profile is not 100% complete, switch directly to PROFILE_REQUIRED step!
+          setStep("PROFILE_REQUIRED");
+          return;
+        }
+
+        // 4. If profile IS 100% complete, ensure delivery address is linked
+        if (locations.length === 0 && addr.trim()) {
+          const fullAddr = ct.trim() ? `${addr.trim()}, ${ct.trim()}` : addr.trim();
+          let targetId = "";
+          try {
+            const created = await locationService.createLocation({
+              address: fullAddr,
+              latitude: 6.9271,
+              longitude: 79.8612,
+            });
+            targetId = created?.id || (created as { id?: string; location_id?: string })?.location_id || `loc-prof-${Date.now()}`;
+          } catch {
+            targetId = `loc-prof-${Date.now()}`;
+          }
+
+          const autoLoc: LocationItem = {
+            id: targetId,
+            address: fullAddr,
+            latitude: 6.9271,
+            longitude: 79.8612,
+            is_default: true,
+          };
+          setUserLocations([autoLoc]);
+          setSelectedLocationId(targetId);
+          setActiveAssignLocationId(targetId);
+          setAddress(fullAddr);
+        } else if (locations.length > 0) {
+          const defaultLoc = locations.find((l) => l.is_default) || locations[0];
           setSelectedLocationId(defaultLoc.id);
           setActiveAssignLocationId(defaultLoc.id);
           setAddress(defaultLoc.address);
           if (defaultLoc.latitude !== undefined) setLatitude(defaultLoc.latitude);
           if (defaultLoc.longitude !== undefined) setLongitude(defaultLoc.longitude);
-          setStep("CHECKOUT");
         }
+
+        // Advance to Checkout
+        setStep("CHECKOUT");
       } catch (err) {
-        console.warn("Could not load user locations/zones:", err);
-        setStep("SET_LOCATION");
+        console.warn("Could not load user profile/locations:", err);
+        setStep("PROFILE_REQUIRED");
       } finally {
         setIsLoadingLocations(false);
+        setIsLoadingProfile(false);
       }
     }
 
     loadData();
+    return () => clearTimeout(resetTimer);
   }, [isOpen, user]);
 
   // Keep activeAssignLocationId in sync with selectedLocationId if not set
   useEffect(() => {
     if (!activeAssignLocationId && selectedLocationId) {
-      setActiveAssignLocationId(selectedLocationId);
+      const syncTimer = setTimeout(() => {
+        setActiveAssignLocationId(selectedLocationId);
+      }, 0);
+      return () => clearTimeout(syncTimer);
     }
   }, [selectedLocationId, activeAssignLocationId]);
 
@@ -319,6 +492,105 @@ export function SubscribeModal({
     }
   };
 
+  // ─── Inline Profile 100% Fulfillment Handler ───
+  // Save inline profile details via PUT /api/v1/me/profile and advance to Checkout
+  const handleSaveProfileAndContinue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    // Validation matching backend /api/v1/me/profile schema
+    if (!profFirstName.trim()) {
+      setErrorMessage("First name is required.");
+      return;
+    }
+    if (!profLastName.trim()) {
+      setErrorMessage("Last name is required.");
+      return;
+    }
+    if (!profPhone.trim() || profPhone.trim().length < 7) {
+      setErrorMessage("Please enter a valid phone number (at least 7 digits).");
+      return;
+    }
+    if (!profAddress.trim() || profAddress.trim().length < 3) {
+      setErrorMessage("Street delivery address is required (at least 3 characters).");
+      return;
+    }
+    if (!profCity.trim() || profCity.trim().length < 2) {
+      setErrorMessage("City / region is required (at least 2 characters).");
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      // Execute PUT /api/v1/me/profile
+      const updated = await userService.updateBillingProfile({
+        first_name: profFirstName.trim(),
+        last_name: profLastName.trim(),
+        phone: profPhone.trim(),
+        address: profAddress.trim(),
+        city: profCity.trim(),
+      });
+
+      if (updated) {
+        setBillingProfile(updated);
+      }
+
+      if (user) {
+        setUser({
+          ...user,
+          name: `${profFirstName.trim()} ${profLastName.trim()}`.trim(),
+        });
+      }
+
+      // Automatically register/update location from verified profile address
+      const fullAddress = `${profAddress.trim()}, ${profCity.trim()}`;
+      let savedLocId = selectedLocationId;
+
+      try {
+        const createdLoc = await locationService.createLocation({
+          address: fullAddress,
+          latitude: Number(latitude) || 6.9271,
+          longitude: Number(longitude) || 79.8612,
+        });
+        savedLocId = createdLoc?.id || (createdLoc as { id?: string; location_id?: string })?.location_id || `loc-prof-${Date.now()}`;
+      } catch {
+        savedLocId = `loc-prof-${Date.now()}`;
+      }
+
+      const newLoc: LocationItem = {
+        id: savedLocId,
+        address: fullAddress,
+        latitude: Number(latitude) || 6.9271,
+        longitude: Number(longitude) || 79.8612,
+        is_default: true,
+      };
+
+      setUserLocations((prev) => {
+        const remaining = prev.filter((l) => l.id !== savedLocId);
+        return [newLoc, ...remaining];
+      });
+      setSelectedLocationId(savedLocId);
+      setActiveAssignLocationId(savedLocId);
+      setAddress(fullAddress);
+
+      setSuccessMessage("Profile verified 100%! Ready to configure subscription.");
+      setTimeout(() => setSuccessMessage(null), 3500);
+
+      setStep("CHECKOUT");
+    } catch (err: unknown) {
+      console.error("Failed to update profile:", err);
+      const msg =
+        err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"
+          ? (err as { message: string }).message
+          : err instanceof Error
+          ? err.message
+          : "Failed to update profile details. Please try again.";
+      setErrorMessage(msg);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   // Submit and save new delivery location via POST /locations & GET /locations/{id}
   const handleSaveLocation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -347,7 +619,7 @@ export function SubscribeModal({
           latitude: numLat,
           longitude: numLng,
         });
-        savedId = createdLoc?.id || (createdLoc as any)?.location_id || "";
+        savedId = createdLoc?.id || (createdLoc as { id?: string; location_id?: string })?.location_id || "";
       } catch (apiErr) {
         console.warn("Location save via API returned error or unauthorized, saving to session:", apiErr);
         savedId = `loc-local-${Date.now()}`;
@@ -386,13 +658,14 @@ export function SubscribeModal({
         setSuccessMessage(null);
         setStep("CHECKOUT");
       }, 350);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to save delivery location:", err);
       const msg =
-        err?.response?.data?.error?.message ||
-        err?.response?.data?.error?.details ||
-        err?.message ||
-        "Failed to save delivery location. Please try again.";
+        err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"
+          ? (err as { message: string }).message
+          : err instanceof Error
+          ? err.message
+          : "Failed to save delivery location. Please try again.";
       setErrorMessage(msg);
     } finally {
       setIsSavingLocation(false);
@@ -511,7 +784,7 @@ export function SubscribeModal({
     }
 
     const newMap: Record<string, string> = {};
-    let cursor = new Date();
+    const cursor = new Date();
     cursor.setDate(cursor.getDate() + 1); // Start tomorrow
 
     let count = 0;
@@ -567,12 +840,11 @@ export function SubscribeModal({
   const selectedDatesCount = Object.keys(selectedDatesMap).length;
 
   // Pricing calculations for custom plan with additional days
-  const { additionalDays, additionalCost, finalPriceNum, displayPrice } = useMemo(() => {
+  const { additionalDays, additionalCost, displayPrice } = useMemo(() => {
     if (!isCustomPlan) {
       return {
         additionalDays: 0,
         additionalCost: 0,
-        finalPriceNum: basePriceNum,
         displayPrice: price,
       };
     }
@@ -589,7 +861,6 @@ export function SubscribeModal({
     return {
       additionalDays: extraDays,
       additionalCost: extraCost,
-      finalPriceNum: total,
       displayPrice: formatted,
     };
   }, [isCustomPlan, selectedDatesCount, defaultDays, dayPrice, basePriceNum, price]);
@@ -609,6 +880,21 @@ export function SubscribeModal({
     }
 
     setErrorMessage(null);
+
+    // Profile 100% fulfillment check before proceeding to Confirmation
+    const isProfileComplete = checkProfileFulfillment(
+      profFirstName,
+      profLastName,
+      profPhone,
+      profAddress,
+      profCity,
+      user?.email
+    );
+    if (!isProfileComplete) {
+      setErrorMessage("100% profile fulfillment is required before subscribing. Please fulfill your profile.");
+      setStep("PROFILE_REQUIRED");
+      return;
+    }
 
     // Custom Plan Validations
     if (isCustomPlan) {
@@ -646,6 +932,21 @@ export function SubscribeModal({
       return;
     }
 
+    // Enforce 100% profile fulfillment before finalizing payment
+    const isProfileComplete = checkProfileFulfillment(
+      profFirstName,
+      profLastName,
+      profPhone,
+      profAddress,
+      profCity,
+      user?.email
+    );
+    if (!isProfileComplete) {
+      setErrorMessage("100% profile fulfillment is required before subscribing. Please fulfill your profile.");
+      setStep("PROFILE_REQUIRED");
+      return;
+    }
+
     setErrorMessage(null);
     setIsSubmitting(true);
 
@@ -662,7 +963,7 @@ export function SubscribeModal({
       const returnUrl = `${origin}${currentPath}?payment=success`;
       const cancelUrl = `${origin}${currentPath}?payment=cancelled`;
 
-      let payload: any;
+      let payload: CreateSubscriptionReq;
 
       if (isCustomPlan) {
         // Custom plan payload with multiple locations & dates array
@@ -709,14 +1010,14 @@ export function SubscribeModal({
       } else {
         throw new Error("Invalid response from subscription checkout.");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Subscription checkout error:", err);
       const msg =
-        err?.response?.data?.error?.message ||
-        err?.response?.data?.error?.details ||
-        err?.response?.data?.message ||
-        err?.message ||
-        "Subscription setup failed. Please try again.";
+        err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"
+          ? (err as { message: string }).message
+          : err instanceof Error
+          ? err.message
+          : "Subscription setup failed. Please try again.";
       setErrorMessage(msg);
     } finally {
       setIsSubmitting(false);
@@ -750,7 +1051,7 @@ export function SubscribeModal({
           "border",
           "border-slate-200",
           "shadow-2xl",
-          isCustomPlan || step === "CONFIRMATION" ? "max-w-2xl" : "max-w-lg",
+          isCustomPlan || step === "CONFIRMATION" || step === "PROFILE_REQUIRED" ? "max-w-2xl" : "max-w-lg",
           "w-full",
           "p-5",
           "sm:p-7",
@@ -768,7 +1069,9 @@ export function SubscribeModal({
         <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-[#0B3B17]/10 text-[#0B3B17]">
-              {step === "SET_LOCATION" ? (
+              {step === "PROFILE_REQUIRED" ? (
+                <User className="w-5 h-5 text-[#28B454]" />
+              ) : step === "SET_LOCATION" ? (
                 <MapPin className="w-5 h-5 text-[#28B454]" />
               ) : step === "CONFIRMATION" ? (
                 <ShieldCheck className="w-5 h-5 text-[#28B454]" />
@@ -781,7 +1084,9 @@ export function SubscribeModal({
             <div>
               <div className="inline-flex items-center gap-1 text-[10px] font-bold font-oswald uppercase tracking-wider text-[#28B454]">
                 <span>
-                  {step === "SET_LOCATION"
+                  {step === "PROFILE_REQUIRED"
+                    ? "STEP 1 OF 3 • PROFILE SETUP (100% REQUIRED)"
+                    : step === "SET_LOCATION"
                     ? "DELIVERY ADDRESS SETUP"
                     : step === "CONFIRMATION"
                     ? "STEP 2 OF 2 • ORDER CONFIRMATION"
@@ -791,7 +1096,9 @@ export function SubscribeModal({
                 </span>
               </div>
               <h3 className="text-lg sm:text-xl font-bold text-slate-900 font-oswald uppercase">
-                {step === "SET_LOCATION"
+                {step === "PROFILE_REQUIRED"
+                  ? "Complete Profile to Subscribe"
+                  : step === "SET_LOCATION"
                   ? "Set Delivery Location"
                   : step === "CONFIRMATION"
                   ? "Confirm Your Subscription"
@@ -848,8 +1155,259 @@ export function SubscribeModal({
           </div>
         )}
 
+        {/* Loading Profile Spinner */}
+        {(isLoadingProfile || isLoadingLocations) && (
+          <div className="p-8 flex flex-col items-center justify-center gap-3 text-center">
+            <RefreshCw className="w-6 h-6 animate-spin text-[#28B454]" />
+            <span className="text-xs font-bold text-slate-600 font-oswald uppercase tracking-wider">
+              Checking profile completion status...
+            </span>
+          </div>
+        )}
+
+        {/* ─── STEP 0: 100% REGISTRATION PROFILE REQUIRED FORM ─── */}
+        {!isLoadingProfile && !isLoadingLocations && step === "PROFILE_REQUIRED" && (
+          <form onSubmit={handleSaveProfileAndContinue} className="space-y-4">
+            {/* Completion Hero Card */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#0B3B17]/5 via-emerald-50/60 to-white border border-[#28B454]/25 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 text-[#0B3B17] text-[10px] font-black font-oswald uppercase tracking-wider mb-1">
+                    <Sparkles className="w-3 h-3 text-[#28B454]" />
+                    <span>Profile Fulfillment Required</span>
+                  </div>
+                  <h4 className="font-oswald text-base sm:text-lg font-bold text-slate-900 uppercase">
+                    100% Registration Profile Needed to Subscribe
+                  </h4>
+                  <p className="text-xs text-slate-600 font-normal leading-relaxed mt-0.5">
+                    Before subscribing to your meal plan, all 6 registration profile details must be completed for daily chef morning preparation, rider delivery dispatch, and billing receipts.
+                  </p>
+                </div>
+
+                {/* Percentage Indicator Widget */}
+                <div className="text-right shrink-0">
+                  <div className="inline-flex flex-col items-center justify-center w-16 h-16 rounded-2xl bg-white border border-emerald-200 shadow-xs">
+                    <span
+                      className={cn(
+                        "font-oswald text-xl font-black leading-none",
+                        profileCompletionPercentage === 100 ? "text-[#28B454]" : "text-amber-600"
+                      )}
+                    >
+                      {profileCompletionPercentage}%
+                    </span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase font-oswald mt-1">
+                      {completedProfileCount}/6 Items
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="space-y-1">
+                <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500 ease-out",
+                      profileCompletionPercentage === 100
+                        ? "bg-gradient-to-r from-[#28B454] to-[#36D068]"
+                        : "bg-gradient-to-r from-amber-500 to-[#28B454]"
+                    )}
+                    style={{ width: `${Math.max(5, profileCompletionPercentage)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* 6 Criteria Status Chips */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 pt-1">
+                {profileChecklist.map((item) => (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      "px-2.5 py-1.5 rounded-xl border text-[11px] font-medium flex items-center justify-between gap-1.5 transition-all",
+                      item.isComplete
+                        ? "bg-emerald-50/80 border-emerald-200 text-emerald-800"
+                        : "bg-amber-50/70 border-amber-200 text-amber-800"
+                    )}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <item.icon className={cn("w-3.5 h-3.5 shrink-0", item.isComplete ? "text-[#28B454]" : "text-amber-500")} />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    {item.isComplete ? (
+                      <Check className="w-3 h-3 text-[#28B454]" />
+                    ) : (
+                      <span className="text-[9px] font-bold uppercase font-oswald bg-amber-200/80 text-amber-900 px-1 py-0.2 rounded shrink-0">
+                        Needed
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Inline Profile Input Fields */}
+            <div className="space-y-3">
+              {/* Row 1: First Name & Last Name */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold font-oswald uppercase tracking-wider text-slate-700 mb-1">
+                    First Name *
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      required
+                      value={profFirstName}
+                      onChange={(e) => setProfFirstName(e.target.value)}
+                      placeholder="e.g. Kasun"
+                      className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#28B454] focus:ring-2 focus:ring-[#28B454]/20 text-xs font-medium transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold font-oswald uppercase tracking-wider text-slate-700 mb-1">
+                    Last Name *
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      required
+                      value={profLastName}
+                      onChange={(e) => setProfLastName(e.target.value)}
+                      placeholder="e.g. Perera"
+                      className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#28B454] focus:ring-2 focus:ring-[#28B454]/20 text-xs font-medium transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Email (Locked) & Phone */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-bold font-oswald uppercase tracking-wider text-slate-700">
+                      Account Email
+                    </label>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded flex items-center gap-1 font-oswald">
+                      <Lock className="w-2.5 h-2.5 text-slate-400" />
+                      <span>Locked</span>
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="email"
+                      readOnly
+                      disabled
+                      value={user?.email || ""}
+                      className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 text-xs font-medium cursor-not-allowed select-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold font-oswald uppercase tracking-wider text-slate-700 mb-1">
+                    Phone Number *
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="tel"
+                      required
+                      value={profPhone}
+                      onChange={(e) => setProfPhone(e.target.value)}
+                      placeholder="e.g. 0771234567"
+                      className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#28B454] focus:ring-2 focus:ring-[#28B454]/20 text-xs font-medium transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 3: Street Address & City */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold font-oswald uppercase tracking-wider text-slate-700 mb-1">
+                    Delivery Street Address *
+                  </label>
+                  <div className="relative">
+                    <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      required
+                      value={profAddress}
+                      onChange={(e) => setProfAddress(e.target.value)}
+                      placeholder="e.g. 114/10, Dehigahahena, Hiyare"
+                      className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#28B454] focus:ring-2 focus:ring-[#28B454]/20 text-xs font-medium transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold font-oswald uppercase tracking-wider text-slate-700 mb-1">
+                    City / Region *
+                  </label>
+                  <div className="relative">
+                    <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      required
+                      value={profCity}
+                      onChange={(e) => setProfCity(e.target.value)}
+                      placeholder="e.g. Galle"
+                      className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#28B454] focus:ring-2 focus:ring-[#28B454]/20 text-xs font-medium transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Form Actions */}
+            <div className="pt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold font-oswald uppercase hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/profile")}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 font-oswald uppercase tracking-wide hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <span>Open Full Profile</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSavingProfile}
+                className="ml-auto px-6 py-3 rounded-xl bg-[#0B3B17] hover:bg-[#124D20] text-white text-xs sm:text-sm font-bold font-oswald uppercase tracking-wider transition-all shadow-md shadow-[#0B3B17]/25 flex items-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {isSavingProfile ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-[#36D068]" />
+                    <span>Saving Profile via /api/v1/me/profile...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4 text-[#36D068]" />
+                    <span>Save Profile &amp; Unlock Subscription</span>
+                    <ArrowRight className="w-4 h-4 text-[#36D068]" />
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        )}
+
         {/* ─── STEP 1: SET DELIVERY LOCATION FORM ─── */}
-        {step === "SET_LOCATION" && (
+        {!isLoadingProfile && step === "SET_LOCATION" && (
           <form onSubmit={handleSaveLocation} className="space-y-4">
             <div className="p-4 bg-emerald-50/60 border border-emerald-200/80 rounded-2xl space-y-1">
               <div className="flex items-center gap-2 text-emerald-900 font-oswald text-xs font-bold uppercase tracking-wider">
@@ -982,7 +1540,7 @@ export function SubscribeModal({
 
             {/* Form Actions */}
             <div className="pt-3 flex items-center justify-between gap-3 border-t border-slate-100">
-              {userLocations.length > 0 ? (
+              {userLocations.length > 0 || isProfile100Percent ? (
                 <button
                   type="button"
                   onClick={() => setStep("CHECKOUT")}
@@ -994,10 +1552,11 @@ export function SubscribeModal({
               ) : (
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold font-oswald uppercase hover:bg-slate-100 transition-colors cursor-pointer"
+                  onClick={() => setStep("PROFILE_REQUIRED")}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold font-oswald uppercase hover:bg-slate-100 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
-                  Cancel
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Profile</span>
                 </button>
               )}
 
@@ -1013,7 +1572,7 @@ export function SubscribeModal({
                   </>
                 ) : (
                   <>
-                    <span>Save Location & Continue</span>
+                    <span>Save Location &amp; Continue</span>
                     <ArrowRight className="w-3.5 h-3.5 text-[#36D068]" />
                   </>
                 )}
@@ -1023,13 +1582,42 @@ export function SubscribeModal({
         )}
 
         {/* ─── STEP 1: SUBSCRIPTION CONFIGURATION (CALENDAR / ADDRESS / RENEWAL) ─── */}
-        {step === "CHECKOUT" && (
+        {!isLoadingProfile && step === "CHECKOUT" && (
           <form onSubmit={handleReviewDetails} className="space-y-4">
             {/* ══════════════════════════════════════════════════════════════
                 CUSTOM PLAN: LIVE INTERACTIVE DELIVERY CALENDAR & MULTI-LOCATION
                ══════════════════════════════════════════════════════════════ */}
             {isCustomPlan ? (
               <div className="space-y-4">
+                {/* 100% Verified Profile Recipient Card for Custom Plan */}
+                <div className="p-3 bg-emerald-50/80 border border-emerald-200/90 rounded-2xl flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-white border border-emerald-300 flex items-center justify-center shrink-0 text-[#28B454]">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-emerald-950 font-oswald uppercase truncate">
+                          {profFirstName} {profLastName}
+                        </span>
+                        <span className="px-1.5 py-0.2 rounded bg-emerald-200 text-[#0B3B17] text-[9px] font-black font-oswald uppercase tracking-wider shrink-0">
+                          ✓ 100% Profile Verified
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-emerald-800 font-medium truncate block">
+                        {profPhone} • {profAddress}, {profCity}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStep("PROFILE_REQUIRED")}
+                    className="text-[10px] font-bold font-oswald uppercase tracking-wider text-[#28B454] hover:underline shrink-0 cursor-pointer"
+                  >
+                    Edit Profile
+                  </button>
+                </div>
+
                 {/* 1. Location Assignment Toolbar for Custom Plan */}
                 <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
                   <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1358,7 +1946,36 @@ export function SubscribeModal({
                   FIXED PLAN: SINGLE DELIVERY ADDRESS BOX
                  ══════════════════════════════════════════════════════════════ */
               <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2.5">
-                <div className="flex items-center justify-between">
+                {/* 100% Verified Profile Recipient Card */}
+                <div className="p-3 bg-emerald-50/80 border border-emerald-200/90 rounded-xl flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-white border border-emerald-300 flex items-center justify-center shrink-0 text-[#28B454]">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-emerald-950 font-oswald uppercase truncate">
+                          {profFirstName} {profLastName}
+                        </span>
+                        <span className="px-1.5 py-0.2 rounded bg-emerald-200 text-[#0B3B17] text-[9.5px] font-black font-oswald uppercase tracking-wider shrink-0">
+                          ✓ 100% Profile Verified
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-emerald-800 font-medium truncate block">
+                        {profPhone} • {user?.email}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStep("PROFILE_REQUIRED")}
+                    className="text-[10px] font-bold font-oswald uppercase tracking-wider text-[#28B454] hover:underline shrink-0 cursor-pointer"
+                  >
+                    Edit Profile
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
                   <span className="text-[11px] font-bold font-oswald uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5 text-[#28B454]" />
                     <span>Delivery Address</span>
@@ -1614,6 +2231,32 @@ export function SubscribeModal({
                   </p>
                 </div>
               )}
+            </div>
+
+            {/* Verified Recipient Summary */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold font-oswald uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-[#28B454]" />
+                  <span>Verified Recipient &amp; Contact</span>
+                </span>
+                <span className="text-[10px] font-oswald font-bold uppercase tracking-wider text-[#15803D] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  ✓ 100% Profile Fulfilled
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div>
+                  <span className="font-bold text-slate-900 block font-oswald uppercase">
+                    {profFirstName} {profLastName}
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    {profPhone} • {user?.email}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                  📍 {billingProfile?.city || profCity}
+                </div>
+              </div>
             </div>
 
             {/* 3. Delivery Address / Locations Breakdown */}

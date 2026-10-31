@@ -1786,6 +1786,122 @@
                 }
             }
         },
+        "/api/v1/me/profile": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the authenticated user's billing profile and whether it is complete",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get my billing profile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_user.ProfileRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Saves the billing details (name, phone, address) required to subscribe",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update my billing profile",
+                "parameters": [
+                    {
+                        "description": "Billing profile",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_user.UpdateProfileReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_user.ProfileRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/meal-cancellations": {
             "get": {
                 "security": [
@@ -8752,18 +8868,53 @@
         "internal_domain_auth.RegisterReq": {
             "type": "object",
             "required": [
+                "address",
+                "city",
                 "email",
-                "password"
+                "first_name",
+                "last_name",
+                "password",
+                "phone"
             ],
             "properties": {
+                "address": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 3,
+                    "example": "123 Galle Rd"
+                },
+                "city": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Colombo"
+                },
                 "email": {
                     "type": "string",
                     "example": "user@example.com"
+                },
+                "first_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "example": "Kasun"
+                },
+                "last_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "example": "Perera"
                 },
                 "password": {
                     "type": "string",
                     "minLength": 8,
                     "example": "P@ssword1"
+                },
+                "phone": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "minLength": 7,
+                    "example": "0771234567"
                 },
                 "role": {
                     "description": "Optional, defaults to CUSTOMER in service",
@@ -11668,6 +11819,29 @@
                 }
             }
         },
+        "internal_domain_user.ProfileRes": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "profile_complete": {
+                    "type": "boolean"
+                }
+            }
+        },
         "internal_domain_user.RoleType": {
             "type": "string",
             "enum": [
@@ -11675,9 +11849,51 @@
                 "CUSTOMER"
             ],
             "x-enum-varnames": [
-                "RoleAdmin",
-                "RoleCustomer"
+                "Admin",
+                "Customer"
             ]
+        },
+        "internal_domain_user.UpdateProfileReq": {
+            "type": "object",
+            "required": [
+                "address",
+                "city",
+                "first_name",
+                "last_name",
+                "phone"
+            ],
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 3,
+                    "example": "123 Galle Rd"
+                },
+                "city": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Colombo"
+                },
+                "first_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "example": "Kasun"
+                },
+                "last_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "example": "Perera"
+                },
+                "phone": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "minLength": 7,
+                    "example": "0771234567"
+                }
+            }
         },
         "internal_domain_user.UpdateRoleReq": {
             "type": "object",
@@ -12124,8 +12340,8 @@
                 "CUSTOMER"
             ],
             "x-enum-varnames": [
-                "RoleAdmin",
-                "RoleCustomer"
+                "Admin",
+                "Customer"
             ]
         },
         "nu3go_internal_shared_analytics.Granularity": {

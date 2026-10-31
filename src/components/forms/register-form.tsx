@@ -35,7 +35,16 @@ export function RegisterForm() {
 
     try {
       // Register user — backend sends OTP code to their email
-      await authService.register({ email, password, role: "CUSTOMER" });
+      await authService.register({
+        first_name: "Customer",
+        last_name: "User",
+        email,
+        phone: "0770000000",
+        address: "Address",
+        city: "Colombo",
+        password,
+        role: "CUSTOMER",
+      });
 
       // Redirect user to the OTP Email Verification page
       router.push(`/verify-email?email=${encodeURIComponent(email)}`);

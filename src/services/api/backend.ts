@@ -25,6 +25,9 @@ export const BACKEND_ENDPOINTS = {
     DETAIL: (id: string) => `${API_V1}/users/${id}`,
     UPDATE_STATUS: (id: string) => `${API_V1}/users/${id}/status`,
   },
+  ME: {
+    PROFILE: `${API_V1}/me/profile`,
+  },
   FAQS: {
     LIST: `${API_V1}/faqs`,
     CREATE: `${API_V1}/faqs`,

@@ -10,7 +10,12 @@ export interface LoginPayload {
 }
 
 export interface RegisterPayload {
+  first_name: string;
+  last_name: string;
   email: string;
+  phone: string;
+  address: string;
+  city: string;
   password: string;
   role?: "ADMIN" | "CUSTOMER";
 }
