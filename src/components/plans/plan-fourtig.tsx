@@ -23,7 +23,10 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useAuthStore } from "@/store/auth.store";
 import { SubscribeModal } from "@/components/subscription/subscribe-modal";
 import { cn } from "@/lib/utils";
-import type { PublicPackage } from "@/services/api/package.service";
+import {
+  parsePackageMacrosDescription,
+  type PublicPackage,
+} from "@/services/api/package.service";
 import {
   mapPackagePlansToDurations,
   matchPackageByName,
@@ -189,6 +192,18 @@ export function PlanFourtig({ packageData }: PlanFourtigProps = {}) {
     durations[0] ||
     FOURTIG_DURATIONS[0];
 
+  // Parse package macros from package description, with single fallback values
+  const macros = useMemo(() => {
+    const desc = pkg?.description || activeDuration?.description || "";
+    const parsed = parsePackageMacrosDescription(desc);
+    return {
+      kcal: parsed.kcal || "430",
+      protein: parsed.protein || "26",
+      carbs: parsed.carbs || "40",
+      fats: parsed.fats || "14",
+    };
+  }, [pkg?.description, activeDuration?.description]);
+
   // Extract active package discount (if assigned)
   const discount = useMemo(() => getPackageDiscount(pkg), [pkg]);
   const discountedPrice = discount
@@ -323,7 +338,7 @@ export function PlanFourtig({ packageData }: PlanFourtigProps = {}) {
                   <span>Energy</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-neutral-900">
-                  380 - 480
+                  {macros.kcal}
                 </span>
                 <span className="text-[10px] text-neutral-500 uppercase tracking-wider">kcal / meal</span>
               </div>
@@ -335,7 +350,7 @@ export function PlanFourtig({ packageData }: PlanFourtigProps = {}) {
                   <span>Clean Protein</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-amber-700">
-                  22g - 30g
+                  {macros.protein.replace(/g$/i, "")}g
                 </span>
                 <span className="text-[10px] text-amber-800/80 uppercase tracking-wider">Digestible</span>
               </div>
@@ -347,7 +362,7 @@ export function PlanFourtig({ packageData }: PlanFourtigProps = {}) {
                   <span>Carbs</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-neutral-900">
-                  35g - 45g
+                  {macros.carbs.replace(/g$/i, "")}g
                 </span>
                 <span className="text-[10px] text-neutral-500 uppercase tracking-wider">Low GI</span>
               </div>
@@ -359,7 +374,7 @@ export function PlanFourtig({ packageData }: PlanFourtigProps = {}) {
                   <span>Heart Fats</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-neutral-900">
-                  12g - 16g
+                  {macros.fats.replace(/g$/i, "")}g
                 </span>
                 <span className="text-[10px] text-neutral-500 uppercase tracking-wider">Omega 3 &amp; 9</span>
               </div>

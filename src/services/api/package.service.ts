@@ -80,6 +80,93 @@ export interface CreatePackagePayload {
   plans: PackagePlanPrice[];
 }
 
+export interface PackageMacros {
+  kcal: string;
+  protein: string;
+  carbs: string;
+  fats: string;
+}
+
+/**
+ * Formats KCAL, Protein, Carbs, and Fats into a standardized single description string for API requests.
+ * Format: "KCAL: 650 | Protein: 45g | Carbs: 60g | Fats: 18g"
+ */
+export function formatPackageMacrosDescription(
+  kcal: string | number,
+  protein: string | number,
+  carbs: string | number,
+  fats: string | number
+): string {
+  const k = String(kcal ?? "").trim();
+  const p = String(protein ?? "").trim();
+  const c = String(carbs ?? "").trim();
+  const f = String(fats ?? "").trim();
+
+  if (!k && !p && !c && !f) return "";
+
+  return `KCAL: ${k || "0"} | Protein: ${p || "0"}g | Carbs: ${c || "0"}g | Fats: ${f || "0"}g`;
+}
+
+/**
+ * Robustly parses KCAL, Protein, Carbs, and Fats from a package description string.
+ * Supports pipe-separated format, comma-separated format, and JSON payload format.
+ */
+export function parsePackageMacrosDescription(desc?: string | null): PackageMacros {
+  if (!desc || typeof desc !== "string") {
+    return { kcal: "", protein: "", carbs: "", fats: "" };
+  }
+
+  const trimmed = desc.trim();
+
+  // Handle JSON format if present
+  if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      return {
+        kcal: String(parsed.kcal || parsed.calories || "").replace(/[^\d.]/g, ""),
+        protein: String(parsed.protein || "").replace(/[^\d.]/g, ""),
+        carbs: String(parsed.carbs || parsed.carbohydrates || "").replace(/[^\d.]/g, ""),
+        fats: String(parsed.fats || parsed.fat || "").replace(/[^\d.]/g, ""),
+      };
+    } catch {
+      // Fall through to regex
+    }
+  }
+
+  // Regex extraction matching KCAL / Calories, Protein, Carbs, Fats
+  const kcalMatch =
+    trimmed.match(/(?:kcal|calories?)\s*[:=]?\s*(\d+(?:\.\d+)?)/i) ||
+    trimmed.match(/(\d+(?:\.\d+)?)\s*(?:kcal|calories?)/i);
+  const proteinMatch =
+    trimmed.match(/protein\s*[:=]?\s*(\d+(?:\.\d+)?)/i) ||
+    trimmed.match(/(\d+(?:\.\d+)?)\s*g?\s*protein/i);
+  const carbsMatch =
+    trimmed.match(/carbs?\s*[:=]?\s*(\d+(?:\.\d+)?)/i) ||
+    trimmed.match(/carbohydrates?\s*[:=]?\s*(\d+(?:\.\d+)?)/i) ||
+    trimmed.match(/(\d+(?:\.\d+)?)\s*g?\s*carbs?/i);
+  const fatsMatch =
+    trimmed.match(/fats?\s*[:=]?\s*(\d+(?:\.\d+)?)/i) ||
+    trimmed.match(/(\d+(?:\.\d+)?)\s*g?\s*fats?/i);
+
+  let kcal = kcalMatch ? kcalMatch[1] : "";
+  let protein = proteinMatch ? proteinMatch[1] : "";
+  let carbs = carbsMatch ? carbsMatch[1] : "";
+  let fats = fatsMatch ? fatsMatch[1] : "";
+
+  // Positional fallback: If not all 4 were matched by labels, extract numbers in order (KCAL, Protein, Carbs, Fats)
+  if (!kcal || !protein || !carbs || !fats) {
+    const numbers = trimmed.match(/\d+(?:\.\d+)?/g);
+    if (numbers && numbers.length >= 4) {
+      if (!kcal) kcal = numbers[0];
+      if (!protein) protein = numbers[1];
+      if (!carbs) carbs = numbers[2];
+      if (!fats) fats = numbers[3];
+    }
+  }
+
+  return { kcal, protein, carbs, fats };
+}
+
 export interface UpdatePackagePayload {
   name?: string;
   description?: string;

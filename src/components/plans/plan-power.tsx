@@ -24,7 +24,10 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useAuthStore } from "@/store/auth.store";
 import { SubscribeModal } from "@/components/subscription/subscribe-modal";
 import { cn } from "@/lib/utils";
-import type { PublicPackage } from "@/services/api/package.service";
+import {
+  parsePackageMacrosDescription,
+  type PublicPackage,
+} from "@/services/api/package.service";
 import {
   mapPackagePlansToDurations,
   matchPackageByName,
@@ -189,6 +192,18 @@ export function PlanPower({ packageData }: PlanPowerProps = {}) {
     durations[0] ||
     POWER_DURATIONS[0];
 
+  // Parse package macros from package description, with single fallback values
+  const macros = useMemo(() => {
+    const desc = pkg?.description || activeDuration?.description || "";
+    const parsed = parsePackageMacrosDescription(desc);
+    return {
+      kcal: parsed.kcal || "600",
+      protein: parsed.protein || "40",
+      carbs: parsed.carbs || "58",
+      fats: parsed.fats || "15",
+    };
+  }, [pkg?.description, activeDuration?.description]);
+
   // Extract active package discount (if assigned)
   const discount = useMemo(() => getPackageDiscount(pkg), [pkg]);
   const discountedPrice = discount
@@ -300,7 +315,7 @@ export function PlanPower({ packageData }: PlanPowerProps = {}) {
                 PROTEIN CONCENTRATION
               </div>
               <div className="font-oswald text-lg sm:text-xl font-black text-red-400">
-                35g - 45g Bioavailable Protein
+                {macros.protein.replace(/g$/i, "")}g Bioavailable Protein
               </div>
             </div>
             <div className="w-11 h-11 rounded-full bg-red-500/20 flex items-center justify-center text-red-400 shrink-0 shadow-inner">
@@ -365,7 +380,7 @@ export function PlanPower({ packageData }: PlanPowerProps = {}) {
                   <span>Energy</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-white">
-                  550 - 650
+                  {macros.kcal}
                 </span>
                 <span className="text-[10px] text-neutral-400 uppercase tracking-wider">kcal / meal</span>
               </div>
@@ -377,7 +392,7 @@ export function PlanPower({ packageData }: PlanPowerProps = {}) {
                   <span>Protein</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-red-400">
-                  35g - 45g
+                  {macros.protein.replace(/g$/i, "")}g
                 </span>
                 <span className="text-[10px] text-red-300/80 uppercase tracking-wider">Lean Protein</span>
               </div>
@@ -389,7 +404,7 @@ export function PlanPower({ packageData }: PlanPowerProps = {}) {
                   <span>Carbs</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-white">
-                  50g - 65g
+                  {macros.carbs.replace(/g$/i, "")}g
                 </span>
                 <span className="text-[10px] text-neutral-400 uppercase tracking-wider">Complex</span>
               </div>
@@ -401,7 +416,7 @@ export function PlanPower({ packageData }: PlanPowerProps = {}) {
                   <span>Healthy Fats</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-white">
-                  12g - 18g
+                  {macros.fats.replace(/g$/i, "")}g
                 </span>
                 <span className="text-[10px] text-neutral-400 uppercase tracking-wider">Omega &amp; MCT</span>
               </div>

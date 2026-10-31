@@ -24,7 +24,10 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useAuthStore } from "@/store/auth.store";
 import { SubscribeModal } from "@/components/subscription/subscribe-modal";
 import { cn } from "@/lib/utils";
-import type { PublicPackage } from "@/services/api/package.service";
+import {
+  parsePackageMacrosDescription,
+  type PublicPackage,
+} from "@/services/api/package.service";
 import {
   mapPackagePlansToDurations,
   matchPackageByName,
@@ -189,6 +192,18 @@ export function PlanClassic({ packageData }: PlanClassicProps = {}) {
     durations[0] ||
     CLASSIC_DURATIONS[0];
 
+  // Parse package macros from package description, with single fallback values
+  const macros = useMemo(() => {
+    const desc = pkg?.description || activeDuration?.description || "";
+    const parsed = parsePackageMacrosDescription(desc);
+    return {
+      kcal: parsed.kcal || "450",
+      protein: parsed.protein || "24",
+      carbs: parsed.carbs || "45",
+      fats: parsed.fats || "12",
+    };
+  }, [pkg?.description, activeDuration?.description]);
+
   // Extract active package discount (if assigned)
   const discount = useMemo(() => getPackageDiscount(pkg), [pkg]);
   const discountedPrice = discount
@@ -323,7 +338,7 @@ export function PlanClassic({ packageData }: PlanClassicProps = {}) {
                   <span>Energy</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-neutral-900">
-                  400 - 500
+                  {macros.kcal}
                 </span>
                 <span className="text-[10px] text-neutral-500 uppercase tracking-wider">kcal / meal</span>
               </div>
@@ -335,7 +350,7 @@ export function PlanClassic({ packageData }: PlanClassicProps = {}) {
                   <span>Protein</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-[#2EB959]">
-                  20g - 28g
+                  {macros.protein.replace(/g$/i, "")}g
                 </span>
                 <span className="text-[10px] text-emerald-700/80 uppercase tracking-wider">Balanced</span>
               </div>
@@ -347,7 +362,7 @@ export function PlanClassic({ packageData }: PlanClassicProps = {}) {
                   <span>Carbs</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-neutral-900">
-                  40g - 50g
+                  {macros.carbs.replace(/g$/i, "")}g
                 </span>
                 <span className="text-[10px] text-neutral-500 uppercase tracking-wider">Whole Grains</span>
               </div>
@@ -359,7 +374,7 @@ export function PlanClassic({ packageData }: PlanClassicProps = {}) {
                   <span>Healthy Fats</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-neutral-900">
-                  10g - 14g
+                  {macros.fats.replace(/g$/i, "")}g
                 </span>
                 <span className="text-[10px] text-neutral-500 uppercase tracking-wider">Unsaturated</span>
               </div>

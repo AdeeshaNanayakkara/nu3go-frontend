@@ -3,6 +3,8 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   packageService,
+  formatPackageMacrosDescription,
+  parsePackageMacrosDescription,
   type PackageItem,
   type PlanWithPrice,
   type SubscriptionPlanItem,
@@ -43,6 +45,10 @@ import {
   ShieldAlert,
   Sparkles,
   FolderOpen,
+  Flame,
+  Beef,
+  Wheat,
+  Droplet,
 } from "lucide-react";
 
 export default function AdminPackagesPage() {
@@ -69,7 +75,10 @@ export default function AdminPackagesPage() {
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<PackageItem | null>(null);
   const [formPackageName, setFormPackageName] = useState("");
-  const [formPackageDescription, setFormPackageDescription] = useState("");
+  const [formPackageKcal, setFormPackageKcal] = useState("");
+  const [formPackageProtein, setFormPackageProtein] = useState("");
+  const [formPackageCarbs, setFormPackageCarbs] = useState("");
+  const [formPackageFats, setFormPackageFats] = useState("");
   const [formPackageIsActive, setFormPackageIsActive] = useState(true);
   const [selectedPlansMap, setSelectedPlansMap] = useState<Record<string, { price: number | ""; return_price: number | "" }>>({});
   const [createModalPlans, setCreateModalPlans] = useState<SubscriptionPlanItem[]>([]);
@@ -340,7 +349,10 @@ export default function AdminPackagesPage() {
   const handleOpenCreatePackageModal = async () => {
     setEditingPackage(null);
     setFormPackageName("");
-    setFormPackageDescription("");
+    setFormPackageKcal("");
+    setFormPackageProtein("");
+    setFormPackageCarbs("");
+    setFormPackageFats("");
     setFormPackageIsActive(true);
     setSelectedPlansMap({});
     setPackageModalError(null);
@@ -386,7 +398,11 @@ export default function AdminPackagesPage() {
     e?.stopPropagation();
     setEditingPackage(pkg);
     setFormPackageName(pkg.name);
-    setFormPackageDescription(pkg.description || "");
+    const macros = parsePackageMacrosDescription(pkg.description);
+    setFormPackageKcal(macros.kcal);
+    setFormPackageProtein(macros.protein);
+    setFormPackageCarbs(macros.carbs);
+    setFormPackageFats(macros.fats);
     setFormPackageIsActive(pkg.is_active ?? true);
     setPackageModalError(null);
     setIsPackageModalOpen(true);
@@ -399,6 +415,30 @@ export default function AdminPackagesPage() {
       setPackageModalError("Package name is required.");
       return;
     }
+
+    if (!formPackageKcal.trim()) {
+      setPackageModalError("Please enter Calories (KCAL).");
+      return;
+    }
+    if (!formPackageProtein.trim()) {
+      setPackageModalError("Please enter Protein in grams.");
+      return;
+    }
+    if (!formPackageCarbs.trim()) {
+      setPackageModalError("Please enter Carbs in grams.");
+      return;
+    }
+    if (!formPackageFats.trim()) {
+      setPackageModalError("Please enter Fats in grams.");
+      return;
+    }
+
+    const packageDescription = formatPackageMacrosDescription(
+      formPackageKcal,
+      formPackageProtein,
+      formPackageCarbs,
+      formPackageFats
+    );
 
     if (!editingPackage) {
       const planEntries = Object.entries(selectedPlansMap);
@@ -422,7 +462,7 @@ export default function AdminPackagesPage() {
       if (editingPackage) {
         await packageService.updatePackage(editingPackage.id, {
           name: formPackageName.trim(),
-          description: formPackageDescription.trim(),
+          description: packageDescription,
           is_active: formPackageIsActive,
         });
       } else {
@@ -434,7 +474,7 @@ export default function AdminPackagesPage() {
 
         await packageService.createPackage({
           name: formPackageName.trim(),
-          description: formPackageDescription.trim(),
+          description: packageDescription,
           is_active: formPackageIsActive,
           plans: plansPayload,
         });
@@ -1464,10 +1504,48 @@ export default function AdminPackagesPage() {
                               </div>
                             </div>
 
-                            {/* Package Description */}
-                            <p className="text-sm text-slate-600 leading-relaxed line-clamp-3 mb-4">
-                              {pkg.description || "No description provided."}
-                            </p>
+                            {/* Package Description / Macros */}
+                            {(() => {
+                              const macros = parsePackageMacrosDescription(pkg.description);
+                              const hasMacros = Boolean(macros.kcal || macros.protein || macros.carbs || macros.fats);
+
+                              if (hasMacros) {
+                                return (
+                                  <div className="flex flex-wrap items-center gap-1.5 mb-4">
+                                    {macros.kcal && (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200/80 text-amber-800 text-[11px] font-bold font-oswald">
+                                        <Flame className="w-3 h-3 text-amber-500 shrink-0" />
+                                        <span>{macros.kcal} KCAL</span>
+                                      </span>
+                                    )}
+                                    {macros.protein && (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200/80 text-rose-800 text-[11px] font-bold font-oswald">
+                                        <Beef className="w-3 h-3 text-rose-500 shrink-0" />
+                                        <span>{macros.protein}g Protein</span>
+                                      </span>
+                                    )}
+                                    {macros.carbs && (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50/70 border border-amber-200/80 text-amber-900 text-[11px] font-bold font-oswald">
+                                        <Wheat className="w-3 h-3 text-amber-600 shrink-0" />
+                                        <span>{macros.carbs}g Carbs</span>
+                                      </span>
+                                    )}
+                                    {macros.fats && (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200/80 text-[#0B3B17] text-[11px] font-bold font-oswald">
+                                        <Droplet className="w-3 h-3 text-emerald-600 shrink-0" />
+                                        <span>{macros.fats}g Fats</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <p className="text-sm text-slate-600 leading-relaxed line-clamp-3 mb-4">
+                                  {pkg.description || "No description provided."}
+                                </p>
+                              );
+                            })()}
                           </div>
 
                           {/* Assigned Plans Summary Pills */}
@@ -1795,17 +1873,115 @@ export default function AdminPackagesPage() {
                 />
               </div>
 
-              <div>
-                <label className={cn('block', 'text-xs', 'font-bold', 'text-slate-700', 'mb-1')}>
-                  Description
-                </label>
-                <textarea
-                  rows={3}
-                  value={formPackageDescription}
-                  onChange={(e) => setFormPackageDescription(e.target.value)}
-                  placeholder="Brief description of meal offerings in this package..."
-                  className={cn('w-full', 'px-3.5', 'py-2.5', 'border', 'border-slate-200', 'rounded-xl', 'text-xs', 'font-medium', 'focus:outline-none', 'focus:border-[#36D068]')}
-                />
+              {/* Nutritional Macros (Horizontal Line: KCAL, Protein, Carbs, Fats) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className={cn('block', 'text-xs', 'font-bold', 'text-slate-700')}>
+                    Nutritional Macros *
+                  </label>
+                  <span className="text-[10.5px] font-medium text-slate-400">
+                    Encoded into description for API &amp; meal plan display
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {/* 1. KCAL */}
+                  <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 focus-within:border-[#36D068] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#36D068]/20 transition-all">
+                    <div className="flex items-center mb-1">
+                      <span className="text-[10px] font-bold font-oswald uppercase tracking-wider text-amber-600 flex items-center gap-1">
+                        <Flame className="w-3 h-3 text-amber-500 shrink-0" />
+                        <span>KCAL</span>
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="1"
+                      value={formPackageKcal}
+                      onChange={(e) => setFormPackageKcal(e.target.value)}
+                      placeholder="650"
+                      className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* 2. Protein */}
+                  <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 focus-within:border-[#36D068] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#36D068]/20 transition-all">
+                    <div className="flex items-center mb-1">
+                      <span className="text-[10px] font-bold font-oswald uppercase tracking-wider text-rose-600 flex items-center gap-1">
+                        <Beef className="w-3 h-3 text-rose-500 shrink-0" />
+                        <span>Protein</span>
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="0.1"
+                      value={formPackageProtein}
+                      onChange={(e) => setFormPackageProtein(e.target.value)}
+                      placeholder="45"
+                      className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* 3. Carbs */}
+                  <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 focus-within:border-[#36D068] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#36D068]/20 transition-all">
+                    <div className="flex items-center mb-1">
+                      <span className="text-[10px] font-bold font-oswald uppercase tracking-wider text-amber-700 flex items-center gap-1">
+                        <Wheat className="w-3 h-3 text-amber-600 shrink-0" />
+                        <span>Carbs</span>
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="0.1"
+                      value={formPackageCarbs}
+                      onChange={(e) => setFormPackageCarbs(e.target.value)}
+                      placeholder="60"
+                      className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* 4. Fats */}
+                  <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 focus-within:border-[#36D068] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#36D068]/20 transition-all">
+                    <div className="flex items-center mb-1">
+                      <span className="text-[10px] font-bold font-oswald uppercase tracking-wider text-emerald-700 flex items-center gap-1">
+                        <Droplet className="w-3 h-3 text-emerald-600 shrink-0" />
+                        <span>Fats</span>
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="0.1"
+                      value={formPackageFats}
+                      onChange={(e) => setFormPackageFats(e.target.value)}
+                      placeholder="18"
+                      className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Live formatted description preview */}
+                {(formPackageKcal || formPackageProtein || formPackageCarbs || formPackageFats) && (
+                  <div className="mt-2 p-2 bg-slate-100/80 rounded-lg flex items-center justify-between text-[11px] text-slate-600">
+                    <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider font-oswald">
+                      API Description Payload:
+                    </span>
+                    <span className="font-mono text-[10.5px] font-semibold text-slate-700 truncate max-w-[80%]">
+                      {formatPackageMacrosDescription(
+                        formPackageKcal,
+                        formPackageProtein,
+                        formPackageCarbs,
+                        formPackageFats
+                      )}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Active Toggle */}

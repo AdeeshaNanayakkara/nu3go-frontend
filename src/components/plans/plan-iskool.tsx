@@ -25,7 +25,10 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useAuthStore } from "@/store/auth.store";
 import { SubscribeModal } from "@/components/subscription/subscribe-modal";
 import { cn } from "@/lib/utils";
-import type { PublicPackage } from "@/services/api/package.service";
+import {
+  parsePackageMacrosDescription,
+  type PublicPackage,
+} from "@/services/api/package.service";
 import {
   mapPackagePlansToDurations,
   matchPackageByName,
@@ -191,6 +194,18 @@ export function PlanIskool({ packageData }: PlanIskoolProps = {}) {
     durations.find((d) => d.key === selectedDurationKey) ||
     durations[0] ||
     ISKOOL_DURATIONS[0];
+
+  // Parse package macros from package description, with single fallback values
+  const macros = useMemo(() => {
+    const desc = pkg?.description || activeDuration?.description || "";
+    const parsed = parsePackageMacrosDescription(desc);
+    return {
+      kcal: parsed.kcal || "400",
+      protein: parsed.protein || "18",
+      carbs: parsed.carbs || "50",
+      fats: parsed.fats || "10",
+    };
+  }, [pkg?.description, activeDuration?.description]);
 
   // Extract active package discount (if assigned)
   const discount = useMemo(() => getPackageDiscount(pkg), [pkg]);
@@ -367,7 +382,7 @@ export function PlanIskool({ packageData }: PlanIskoolProps = {}) {
                   <span>Energy</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-white">
-                  350 - 450
+                  {macros.kcal}
                 </span>
                 <span className="text-[10px] text-neutral-400 uppercase tracking-wider">kcal / meal</span>
               </div>
@@ -379,7 +394,7 @@ export function PlanIskool({ packageData }: PlanIskoolProps = {}) {
                   <span>Growth Protein</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-cyan-400">
-                  15g - 22g
+                  {macros.protein.replace(/g$/i, "")}g
                 </span>
                 <span className="text-[10px] text-cyan-400/80 uppercase tracking-wider">Clean Growth</span>
               </div>
@@ -391,7 +406,7 @@ export function PlanIskool({ packageData }: PlanIskoolProps = {}) {
                   <span>Brain Carbs</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-white">
-                  45g - 55g
+                  {macros.carbs.replace(/g$/i, "")}g
                 </span>
                 <span className="text-[10px] text-neutral-400 uppercase tracking-wider">Whole Grains</span>
               </div>
@@ -403,7 +418,7 @@ export function PlanIskool({ packageData }: PlanIskoolProps = {}) {
                   <span>Brain Fats</span>
                 </div>
                 <span className="font-oswald text-base sm:text-lg font-bold text-white">
-                  8g - 12g
+                  {macros.fats.replace(/g$/i, "")}g
                 </span>
                 <span className="text-[10px] text-neutral-400 uppercase tracking-wider">DHA &amp; Seeds</span>
               </div>
