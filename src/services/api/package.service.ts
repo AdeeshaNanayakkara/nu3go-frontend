@@ -16,6 +16,8 @@ export interface PublicAssignedPlan {
   duration_limit: number;
   price: number;
   return_price?: number;
+  active_discount?: ActiveDiscount | null;
+  discount?: ActiveDiscount | null;
 }
 
 export interface ActiveDiscount {
@@ -24,6 +26,7 @@ export interface ActiveDiscount {
   percentage: number;
   start_date?: string;
   end_date?: string;
+  is_active?: boolean;
 }
 
 export interface PublicPackage {
@@ -288,7 +291,22 @@ export const packageService = {
    * Update an existing package by ID
    */
   async updatePackage(id: string, data: UpdatePackagePayload): Promise<PackageItem> {
-    const response = await apiClient.put<PackageItem>(`/api/admin/packages/${id}`, data);
+    const payload: UpdatePackagePayload = {
+      ...(data.name !== undefined ? { name: data.name } : {}),
+      ...(data.description !== undefined ? { description: data.description } : {}),
+      ...(data.is_active !== undefined ? { is_active: data.is_active } : {}),
+      ...(data.plans !== undefined
+        ? {
+            plans: data.plans.map((p) => ({
+              plan_id: p.plan_id,
+              price: Number(p.price),
+              return_price: Number(p.return_price ?? 0),
+            })),
+          }
+        : {}),
+    };
+
+    const response = await apiClient.put<PackageItem>(`/api/admin/packages/${id}`, payload);
     return assertApiResponse<PackageItem>(response, "Unable to update package. Please check details.");
   },
 

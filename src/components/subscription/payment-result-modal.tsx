@@ -26,6 +26,7 @@ export function PaymentResultModal() {
   const paymentStatus = searchParams.get("payment") || searchParams.get("status");
   const orderId = searchParams.get("order_id") || searchParams.get("id");
   const errorMessage = searchParams.get("message") || searchParams.get("error");
+  const isWalletPayment = searchParams.get("wallet_payment") === "success";
 
   // Determine if payment modal should be visible
   const isSuccess =
@@ -134,11 +135,13 @@ export function PaymentResultModal() {
               </div>
 
               <h3 className="text-2xl sm:text-3xl font-black text-slate-900 font-oswald uppercase tracking-tight leading-tight">
-                Payment Authorized!
+                {isWalletPayment ? "Subscribed with Wallet Credit!" : "Payment Authorized!"}
               </h3>
 
               <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mt-2 max-w-sm mx-auto">
-                Your payment card has been securely pre-approved with PayHere. Your fresh chef-crafted meal deliveries have been activated!
+                {isWalletPayment
+                  ? "Your subscription has been successfully paid and activated using your wallet credit. Your fresh chef-crafted meal deliveries have been scheduled!"
+                  : "Your payment card has been securely pre-approved with PayHere. Your fresh chef-crafted meal deliveries have been activated!"}
               </p>
             </div>
 
@@ -150,7 +153,7 @@ export function PaymentResultModal() {
                   <span>Order Reference</span>
                 </span>
                 <span className="font-mono text-xs font-bold text-slate-900 bg-white px-2 py-0.5 rounded-md border border-slate-200">
-                  {orderId || "SUB-" + Math.floor(100000 + Math.random() * 900000)}
+                  {orderId || "—"}
                 </span>
               </div>
 
@@ -163,11 +166,11 @@ export function PaymentResultModal() {
 
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-500 flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#28B454]" /> Gateway Status
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#28B454]" /> Payment Mode
                 </span>
                 <span className="font-bold text-[#15803D] flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-[#28B454] animate-ping" />
-                  Preapproved (Active)
+                  {isWalletPayment ? "Wallet Credit (Paid)" : "Preapproved (Active)"}
                 </span>
               </div>
             </div>

@@ -22,6 +22,7 @@ export const walletService = {
     try {
       const response = await apiClient.get<any>("/api/v1/wallet/balance", {
         params: userId ? { user_id: userId } : undefined,
+        skipAuthRedirect: true,
       });
 
       const body = response.data;

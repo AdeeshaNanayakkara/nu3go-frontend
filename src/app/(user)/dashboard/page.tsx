@@ -10,15 +10,9 @@ import {
 import { invoiceService, type InvoiceItem } from "@/services/api/invoice.service";
 import { locationService, type LocationItem } from "@/services/api/location.service";
 import { packageService, type PublicPackage } from "@/services/api/package.service";
-import {
-  subscriptionPlanService,
-  type SubscriptionPlan,
-} from "@/services/api/subscription-plan.service";
 import { walletService } from "@/services/api/wallet.service";
 import { ActivePlanCard } from "@/components/dashboard/active-plan-card";
-import { NextMealCard } from "@/components/dashboard/next-meal-card";
 import { KpiMetricCards } from "@/components/dashboard/kpi-metric-cards";
-import { RecentInvoicesTable } from "@/components/dashboard/recent-invoices-table";
 import { QuickActionsHub } from "@/components/dashboard/quick-actions-hub";
 import {
   AlertTriangle,
@@ -37,7 +31,6 @@ export default function CustomerDashboardPage() {
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [packages, setPackages] = useState<PublicPackage[]>([]);
-  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [billingProfile, setBillingProfile] = useState<BillingProfileRes | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,11 +45,10 @@ export default function CustomerDashboardPage() {
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [allSubs, locsData, pkgsData, plansData, balanceData, profileData] = await Promise.all([
+      const [allSubs, locsData, pkgsData, balanceData, profileData] = await Promise.all([
         subscriptionService.getSubscriptions(),
         locationService.getLocations().catch(() => []),
         packageService.getPublicPackages().catch(() => []),
-        subscriptionPlanService.getPublicSubscriptionPlans().catch(() => []),
         walletService.getBalance().catch(() => 0),
         userService.getBillingProfile().catch(() => null),
       ]);
@@ -67,13 +59,14 @@ export default function CustomerDashboardPage() {
       );
 
       // Fetch invoices only for active subscriptions
-      const activeInvoices = await invoiceService.getActiveSubscriptionsInvoices(activeSubs);
+      const activeInvoices = await invoiceService.getActiveSubscriptionsInvoices(activeSubs, {
+        maxSubscriptions: 2,
+      });
 
       setSubscriptions(activeSubs);
       setInvoices(activeInvoices);
       setLocations(locsData || []);
       setPackages(pkgsData || []);
-      setSubscriptionPlans(plansData || []);
       setWalletBalance(balanceData ?? 0);
       setBillingProfile(profileData || null);
     } catch (err) {
@@ -92,6 +85,26 @@ export default function CustomerDashboardPage() {
 
   // Primary active subscription
   const activeSubscription = subscriptions[selectedIndex] || subscriptions[0] || null;
+
+  // Ensure invoices for the active subscription are loaded if not already fetched
+  useEffect(() => {
+    if (!activeSubscription?.id) return;
+    invoiceService.getSubscriptionInvoices(activeSubscription.id).then((subInvoices) => {
+      if (!subInvoices || subInvoices.length === 0) return;
+      setInvoices((prev) => {
+        const seen = new Set(prev.map((i) => i.id));
+        const newOnes = subInvoices.filter((i) => !seen.has(i.id));
+        if (newOnes.length === 0) return prev;
+        const combined = [...prev, ...newOnes];
+        combined.sort((a, b) => {
+          const timeA = new Date(a.created_at || a.paid_at || 0).getTime();
+          const timeB = new Date(b.created_at || b.paid_at || 0).getTime();
+          return timeB - timeA;
+        });
+        return combined;
+      });
+    });
+  }, [activeSubscription?.id]);
 
   // Resolve package details
   const getPackageDetails = (sub: SubscriptionResItem | null) => {
@@ -198,24 +211,6 @@ export default function CustomerDashboardPage() {
             fullLabel: duration ? `${found.name} (${duration})` : found.name,
           };
         }
-      }
-    }
-
-    // 3. Public subscription plans
-    if (planId && subscriptionPlans.length > 0) {
-      const found = subscriptionPlans.find((sp) => sp.id === planId);
-      if (found) {
-        const duration = found.duration_limit
-          ? `${found.duration_limit} Weekdays`
-          : found.billing_cycle || "";
-        return {
-          name: found.name,
-          durationLabel: duration,
-          billingCycle: found.billing_cycle || "MONTHLY",
-          durationLimit: found.duration_limit || 20,
-          type: found.type || "Fixed Duration",
-          fullLabel: duration ? `${found.name} (${duration})` : found.name,
-        };
       }
     }
 
@@ -490,23 +485,7 @@ export default function CustomerDashboardPage() {
         isLoading={isLoading}
       />
 
-      {/* ─── 4. Two-Column Showcase (Tomorrow's Meal + Recent Invoices) ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        {/* Left Column: Tomorrow's Dish Preview */}
-        <div className="lg:col-span-6 flex flex-col">
-          <NextMealCard
-            deliveryAddress={defaultAddress}
-            deliveryTime="Tomorrow • 7:00 AM – 8:30 AM"
-          />
-        </div>
-
-        {/* Right Column: Recent Invoices & Receipts */}
-        <div className="lg:col-span-6 flex flex-col">
-          <RecentInvoicesTable invoices={invoices} isLoading={isLoading} />
-        </div>
-      </div>
-
-      {/* ─── 5. Quick Actions Hub ─── */}
+      {/* ─── 4. Quick Actions Hub ─── */}
       <QuickActionsHub />
 
       {/* Cancel Plan Confirmation Modal */}
