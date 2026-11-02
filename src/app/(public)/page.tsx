@@ -7,6 +7,7 @@ import { FeatureHighlights } from "@/components/home/feature-highlights";
 import { HowItWorks } from "@/components/home/how-it-works";
 import { MenuShowcase } from "@/components/home/menu-showcase";
 import { DeliveryLocations } from "@/components/home/delivery-locations";
+import { ReviewSection } from "@/components/home/review-section";
 import { ContactSection } from "@/components/home/contact-section";
 import { InstagramGallery } from "@/components/home/instagram-gallery";
 import { HighlightSection } from "@/components/home/highlight-section";
@@ -43,6 +44,9 @@ export default function HomePage() {
 
       {/* ─── Pizzeria-style Delivery Locations ─── */}
       <DeliveryLocations />
+
+      {/* ─── Verified Customer Reviews Section ─── */}
+      <ReviewSection />
 
       {/* ─── Contact Section ─── */}
       <ContactSection />
