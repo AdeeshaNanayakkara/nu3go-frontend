@@ -394,6 +394,17 @@ export default function AdminPackagesPage() {
     }));
   };
 
+  const handleCreatePlanReturnPriceChange = (planId: string, value: string) => {
+    const numVal = value !== "" ? Number(value) : "";
+    setSelectedPlansMap((prev) => ({
+      ...prev,
+      [planId]: {
+        ...prev[planId],
+        return_price: numVal,
+      },
+    }));
+  };
+
   const handleOpenEditPackageModal = (pkg: PackageItem, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setEditingPackage(pkg);
@@ -1832,7 +1843,7 @@ export default function AdminPackagesPage() {
       {/* ─── MODAL 1: ADD / EDIT PACKAGE ─── */}
       {isPackageModalOpen && (
         <div className={cn('fixed', 'inset-0', 'z-50', 'bg-slate-900/40', 'backdrop-blur-xs', 'flex', 'items-center', 'justify-center', 'p-4')}>
-          <div className={cn('bg-white', 'rounded-3xl', 'border', 'border-slate-200', 'shadow-2xl', 'max-w-md', 'w-full', 'p-6', 'space-y-5', 'animate-in', 'fade-in', 'zoom-in-95', 'duration-150')}>
+          <div className={cn('bg-white', 'rounded-3xl', 'border', 'border-slate-200', 'shadow-2xl', 'max-w-2xl', 'w-full', 'p-6 sm:p-7', 'space-y-5', 'animate-in', 'fade-in', 'zoom-in-95', 'duration-150')}>
             <div className={cn('flex', 'items-center', 'justify-between', 'pb-3', 'border-b', 'border-slate-100')}>
               <div className={cn('flex', 'items-center', 'gap-2.5')}>
                 <div className={cn('p-2', 'rounded-xl', 'bg-[#36D068]/15', 'text-[#36D068]')}>
@@ -2038,19 +2049,34 @@ export default function AdminPackagesPage() {
                           </label>
 
                           {isSelected && (
-                            <div className="flex items-center gap-1.5 shrink-0 pl-6 sm:pl-0">
-                              <span className="text-[11px] font-semibold text-slate-600">
-                                Package Price (LKR):
-                              </span>
-                              <input
-                                type="number"
-                                min="1"
-                                required
-                                value={selectedPlansMap[plan.id]?.price}
-                                onChange={(e) => handleCreatePlanPriceChange(plan.id, e.target.value)}
-                                placeholder="e.g. 15000"
-                                className="w-28 px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:border-[#36D068]"
-                              />
+                            <div className="flex flex-wrap items-center gap-4 shrink-0 pl-6 sm:pl-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] font-semibold text-slate-600">
+                                  Price (LKR):
+                                </span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  required
+                                  value={selectedPlansMap[plan.id]?.price}
+                                  onChange={(e) => handleCreatePlanPriceChange(plan.id, e.target.value)}
+                                  placeholder="e.g. 15000"
+                                  className="w-28 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:border-[#36D068]"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] font-semibold text-slate-600">
+                                  Return Price (LKR):
+                                </span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={selectedPlansMap[plan.id]?.return_price ?? 0}
+                                  onChange={(e) => handleCreatePlanReturnPriceChange(plan.id, e.target.value)}
+                                  placeholder="0"
+                                  className="w-28 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:border-[#36D068]"
+                                />
+                              </div>
                             </div>
                           )}
                         </div>
@@ -2145,21 +2171,43 @@ export default function AdminPackagesPage() {
                               <span className={cn('font-bold', 'text-slate-900', 'block')}>
                                 {plan.plan_name || plan.name}
                               </span>
-                              <span className={cn('text-[11px]', 'text-[#36D068]', 'font-bold')}>
-                                LKR {plan.price?.toLocaleString()}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className={cn('text-[11px]', 'text-[#36D068]', 'font-bold')}>
+                                  Price: LKR {plan.price?.toLocaleString()}
+                                </span>
+                                <span className={cn('text-[11px]', 'text-slate-500', 'font-medium')}>
+                                  • Return: LKR {(plan.return_price ?? 0).toLocaleString()}
+                                </span>
+                              </div>
                             </div>
 
                             {isEditingThis ? (
                               <div className={cn('flex', 'items-center', 'gap-2')}>
-                                <input
-                                  type="number"
-                                  value={editPriceVal}
-                                  onChange={(e) =>
-                                    setEditPriceVal(e.target.value ? Number(e.target.value) : "")
-                                  }
-                                  className={cn('w-24', 'px-2', 'py-1', 'bg-white', 'border', 'border-slate-300', 'rounded-lg', 'text-xs', 'font-bold')}
-                                />
+                                <div className="flex flex-col sm:flex-row items-center gap-1.5">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[10px] text-slate-500 font-semibold">Price:</span>
+                                    <input
+                                      type="number"
+                                      value={editPriceVal}
+                                      onChange={(e) =>
+                                        setEditPriceVal(e.target.value ? Number(e.target.value) : "")
+                                      }
+                                      className={cn('w-20', 'px-2', 'py-1', 'bg-white', 'border', 'border-slate-300', 'rounded-lg', 'text-xs', 'font-bold')}
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[10px] text-slate-500 font-semibold">Return:</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={editReturnPriceVal}
+                                      onChange={(e) =>
+                                        setEditReturnPriceVal(e.target.value !== "" ? Number(e.target.value) : "")
+                                      }
+                                      className={cn('w-20', 'px-2', 'py-1', 'bg-white', 'border', 'border-slate-300', 'rounded-lg', 'text-xs', 'font-bold')}
+                                    />
+                                  </div>
+                                </div>
                                 <button
                                   type="button"
                                   onClick={() => handleSavePrice(plan.plan_id)}
@@ -2212,7 +2260,7 @@ export default function AdminPackagesPage() {
                     Assign New Plan
                   </h4>
 
-                  <div className={cn('grid', 'grid-cols-1', 'sm:grid-cols-2', 'gap-3')}>
+                  <div className={cn('grid', 'grid-cols-1', 'sm:grid-cols-3', 'gap-3')}>
                     <div>
                       <label className={cn('block', 'text-[11px]', 'font-semibold', 'text-slate-600', 'mb-1')}>
                         Select Available Plan
@@ -2243,6 +2291,22 @@ export default function AdminPackagesPage() {
                           setNewPlanPrice(e.target.value ? Number(e.target.value) : "")
                         }
                         placeholder="e.g. 18000"
+                        className={cn('w-full', 'px-3', 'py-2', 'bg-slate-50', 'border', 'border-slate-200', 'rounded-xl', 'text-xs', 'font-medium', 'focus:outline-none', 'focus:border-[#36D068]')}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                        Return Price (LKR)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newPlanReturnPrice}
+                        onChange={(e) =>
+                          setNewPlanReturnPrice(e.target.value !== "" ? Number(e.target.value) : "")
+                        }
+                        placeholder="0"
                         className={cn('w-full', 'px-3', 'py-2', 'bg-slate-50', 'border', 'border-slate-200', 'rounded-xl', 'text-xs', 'font-medium', 'focus:outline-none', 'focus:border-[#36D068]')}
                       />
                     </div>

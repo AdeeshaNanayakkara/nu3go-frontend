@@ -12,7 +12,6 @@ import { InvoiceReceiptModal } from "@/components/dashboard/invoice-receipt-moda
 import {
   UtensilsCrossed,
   Sparkles,
-  Calendar,
   Clock,
   MapPin,
   RefreshCw,
@@ -21,7 +20,6 @@ import {
   AlertTriangle,
   ChevronRight,
   Compass,
-  Zap,
   Receipt,
   Eye,
 } from "lucide-react";
@@ -128,14 +126,6 @@ export default function SubscriptionsOrdersPage() {
     return "Chef-Crafted Meal Plan";
   };
 
-  const weekSchedule = [
-    { day: "Monday", meal: "Herb Grilled Chicken & Quinoa Power Bowl", calories: "520 kcal", protein: "42g", status: "Delivered" },
-    { day: "Tuesday", meal: "Smoked Salmon & Avocado Artisan Toast Box", calories: "490 kcal", protein: "38g", status: "Delivered" },
-    { day: "Wednesday", meal: "High-Protein Scrambled Egg Whites & Sweet Potato", calories: "470 kcal", protein: "36g", status: "Scheduled" },
-    { day: "Thursday", meal: "Greek Yogurt, Chia Seed & Super Berry Parfait", calories: "450 kcal", protein: "34g", status: "Scheduled" },
-    { day: "Friday", meal: "Char-grilled Beef Tenderloin & Roasted Veggies", calories: "540 kcal", protein: "46g", status: "Scheduled" },
-  ];
-
   return (
     <div className="space-y-8 animate-in fade-in duration-300 font-poppins">
       {/* Header */}
@@ -185,14 +175,12 @@ export default function SubscriptionsOrdersPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Subscriptions List */}
-          <div className="lg:col-span-5 space-y-4">
+        <div className="space-y-4">
             <h3 className="font-oswald text-sm font-bold uppercase tracking-wider text-neutral-900">
               Active Packages ({subscriptions.length})
             </h3>
 
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {subscriptions.map((sub) => {
                 const isSelected = selectedSub?.id === sub.id;
                 const isActive = sub.status?.toUpperCase() === "ACTIVE";
@@ -266,82 +254,6 @@ export default function SubscriptionsOrdersPage() {
                 );
               })}
             </div>
-          </div>
-
-          {/* Right Column: Weekly Meal Delivery Schedule Calendar */}
-          <div className="lg:col-span-7 space-y-4">
-            <div className="rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-7 shadow-sm space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-emerald-50 text-[#15803D]">
-                    <Calendar className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-oswald text-base sm:text-lg font-bold uppercase text-neutral-900 tracking-tight">
-                      Weekly Meal Schedule
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Monday to Friday Morning Breakfast Deliveries
-                    </p>
-                  </div>
-                </div>
-
-                <span className="font-oswald text-xs font-bold uppercase tracking-wider text-[#15803D] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-2xs">
-                  Week 3 of 4
-                </span>
-              </div>
-
-              {/* Schedule Days List */}
-              <div className="space-y-3">
-                {weekSchedule.map((item, idx) => {
-                  const isDelivered = item.status === "Delivered";
-                  return (
-                    <div
-                      key={idx}
-                      className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-oswald text-xs font-bold uppercase tracking-wider text-neutral-900">{item.day}</span>
-                          <span
-                            className={`font-oswald text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${isDelivered
-                                ? "bg-emerald-100/80 text-[#15803D]"
-                                : "bg-blue-100/80 text-blue-700"
-                              }`}
-                          >
-                            {item.status}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-700 font-medium">
-                          {item.meal}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0 text-xs">
-                        <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 text-slate-600 font-medium">
-                          {item.calories}
-                        </span>
-                        <span className="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-[#15803D] font-oswald font-bold uppercase tracking-wide">
-                          {item.protein} Protein
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Delivery Guidelines Box */}
-              <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-xs text-slate-700 space-y-1.5">
-                <div className="flex items-center gap-1.5 text-[#15803D] font-oswald font-bold uppercase tracking-wider text-xs">
-                  <Zap className="w-4 h-4 text-[#36D068]" />
-                  <span>Doorstep Delivery Schedule</span>
-                </div>
-                <p className="text-[11px] text-slate-600 leading-relaxed">
-                  Morning deliveries occur between 7:00 AM and 8:30 AM daily. Any delivery address changes or skip requests must be confirmed before 5:00 PM the previous day.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 

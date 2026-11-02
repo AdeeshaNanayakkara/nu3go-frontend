@@ -52,12 +52,19 @@ export interface ListInvoicesRes {
 
 export type ListInvoicesResponse = ListInvoicesRes;
 
+// In-memory cache & in-flight promise deduplication for subscription invoices (60s TTL)
+const subscriptionInvoicesCache = new Map<string, { timestamp: number; data: InvoiceItem[] }>();
+const inFlightSubscriptionInvoicePromises = new Map<string, Promise<InvoiceItem[]>>();
+const INVOICE_CACHE_TTL_MS = 60 * 1000;
+
 export const invoiceService = {
   /**
-   * Retrieves invoices specifically for all active subscriptions
+   * Retrieves invoices specifically for active subscriptions.
+   * Can be capped with options.maxSubscriptions to prevent N+1 query floods on dashboard overviews.
    */
   async getActiveSubscriptionsInvoices(
-    activeSubscriptions?: SubscriptionResItem[]
+    activeSubscriptions?: SubscriptionResItem[],
+    options?: { maxSubscriptions?: number }
   ): Promise<InvoiceItem[]> {
     try {
       let subsToQuery = activeSubscriptions;
@@ -70,6 +77,11 @@ export const invoiceService = {
 
       if (!subsToQuery || subsToQuery.length === 0) {
         return [];
+      }
+
+      // If capped, limit parallel subscription queries (e.g. on dashboard overview)
+      if (options?.maxSubscriptions && options.maxSubscriptions > 0) {
+        subsToQuery = subsToQuery.slice(0, options.maxSubscriptions);
       }
 
       const invoicePromises = subsToQuery.map(async (sub) => {
@@ -106,38 +118,63 @@ export const invoiceService = {
     }
   },
   /**
-   * Retrieves invoices specifically for a given subscription ID
+   * Retrieves invoices specifically for a given subscription ID.
+   * Uses in-flight deduplication and a 60-second in-memory cache to prevent redundant network calls.
    */
   async getSubscriptionInvoices(
     subscriptionId: string,
     params?: { status?: string; page?: number; limit?: number }
   ): Promise<InvoiceItem[]> {
     if (!subscriptionId) return [];
-    try {
-      const response = await apiClient.get<any>(
-        `/api/v1/subscriptions/${subscriptionId}/invoices`,
-        { params: params as Record<string, string | number | boolean | undefined> }
-      );
 
-      const raw = response.data;
-      if (!raw) return [];
+    const cacheKey = `${subscriptionId}_${params?.status || "ALL"}_${params?.page || 1}_${params?.limit || 0}`;
 
-      if (Array.isArray(raw)) return raw;
-
-      if (raw.data) {
-        if (Array.isArray(raw.data)) return raw.data;
-        if (raw.data.data && Array.isArray(raw.data.data)) return raw.data.data;
-        if (raw.data.invoices && Array.isArray(raw.data.invoices)) return raw.data.invoices;
-        if (raw.data.id) return [raw.data];
-      }
-
-      if (raw.invoices && Array.isArray(raw.invoices)) return raw.invoices;
-
-      return [];
-    } catch (err) {
-      console.error(`[invoiceService] Error fetching invoices for subscription ${subscriptionId}:`, err);
-      return [];
+    // 1. Check in-memory cache
+    const cached = subscriptionInvoicesCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < INVOICE_CACHE_TTL_MS) {
+      return cached.data;
     }
+
+    // 2. Reuse in-flight request if already in progress
+    const inFlight = inFlightSubscriptionInvoicePromises.get(cacheKey);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    // 3. Initiate request with promise deduplication
+    const fetchPromise = (async () => {
+      try {
+        const response = await apiClient.get<any>(
+          `/api/v1/subscriptions/${subscriptionId}/invoices`,
+          { params: params as Record<string, string | number | boolean | undefined> }
+        );
+
+        const raw = response.data;
+        let parsed: InvoiceItem[] = [];
+
+        if (Array.isArray(raw)) {
+          parsed = raw;
+        } else if (raw?.data) {
+          if (Array.isArray(raw.data)) parsed = raw.data;
+          else if (raw.data.data && Array.isArray(raw.data.data)) parsed = raw.data.data;
+          else if (raw.data.invoices && Array.isArray(raw.data.invoices)) parsed = raw.data.invoices;
+          else if (raw.data.id) parsed = [raw.data];
+        } else if (raw?.invoices && Array.isArray(raw.invoices)) {
+          parsed = raw.invoices;
+        }
+
+        subscriptionInvoicesCache.set(cacheKey, { timestamp: Date.now(), data: parsed });
+        return parsed;
+      } catch (err) {
+        console.error(`[invoiceService] Error fetching invoices for subscription ${subscriptionId}:`, err);
+        return [];
+      } finally {
+        inFlightSubscriptionInvoicePromises.delete(cacheKey);
+      }
+    })();
+
+    inFlightSubscriptionInvoicePromises.set(cacheKey, fetchPromise);
+    return fetchPromise;
   },
 
   /**

@@ -22,7 +22,10 @@ export interface PreapprovalParams {
 
 export interface CheckoutRes {
   order_id: string;
-  checkout_params: PreapprovalParams;
+  checkout_params?: PreapprovalParams | null;
+  fully_covered_by_wallet?: boolean;
+  grand_total_payable?: number;
+  wallet_credit_applied?: number;
 }
 
 export interface SubscriptionLocationInput {
@@ -41,6 +44,7 @@ export interface CreateSubscriptionReq {
   return_url?: string;
   cancel_url?: string;
   locations?: SubscriptionLocationInput[];
+  use_wallet_credit?: boolean;
 }
 
 export interface SubscriptionResItem {

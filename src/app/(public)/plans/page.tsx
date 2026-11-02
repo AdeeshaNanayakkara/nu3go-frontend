@@ -17,6 +17,9 @@ export const metadata: Metadata = generatePageMetadata({
   path: "/plans",
 });
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 /**
  * Server-side fetch of active catalog packages from database
  */
@@ -25,7 +28,7 @@ async function getActivePackages(): Promise<PublicPackage[]> {
     const res = await fetch(BACKEND_ENDPOINTS.PUBLIC_PACKAGES.LIST, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
-      next: { revalidate: 60 },
+      cache: "no-store",
     });
 
     if (res.ok) {

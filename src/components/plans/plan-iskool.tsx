@@ -34,6 +34,7 @@ import {
   matchPackageByName,
   getPackageDiscount,
   calculateDiscountedPrice,
+  getPerMealPrice,
   type DurationPriceOption,
 } from "./plan-utils";
 import { DiscountBadge } from "./discount-badge";
@@ -207,11 +208,27 @@ export function PlanIskool({ packageData }: PlanIskoolProps = {}) {
     };
   }, [pkg?.description, activeDuration?.description]);
 
-  // Extract active package discount (if assigned)
-  const discount = useMemo(() => getPackageDiscount(pkg), [pkg]);
+  // Find current assigned plan matching active duration
+  const activePlan = useMemo(() => {
+    return pkg?.plans?.find(
+      (p) => p.plan_id === activeDuration.planId || p.plan_id === activeDuration.key
+    );
+  }, [pkg?.plans, activeDuration.planId, activeDuration.key]);
+
+  // Extract active package discount (if assigned and unexpired)
+  const discount = useMemo(() => getPackageDiscount(pkg, activePlan), [pkg, activePlan]);
   const discountedPrice = discount
     ? calculateDiscountedPrice(activeDuration.price, discount.percentage)
     : activeDuration.price;
+
+  // Per-meal price prioritizing return_price from response
+  const perMealPrice = useMemo(() => {
+    return getPerMealPrice(activePlan, activeDuration);
+  }, [activePlan, activeDuration]);
+
+  const discountedPerMealPrice = useMemo(() => {
+    return getPerMealPrice(activePlan, activeDuration, discount?.percentage);
+  }, [activePlan, activeDuration, discount?.percentage]);
 
   const handleSubscribeClick = () => {
     if (!user) {
@@ -513,13 +530,13 @@ export function PlanIskool({ packageData }: PlanIskoolProps = {}) {
                         Pay LKR {discountedPrice.toLocaleString("en-US")} with {discount.percentage}% OFF
                       </div>
                       <div className="text-[11px] text-neutral-500">
-                        ~LKR {Math.round(discountedPrice / activeDuration.days)} / meal
+                        ~LKR {discountedPerMealPrice.toLocaleString("en-US")} / meal
                       </div>
                     </div>
                   ) : (
                     <>
                       <div className="text-white font-medium">
-                        ~LKR {Math.round(activeDuration.price / activeDuration.days)} / meal
+                        ~LKR {perMealPrice.toLocaleString("en-US")} / meal
                       </div>
                       <div className="text-[11px] text-neutral-500">
                         School Morning Delivery
