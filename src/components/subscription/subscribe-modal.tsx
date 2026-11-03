@@ -217,6 +217,7 @@ export function SubscribeModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittingStep, setSubmittingStep] = useState<string>("");
   const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [applyWalletCredit, setApplyWalletCredit] = useState<boolean>(true);
   const [isLoadingWallet, setIsLoadingWallet] = useState<boolean>(false);
   const [isPayingWithWallet, setIsPayingWithWallet] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -890,6 +891,20 @@ export function SubscribeModal({
     const extraCost = extraDays * dayPrice;
     return basePriceNum + extraCost;
   }, [isCustomPlan, basePriceNum, selectedDatesCount, defaultDays, dayPrice]);
+
+  // Wallet deduction calculations (deduct any available wallet credit)
+  const walletCreditToDeduct = useMemo(() => {
+    if (!applyWalletCredit || walletBalance <= 0) return 0;
+    return Math.min(walletBalance, totalPayableAmount);
+  }, [applyWalletCredit, walletBalance, totalPayableAmount]);
+
+  const remainingPayableAmount = useMemo(() => {
+    return Math.max(0, totalPayableAmount - walletCreditToDeduct);
+  }, [totalPayableAmount, walletCreditToDeduct]);
+
+  const isFullyCoveredByWallet = useMemo(() => {
+    return applyWalletCredit && walletBalance >= totalPayableAmount && totalPayableAmount > 0;
+  }, [applyWalletCredit, walletBalance, totalPayableAmount]);
 
   // 1. Validate configuration and proceed to Confirmation Step
   const handleReviewDetails = (e: React.FormEvent) => {
@@ -2368,13 +2383,15 @@ export function SubscribeModal({
               )}
             </div>
 
-            {/* 4. User's Wallet Balance Card & Status */}
+            {/* 4. User's Wallet Balance & Payment Breakdown Card */}
             <div
               className={cn(
                 "p-4 rounded-2xl border transition-all",
-                walletBalance >= totalPayableAmount
-                  ? "bg-emerald-50/80 border-emerald-300 text-emerald-950"
-                  : "bg-slate-50 border-slate-200 text-slate-800"
+                walletBalance > 0
+                  ? applyWalletCredit
+                    ? "bg-emerald-50/80 border-emerald-300 text-emerald-950 shadow-2xs"
+                    : "bg-slate-50 border-slate-200 text-slate-800"
+                  : "bg-slate-50 border-slate-200 text-slate-700"
               )}
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -2382,7 +2399,7 @@ export function SubscribeModal({
                   <div
                     className={cn(
                       "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                      walletBalance >= totalPayableAmount
+                      walletBalance > 0 && applyWalletCredit
                         ? "bg-emerald-600 text-white shadow-xs"
                         : "bg-slate-200 text-slate-700"
                     )}
@@ -2394,9 +2411,14 @@ export function SubscribeModal({
                       <span className="text-[11px] font-bold font-oswald uppercase tracking-wider text-slate-700">
                         Your Wallet Balance
                       </span>
-                      {walletBalance >= totalPayableAmount && (
+                      {walletBalance > 0 && isFullyCoveredByWallet && (
                         <span className="text-[9.5px] font-bold font-oswald uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-600 text-white shadow-2xs">
-                          Sufficient Balance
+                          100% Covered
+                        </span>
+                      )}
+                      {walletBalance > 0 && !isFullyCoveredByWallet && applyWalletCredit && (
+                        <span className="text-[9.5px] font-bold font-oswald uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-[#15803D] border border-emerald-300">
+                          Partial Credit Applied
                         </span>
                       )}
                     </div>
@@ -2406,30 +2428,66 @@ export function SubscribeModal({
                   </div>
                 </div>
 
-                <div className="text-left sm:text-right">
-                  {walletBalance >= totalPayableAmount ? (
-                    <span className="text-xs text-emerald-700 font-semibold inline-flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Covers 100% of this payment</span>
+                {/* Interactive Toggle for Wallet Credit */}
+                {walletBalance > 0 ? (
+                  <label className="flex items-center gap-2.5 cursor-pointer self-start sm:self-center bg-white py-1.5 px-3 rounded-xl border border-slate-200/90 hover:border-emerald-400 transition-colors shadow-2xs">
+                    <input
+                      type="checkbox"
+                      checked={applyWalletCredit}
+                      onChange={(e) => setApplyWalletCredit(e.target.checked)}
+                      className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                    />
+                    <span className="font-oswald text-xs font-bold uppercase tracking-wider text-slate-800 select-none">
+                      Apply Wallet Credit
                     </span>
-                  ) : (
-                    <div className="text-xs text-slate-500">
-                      <span>Insufficient for full wallet payment</span>
-                      <span className="block text-[11px] text-slate-400">
-                        Short by LKR {Math.max(0, totalPayableAmount - walletBalance).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                  </label>
+                ) : (
+                  <span className="text-xs text-slate-400 font-medium">No wallet credit</span>
+                )}
               </div>
 
-              {walletBalance >= totalPayableAmount ? (
-                <p className="text-[11px] text-emerald-800 font-medium mt-2.5 pt-2.5 border-t border-emerald-200/70 leading-relaxed">
-                  ✓ Your wallet credit is sufficient. You can subscribe instantly using your wallet credit without PayHere redirection.
-                </p>
+              {/* Deduction Breakdown */}
+              {walletBalance > 0 ? (
+                applyWalletCredit ? (
+                  <div className="mt-3 pt-2.5 border-t border-emerald-200/70 space-y-1.5 text-xs">
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span>Total Plan Price:</span>
+                      <span className="font-medium text-slate-800">
+                        LKR {totalPayableAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-emerald-700 font-semibold">
+                      <span>Wallet Credit Applied:</span>
+                      <span>
+                        - LKR {walletCreditToDeduct.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center font-bold text-slate-900 pt-1.5 border-t border-emerald-200/50">
+                      <span>{remainingPayableAmount === 0 ? "Amount Due:" : "Remaining Due via PayHere:"}</span>
+                      <span className={cn("text-sm font-black font-oswald", remainingPayableAmount === 0 ? "text-emerald-700" : "text-[#0B3B17]")}>
+                        {remainingPayableAmount === 0
+                          ? "LKR 0.00 (Fully Covered)"
+                          : `LKR ${remainingPayableAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                      </span>
+                    </div>
+                    {remainingPayableAmount === 0 ? (
+                      <p className="text-[11px] text-emerald-800 font-medium pt-1">
+                        ✓ Your wallet credit covers 100% of this subscription. Instant activation without PayHere.
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-slate-600 font-normal pt-1">
+                        LKR {walletCreditToDeduct.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} will be deducted from your wallet credit. The remaining LKR {remainingPayableAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} will be charged via PayHere.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-500 font-normal mt-2.5 pt-2.5 border-t border-slate-200/70 leading-relaxed">
+                    Wallet credit is not applied. You will be charged the full LKR {totalPayableAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} via PayHere.
+                  </p>
+                )
               ) : (
                 <p className="text-[11px] text-slate-500 font-normal mt-2.5 pt-2.5 border-t border-slate-200/70 leading-relaxed">
-                  Remaining amount will be charged via PayHere secure preapproval checkout.
+                  Your payment will be securely processed through PayHere.
                 </p>
               )}
             </div>
@@ -2460,54 +2518,72 @@ export function SubscribeModal({
               </button>
 
               <div className="flex-1 flex flex-col sm:flex-row items-stretch gap-2.5">
-                {/* Pay by Wallet Button (shown only when wallet balance >= total payment value) */}
-                {walletBalance >= totalPayableAmount && (
+                {applyWalletCredit && isFullyCoveredByWallet ? (
+                  /* 100% Covered by Wallet */
                   <button
                     type="button"
                     disabled={isSubmitting}
                     onClick={() => handleSubscriptionSubmit(true)}
                     className="flex-1 py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold font-oswald uppercase tracking-wider transition-all shadow-md shadow-emerald-600/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                   >
-                    {isSubmitting && isPayingWithWallet ? (
+                    {isSubmitting ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Applying Wallet Credit...</span>
+                        <span>{submittingStep || "Applying Wallet Credit..."}</span>
                       </>
                     ) : (
                       <>
                         <Wallet className="w-4 h-4 text-emerald-200" />
-                        <span>PAY BY WALLET ({displayPrice})</span>
+                        <span>PAY BY WALLET (LKR 0.00 • 100% COVERED)</span>
                         <CheckCircle2 className="w-4 h-4 text-emerald-200" />
                       </>
                     )}
                   </button>
+                ) : applyWalletCredit && walletBalance > 0 ? (
+                  /* Partial Wallet Credit Applied + Remaining via PayHere */
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => handleSubscriptionSubmit(true)}
+                    className="flex-1 py-3.5 px-4 rounded-2xl bg-[#0B3B17] hover:bg-[#124D20] text-white text-xs sm:text-sm font-bold font-oswald uppercase tracking-wider transition-all shadow-md shadow-[#0B3B17]/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>{submittingStep || "Redirecting to PayHere..."}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-4 h-4 text-[#36D068]" />
+                        <span>
+                          PAY LKR {remainingPayableAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} VIA PAYHERE
+                        </span>
+                        <ArrowRight className="w-3.5 h-3.5 text-[#36D068]" />
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  /* Standard Full PayHere Checkout (No Wallet Credit) */
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => handleSubscriptionSubmit(false)}
+                    className="flex-1 py-3.5 px-4 rounded-2xl bg-[#0B3B17] hover:bg-[#124D20] text-white text-xs sm:text-sm font-bold font-oswald uppercase tracking-wider transition-all shadow-md shadow-[#0B3B17]/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>{submittingStep || "Redirecting to PayHere..."}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-4 h-4 text-[#36D068]" />
+                        <span>CONFIRM & PAY ({displayPrice})</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-[#36D068]" />
+                      </>
+                    )}
+                  </button>
                 )}
-
-                {/* Standard PayHere Checkout Button */}
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={() => handleSubscriptionSubmit(false)}
-                  className={cn(
-                    "py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-bold font-oswald uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60",
-                    walletBalance >= totalPayableAmount
-                      ? "bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/15"
-                      : "flex-1 bg-[#0B3B17] hover:bg-[#124D20] text-white shadow-[#0B3B17]/25"
-                  )}
-                >
-                  {isSubmitting && !isPayingWithWallet ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>{submittingStep || "Redirecting to PayHere..."}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="w-4 h-4 text-[#36D068]" />
-                      <span>{walletBalance >= totalPayableAmount ? "PAY VIA PAYHERE" : "CONFIRM & PAY"} ({displayPrice})</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-[#36D068]" />
-                    </>
-                  )}
-                </button>
               </div>
             </div>
           </div>
