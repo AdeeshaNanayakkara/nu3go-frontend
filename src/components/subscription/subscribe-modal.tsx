@@ -43,6 +43,7 @@ import {
   triggerPayHereCheckout,
   type SubscriptionLocationInput,
   type CreateSubscriptionReq,
+  type DeliveryType,
 } from "@/services/api/subscription.service";
 import { userService, type BillingProfileRes } from "@/services/api/user.service";
 import { walletService } from "@/services/api/wallet.service";
@@ -58,6 +59,7 @@ interface SubscribeModalProps {
   planId?: string;
   planType?: "FIXED" | "CUSTOM" | string;
   durationLimit?: number;
+  maxDays?: number;
   discountId?: string;
   price: string;
 }
@@ -132,6 +134,7 @@ export function SubscribeModal({
   planId = "",
   planType = "FIXED",
   durationLimit,
+  maxDays,
   discountId,
   price,
 }: SubscribeModalProps) {
@@ -189,6 +192,9 @@ export function SubscribeModal({
 
   // Auto renewal state (Default is OFF)
   const [autoRenew, setAutoRenew] = useState(false);
+
+  // Delivery hand-over instruction (Default: Call & Hand Over)
+  const [deliveryType, setDeliveryType] = useState<DeliveryType>("CALL_AND_HANDOVER");
 
   // Delivery Address Form Inputs for Set Location UI
   const [address, setAddress] = useState("");
@@ -329,6 +335,8 @@ export function SubscribeModal({
       setSuccessMessage(null);
       setSubmittingStep("");
       setSelectedDatesMap({});
+      setDaysCount(defaultDays);
+      setDeliveryType("CALL_AND_HANDOVER");
     }, 0);
 
     async function loadData() {
@@ -857,6 +865,13 @@ export function SubscribeModal({
 
   const selectedDatesCount = Object.keys(selectedDatesMap).length;
 
+  // Total desired days chosen by the customer for a custom plan
+  const [daysCount, setDaysCount] = useState<number>(defaultDays);
+
+  // Keep daysCount in range [defaultDays, maxDays] when defaults change
+  const effectiveMaxDays = maxDays && maxDays > defaultDays ? maxDays : defaultDays;
+  const clampedDaysCount = Math.max(defaultDays, Math.min(daysCount, effectiveMaxDays));
+
   // Pricing calculations for custom plan with additional days
   const { additionalDays, additionalCost, displayPrice } = useMemo(() => {
     if (!isCustomPlan) {
@@ -867,7 +882,7 @@ export function SubscribeModal({
       };
     }
 
-    const extraDays = Math.max(0, selectedDatesCount - defaultDays);
+    const extraDays = Math.max(0, clampedDaysCount - defaultDays);
     const extraCost = extraDays * dayPrice;
     const total = basePriceNum + extraCost;
 
@@ -881,15 +896,15 @@ export function SubscribeModal({
       additionalCost: extraCost,
       displayPrice: formatted,
     };
-  }, [isCustomPlan, selectedDatesCount, defaultDays, dayPrice, basePriceNum, price]);
+  }, [isCustomPlan, clampedDaysCount, defaultDays, dayPrice, basePriceNum, price]);
 
   // Total payable amount in numeric format for wallet balance sufficiency check
   const totalPayableAmount = useMemo(() => {
     if (!isCustomPlan) return basePriceNum;
-    const extraDays = Math.max(0, selectedDatesCount - defaultDays);
+    const extraDays = Math.max(0, clampedDaysCount - defaultDays);
     const extraCost = extraDays * dayPrice;
     return basePriceNum + extraCost;
-  }, [isCustomPlan, basePriceNum, selectedDatesCount, defaultDays, dayPrice]);
+  }, [isCustomPlan, basePriceNum, clampedDaysCount, defaultDays, dayPrice]);
 
   // 1. Validate configuration and proceed to Confirmation Step
   const handleReviewDetails = (e: React.FormEvent) => {
@@ -922,19 +937,7 @@ export function SubscribeModal({
       return;
     }
 
-    // Custom Plan Validations
-    if (isCustomPlan) {
-      if (selectedDatesCount === 0) {
-        setErrorMessage("Please select delivery dates on the calendar.");
-        return;
-      }
-      if (selectedDatesCount < defaultDays) {
-        setErrorMessage(
-          `Please select at least ${defaultDays} delivery days for your plan (${selectedDatesCount} currently selected. Need ${defaultDays - selectedDatesCount} more).`
-        );
-        return;
-      }
-    } else {
+    if (!isCustomPlan) {
       // Fixed Plan Validation
       if (!selectedLocationId) {
         setErrorMessage("Please select or add a delivery location to continue.");
@@ -998,22 +1001,17 @@ export function SubscribeModal({
       let payload: CreateSubscriptionReq;
 
       if (isCustomPlan) {
-        // Custom plan payload with multiple locations & dates array
-        const locationsPayload: SubscriptionLocationInput[] = groupedLocations.map((g) => ({
-          location_id: g.locationId,
-          dates: g.dates,
-        }));
-
         payload = {
           package_id: packageId,
           subscription_plan_id: planId,
           plan_id: planId,
           discount_id: discountId || undefined,
-          locations: locationsPayload,
           auto_renew: autoRenew,
           return_url: returnUrl,
           cancel_url: cancelUrl,
           use_wallet_credit: useWallet ? true : undefined,
+          days_count: clampedDaysCount,
+          delivery_type: deliveryType,
         };
       } else {
         // Fixed plan payload with single location_id
@@ -1033,6 +1031,7 @@ export function SubscribeModal({
           return_url: returnUrl,
           cancel_url: cancelUrl,
           use_wallet_credit: useWallet ? true : undefined,
+          delivery_type: deliveryType,
         };
       }
 
@@ -1636,7 +1635,7 @@ export function SubscribeModal({
                ══════════════════════════════════════════════════════════════ */}
             {isCustomPlan ? (
               <div className="space-y-4">
-                {/* 100% Verified Profile Recipient Card for Custom Plan */}
+                {/* Verified Profile Card */}
                 <div className="p-3 bg-emerald-50/80 border border-emerald-200/90 rounded-2xl flex items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-7 h-7 rounded-lg bg-white border border-emerald-300 flex items-center justify-center shrink-0 text-[#28B454]">
@@ -1665,328 +1664,66 @@ export function SubscribeModal({
                   </button>
                 </div>
 
-                {/* 1. Location Assignment Toolbar for Custom Plan */}
-                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-[11px] font-bold font-oswald uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-[#28B454]" />
-                      <span>Select Location to Assign Dates</span>
+                {/* Total Days Input & Pricing */}
+                <div className="p-3.5 bg-white border border-slate-200 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-[#28B454]" />
+                    <span className="text-xs font-bold font-oswald uppercase tracking-wider text-slate-900">
+                      Total Delivery Days
                     </span>
-
-                    <button
-                      type="button"
-                      onClick={() => setStep("SET_LOCATION")}
-                      className="text-[11px] font-bold font-oswald uppercase tracking-wider text-[#28B454] hover:underline cursor-pointer flex items-center gap-1"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>+ Add New Address</span>
-                    </button>
                   </div>
-
-                  {userLocations.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {userLocations.map((loc, idx) => {
-                        const isSelected = activeAssignLocationId === loc.id;
-                        const accent = LOCATION_ACCENTS[idx % LOCATION_ACCENTS.length];
-                        return (
-                          <button
-                            key={loc.id}
-                            type="button"
-                            onClick={() => setActiveAssignLocationId(loc.id)}
-                            className={cn(
-                              "px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all text-left cursor-pointer",
-                              isSelected
-                                ? `${accent.light} ${accent.border} shadow-xs ring-2 ${accent.ring}`
-                                : "bg-white border-slate-200 text-slate-700 hover:bg-slate-100"
-                            )}
-                          >
-                            <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", accent.bg)} />
-                            <span className="max-w-[200px] truncate">
-                              {loc.address}
-                            </span>
-                            {isSelected && (
-                              <span className="ml-auto text-[10px] font-bold font-oswald uppercase text-[#28B454] bg-[#28B454]/10 px-1.5 py-0.5 rounded-md">
-                                Active
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 flex items-center justify-between gap-2">
-                      <span className="text-xs text-amber-800 font-medium">No saved delivery address.</span>
-                      <button
-                        type="button"
-                        onClick={() => setStep("SET_LOCATION")}
-                        className="text-xs font-bold text-[#28B454] uppercase font-oswald hover:underline"
-                      >
-                        Set Delivery Address &rarr;
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium pt-1 border-t border-slate-200/60">
-                    <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span>Click any date below to schedule delivery to the active location selected above.</span>
-                  </div>
-                </div>
-
-                {/* 2. Selection Progress Bar & Quick Action Buttons */}
-                <div className="p-3.5 bg-white border border-slate-200 rounded-2xl space-y-2.5">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold font-oswald uppercase tracking-wider text-slate-900">
-                        Delivery Schedule Progress:
-                      </span>
-                      <span
-                        className={cn(
-                          "px-2.5 py-0.5 rounded-full text-xs font-black font-oswald uppercase",
-                          selectedDatesCount >= defaultDays
-                            ? additionalDays > 0
-                              ? "bg-emerald-600 text-white shadow-2xs"
-                              : "bg-emerald-100 text-emerald-800"
-                            : selectedDatesCount > 0
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-slate-100 text-slate-600"
-                        )}
-                      >
-                        {selectedDatesCount < defaultDays
-                          ? `${selectedDatesCount} / ${defaultDays} Days (Min ${defaultDays})`
-                          : selectedDatesCount === defaultDays
-                          ? `${selectedDatesCount} Days (Standard Plan)`
-                          : `${selectedDatesCount} Days (+${additionalDays} Extra Days)`}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={handleAutoSelectWeekdays}
-                        className="px-2.5 py-1 rounded-lg bg-[#0B3B17]/10 hover:bg-[#0B3B17]/20 text-[#0B3B17] text-[11px] font-bold font-oswald uppercase tracking-wide transition-colors flex items-center gap-1 cursor-pointer"
-                        title={`Automatically pick the default ${defaultDays} weekdays`}
-                      >
-                        <Zap className="w-3 h-3 text-[#28B454]" />
-                        <span>Auto-Pick {defaultDays} Weekdays</span>
-                      </button>
-
-                      {selectedDatesCount > 0 && (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex-1">
+                      <p className="text-[11px] text-slate-500 font-medium mb-1.5">
+                        Enter the total number of days you want your meals delivered
+                        {effectiveMaxDays > defaultDays ? ` (min ${defaultDays} – max ${effectiveMaxDays} days)` : ` (min ${defaultDays} days)`}.
+                        Base package covers the first {defaultDays} days; extra days are charged at{" "}
+                        <span className="font-bold text-slate-700">
+                          LKR {dayPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/day
+                        </span>.
+                      </p>
+                      <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={handleClearSelectedDates}
-                          className="px-2 py-1 rounded-lg text-slate-400 hover:text-red-600 text-[11px] font-bold font-oswald uppercase tracking-wide hover:bg-red-50 transition-colors flex items-center gap-1 cursor-pointer"
+                          onClick={() => setDaysCount((v) => Math.max(defaultDays, v - 1))}
+                          disabled={daysCount <= defaultDays}
+                          className="w-8 h-8 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-base disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                         >
-                          <Trash2 className="w-3 h-3" />
-                          <span>Clear</span>
+                          −
                         </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Progress track */}
-                  <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full transition-all duration-300 rounded-full",
-                        additionalDays > 0
-                          ? "bg-gradient-to-r from-[#28B454] to-emerald-400 shadow-xs"
-                          : "bg-[#28B454]"
-                      )}
-                      style={{
-                        width: `${Math.min(100, (selectedDatesCount / defaultDays) * 100)}%`,
-                      }}
-                    />
-                  </div>
-
-                  {/* Dynamic Pricing Info & Extra Days Notice */}
-                  <div className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <div className="flex items-center gap-2 text-slate-600 flex-wrap">
-                      <span className="font-semibold text-slate-800">
-                        Base Plan: {defaultDays} Days ({`LKR ${basePriceNum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`})
-                      </span>
-                      <span className="text-slate-300">•</span>
-                      <span className="text-slate-500 font-medium">
-                        Day Rate: {`LKR ${dayPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/day`}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {additionalDays > 0 ? (
-                        <div className="flex items-center gap-1.5 text-emerald-800 font-bold font-oswald text-xs bg-emerald-100/90 px-2 py-0.5 rounded-lg border border-emerald-300">
-                          <Plus className="w-3 h-3 text-[#28B454]" />
-                          <span>+{additionalDays} Extra Days (+{`LKR ${additionalCost.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`})</span>
-                        </div>
-                      ) : selectedDatesCount < defaultDays ? (
-                        <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                          Need {defaultDays - selectedDatesCount} more day{defaultDays - selectedDatesCount > 1 ? "s" : ""}
-                        </span>
-                      ) : null}
-
-                      <div className="text-right pl-2 border-l border-slate-200">
-                        <span className="text-[10px] uppercase font-bold font-oswald text-slate-400 block leading-none">Current Total</span>
-                        <span className="font-oswald font-black text-sm text-[#0B3B17] leading-tight block">
-                          {displayPrice}
-                        </span>
+                        <input
+                          type="number"
+                          min={defaultDays}
+                          max={effectiveMaxDays}
+                          value={clampedDaysCount}
+                          onChange={(e) => {
+                            const v = parseInt(e.target.value, 10);
+                            if (!isNaN(v)) setDaysCount(Math.max(defaultDays, Math.min(v, effectiveMaxDays)));
+                          }}
+                          className="w-20 text-center text-sm font-black font-oswald border border-slate-200 rounded-xl px-2 py-1.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#28B454]/40 focus:border-[#28B454]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setDaysCount((v) => Math.min(effectiveMaxDays, v + 1))}
+                          disabled={daysCount >= effectiveMaxDays}
+                          className="w-8 h-8 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-base disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                        >
+                          +
+                        </button>
+                        <span className="text-xs text-slate-500 font-medium">days total</span>
                       </div>
                     </div>
+                    <div className="sm:text-right bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 shrink-0">
+                      <span className="text-[10px] uppercase font-bold font-oswald text-slate-400 block leading-none mb-0.5">Total Price</span>
+                      <span className="font-oswald font-black text-base text-[#0B3B17] block">{displayPrice}</span>
+                      {additionalDays > 0 && (
+                        <span className="text-[10px] text-emerald-700 font-semibold block mt-0.5">
+                          +{additionalDays} extra × LKR {dayPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                {/* 3. Live Interactive Calendar */}
-                <div className="p-4 bg-white border border-slate-200 rounded-2xl space-y-3">
-                  {/* Calendar Month Navigation Header */}
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-oswald text-base font-bold text-slate-900 uppercase tracking-wide">
-                      {calendarMonthDate.toLocaleString("en-US", { month: "long", year: "numeric" })}
-                    </h4>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={handlePrevMonth}
-                        className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
-                        aria-label="Previous Month"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleNextMonth}
-                        className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
-                        aria-label="Next Month"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 5-Day Weekday Header (Mon - Fri) */}
-                  <div className="grid grid-cols-5 gap-1.5 text-center font-oswald text-xs font-bold uppercase tracking-wider text-slate-600 pb-1.5 border-b border-slate-100">
-                    <div>Mon</div>
-                    <div>Tue</div>
-                    <div>Wed</div>
-                    <div>Thu</div>
-                    <div>Fri</div>
-                  </div>
-
-                  {/* 5-Day Weekday Cells Grid */}
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {calendarDays.map((d, index) => {
-                      const assignedLocId = selectedDatesMap[d.dateStr];
-                      const isSelected = Boolean(assignedLocId);
-                      const locIdx = userLocations.findIndex((l) => l.id === assignedLocId);
-                      const accent =
-                        isSelected && locIdx >= 0
-                          ? LOCATION_ACCENTS[locIdx % LOCATION_ACCENTS.length]
-                          : LOCATION_ACCENTS[0];
-
-                      return (
-                        <button
-                          key={`${d.dateStr}-${index}`}
-                          type="button"
-                          disabled={d.isPast}
-                          title={d.isPast ? "Past date" : undefined}
-                          onClick={() => handleToggleCalendarDate(d.dateStr)}
-                          className={cn(
-                            "h-11 sm:h-12 rounded-xl text-xs font-bold transition-all relative flex flex-col items-center justify-center select-none",
-                            d.isPast
-                              ? "opacity-25 bg-slate-50 text-slate-400 cursor-not-allowed border border-transparent"
-                              : isSelected
-                              ? `${accent.bg} text-white shadow-sm ring-2 ${accent.ring} cursor-pointer scale-[1.02]`
-                              : d.isCurrentMonth
-                              ? "bg-slate-50/80 text-slate-800 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-slate-200/60 cursor-pointer"
-                              : "bg-slate-50/30 text-slate-400 hover:bg-slate-100 border border-transparent cursor-pointer"
-                          )}
-                        >
-                          <span className={cn("leading-none", isSelected ? "text-white font-black text-sm" : "")}>
-                            {d.dayNum}
-                          </span>
-
-                          {isSelected && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-white mt-1 shrink-0 animate-pulse" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 4. Grouped Delivery Breakdown */}
-                {groupedLocations.length > 0 && (
-                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold font-oswald uppercase tracking-wider text-slate-800">
-                        Assigned Delivery Locations ({groupedLocations.length})
-                      </span>
-                      <span className="text-[11px] font-medium text-slate-500">
-                        Total {selectedDatesCount} meals scheduled
-                      </span>
-                    </div>
-
-                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                      {groupedLocations.map((grp) => (
-                        <div
-                          key={grp.locationId}
-                          className={cn(
-                            "p-2.5 rounded-xl border bg-white space-y-2 shadow-3xs",
-                            grp.color.border
-                          )}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", grp.color.bg)} />
-                              <span className="text-xs font-bold text-slate-800 truncate">
-                                {grp.location?.address || "Delivery Address"}
-                              </span>
-                            </div>
-                            <span
-                              className={cn(
-                                "px-2 py-0.5 rounded-full text-[10.5px] font-black font-oswald uppercase shrink-0",
-                                grp.color.light
-                              )}
-                            >
-                              {grp.dates.length} Days
-                            </span>
-                          </div>
-
-                          {/* Date chips */}
-                          <div className="flex flex-wrap gap-1.5 pt-1 border-t border-slate-100">
-                            {grp.dates.map((dStr) => (
-                              <div
-                                key={dStr}
-                                className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 px-2 py-1 rounded-lg text-[11px] font-medium"
-                              >
-                                <span>{formatFriendlyDate(dStr)}</span>
-                                {userLocations.length > 1 && (
-                                  <select
-                                    value={grp.locationId}
-                                    onChange={(e) => handleChangeDateLocation(dStr, e.target.value)}
-                                    className="text-[10px] font-semibold bg-white border border-slate-200 rounded px-1 py-0.5 cursor-pointer text-slate-700"
-                                    title="Switch location for this date"
-                                  >
-                                    {userLocations.map((uloc, uidx) => (
-                                      <option key={uloc.id} value={uloc.id}>
-                                        📍 {LOCATION_ACCENTS[uidx % LOCATION_ACCENTS.length].tag}: {uloc.address.slice(0, 18)}...
-                                      </option>
-                                    ))}
-                                  </select>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleCalendarDate(dStr)}
-                                  className="text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
-                                  title="Remove date"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             ) : (
               /* ══════════════════════════════════════════════════════════════
@@ -2081,6 +1818,65 @@ export function SubscribeModal({
               </div>
             )}
 
+            {/* Delivery Hand-over Instruction */}
+            <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-2.5">
+              <div className="flex items-center gap-2">
+                <PackageIcon className="w-3.5 h-3.5 text-[#28B454]" />
+                <span className="text-xs font-bold font-oswald uppercase tracking-wider text-slate-900">
+                  Delivery Hand-over Instruction
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setDeliveryType("CALL_AND_HANDOVER")}
+                  className={cn(
+                    "p-3 rounded-xl border text-left transition-all cursor-pointer",
+                    deliveryType === "CALL_AND_HANDOVER"
+                      ? "bg-emerald-50/70 border-[#28B454] ring-1 ring-[#28B454]/30"
+                      : "bg-white border-slate-200 hover:border-slate-300"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5 text-[#28B454] shrink-0" />
+                    <span className="text-xs font-bold text-slate-900 font-oswald uppercase tracking-wide">
+                      Call &amp; Hand Over
+                    </span>
+                    {deliveryType === "CALL_AND_HANDOVER" && (
+                      <Check className="w-3.5 h-3.5 text-[#28B454] ml-auto shrink-0" />
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                    Rider calls you and hands the meal directly to you at the door.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDeliveryType("LEAVE_AT_GUARDROOM")}
+                  className={cn(
+                    "p-3 rounded-xl border text-left transition-all cursor-pointer",
+                    deliveryType === "LEAVE_AT_GUARDROOM"
+                      ? "bg-emerald-50/70 border-[#28B454] ring-1 ring-[#28B454]/30"
+                      : "bg-white border-slate-200 hover:border-slate-300"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-3.5 h-3.5 text-[#28B454] shrink-0" />
+                    <span className="text-xs font-bold text-slate-900 font-oswald uppercase tracking-wide">
+                      Leave at Guardroom
+                    </span>
+                    {deliveryType === "LEAVE_AT_GUARDROOM" && (
+                      <Check className="w-3.5 h-3.5 text-[#28B454] ml-auto shrink-0" />
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                    Meal is left with security/guardroom for pickup.
+                  </p>
+                </button>
+              </div>
+            </div>
+
             {/* Auto-Renewal Toggle */}
             <div
               onClick={() => setAutoRenew(!autoRenew)}
@@ -2147,22 +1943,11 @@ export function SubscribeModal({
 
               <button
                 type="submit"
-                disabled={
-                  (!isCustomPlan && !selectedLocationId) ||
-                  (isCustomPlan && selectedDatesCount < defaultDays)
-                }
+                disabled={!isCustomPlan && !selectedLocationId}
                 className="flex-1 py-3.5 rounded-2xl bg-[#0B3B17] hover:bg-[#124D20] text-white text-xs sm:text-sm font-bold font-oswald uppercase tracking-wider transition-all shadow-md shadow-[#0B3B17]/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isCustomPlan && selectedDatesCount < defaultDays ? (
-                  <span>
-                    SELECT MINIMUM {defaultDays} DAYS ({defaultDays - selectedDatesCount} MORE REQUIRED)
-                  </span>
-                ) : (
-                  <>
-                    <span>REVIEW &amp; CONFIRM DETAILS ({displayPrice})</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-[#36D068]" />
-                  </>
-                )}
+                <span>REVIEW &amp; CONFIRM DETAILS ({displayPrice})</span>
+                <ArrowRight className="w-3.5 h-3.5 text-[#36D068]" />
               </button>
             </div>
           </form>
@@ -2187,8 +1972,8 @@ export function SubscribeModal({
                   <p className="text-emerald-200/90 text-xs mt-1 font-medium">
                     {isCustomPlan
                       ? additionalDays > 0
-                        ? `${selectedDatesCount} Custom Scheduled Meals (${defaultDays} Base + ${additionalDays} Extra Days) • Multi-Location Support`
-                        : `${selectedDatesCount} Custom Scheduled Meals • Multi-Location Support`
+                        ? `${clampedDaysCount} Days (${defaultDays} Base + ${additionalDays} Extra Days)`
+                        : `${clampedDaysCount} Days`
                       : `${durationLimit || (planName.toLowerCase().includes("monthly") ? 20 : 5)} Weekday Morning Breakfast Meals`}
                   </p>
                 </div>
@@ -2215,8 +2000,8 @@ export function SubscribeModal({
                 <p className="text-xs font-bold text-slate-900 font-poppins">
                   {isCustomPlan
                     ? additionalDays > 0
-                      ? `${selectedDatesCount} Selected Weekdays (${defaultDays} Base + ${additionalDays} Extra)`
-                      : `${selectedDatesCount} Selected Weekdays (Mon – Fri)`
+                      ? `${clampedDaysCount} Days (${defaultDays} Base + ${additionalDays} Extra)`
+                      : `${clampedDaysCount} Days`
                     : planName.toLowerCase().includes("weekly")
                     ? "5 Days (Mon – Fri)"
                     : "20 Weekdays (Mon – Fri)"}
@@ -2224,6 +2009,10 @@ export function SubscribeModal({
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
                   <Clock className="w-3 h-3 text-slate-400" />
                   <span>Morning Delivery (6:30 AM – 8:30 AM)</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                  <PackageIcon className="w-3 h-3 text-slate-400" />
+                  <span>{deliveryType === "LEAVE_AT_GUARDROOM" ? "Leave at Guardroom" : "Call & Hand Over"}</span>
                 </div>
               </div>
 
@@ -2394,11 +2183,15 @@ export function SubscribeModal({
                       <span className="text-[11px] font-bold font-oswald uppercase tracking-wider text-slate-700">
                         Your Wallet Balance
                       </span>
-                      {walletBalance >= totalPayableAmount && (
+                      {walletBalance >= totalPayableAmount ? (
                         <span className="text-[9.5px] font-bold font-oswald uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-600 text-white shadow-2xs">
                           Sufficient Balance
                         </span>
-                      )}
+                      ) : walletBalance > 0 ? (
+                        <span className="text-[9.5px] font-bold font-oswald uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500 text-white shadow-2xs">
+                          Partial Credit Available
+                        </span>
+                      ) : null}
                     </div>
                     <span className="text-base sm:text-lg font-black text-slate-900 block font-oswald tracking-tight">
                       LKR {walletBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -2426,6 +2219,18 @@ export function SubscribeModal({
               {walletBalance >= totalPayableAmount ? (
                 <p className="text-[11px] text-emerald-800 font-medium mt-2.5 pt-2.5 border-t border-emerald-200/70 leading-relaxed">
                   ✓ Your wallet credit is sufficient. You can subscribe instantly using your wallet credit without PayHere redirection.
+                </p>
+              ) : walletBalance > 0 ? (
+                <p className="text-[11px] text-slate-600 font-normal mt-2.5 pt-2.5 border-t border-slate-200/70 leading-relaxed">
+                  You can apply your{" "}
+                  <span className="font-bold text-slate-800">
+                    LKR {walletBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>{" "}
+                  wallet credit toward this order — the remaining{" "}
+                  <span className="font-bold text-slate-800">
+                    LKR {Math.max(0, totalPayableAmount - walletBalance).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>{" "}
+                  will be charged via PayHere secure preapproval checkout.
                 </p>
               ) : (
                 <p className="text-[11px] text-slate-500 font-normal mt-2.5 pt-2.5 border-t border-slate-200/70 leading-relaxed">
@@ -2460,8 +2265,10 @@ export function SubscribeModal({
               </button>
 
               <div className="flex-1 flex flex-col sm:flex-row items-stretch gap-2.5">
-                {/* Pay by Wallet Button (shown only when wallet balance >= total payment value) */}
-                {walletBalance >= totalPayableAmount && (
+                {/* Pay by Wallet Button — shown whenever the customer has ANY wallet balance.
+                    Full coverage pays instantly; partial balance applies as credit and the
+                    remainder is routed to PayHere automatically (handled server-side). */}
+                {walletBalance > 0 && (
                   <button
                     type="button"
                     disabled={isSubmitting}
@@ -2473,24 +2280,31 @@ export function SubscribeModal({
                         <RefreshCw className="w-4 h-4 animate-spin" />
                         <span>Applying Wallet Credit...</span>
                       </>
-                    ) : (
+                    ) : walletBalance >= totalPayableAmount ? (
                       <>
                         <Wallet className="w-4 h-4 text-emerald-200" />
                         <span>PAY BY WALLET ({displayPrice})</span>
                         <CheckCircle2 className="w-4 h-4 text-emerald-200" />
                       </>
+                    ) : (
+                      <>
+                        <Wallet className="w-4 h-4 text-emerald-200" />
+                        <span>
+                          USE WALLET (LKR {walletBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) + PAYHERE
+                        </span>
+                      </>
                     )}
                   </button>
                 )}
 
-                {/* Standard PayHere Checkout Button */}
+                {/* Standard PayHere Checkout Button (full amount, no wallet credit applied) */}
                 <button
                   type="button"
                   disabled={isSubmitting}
                   onClick={() => handleSubscriptionSubmit(false)}
                   className={cn(
                     "py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-bold font-oswald uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60",
-                    walletBalance >= totalPayableAmount
+                    walletBalance > 0
                       ? "bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/15"
                       : "flex-1 bg-[#0B3B17] hover:bg-[#124D20] text-white shadow-[#0B3B17]/25"
                   )}
@@ -2503,7 +2317,7 @@ export function SubscribeModal({
                   ) : (
                     <>
                       <Lock className="w-4 h-4 text-[#36D068]" />
-                      <span>{walletBalance >= totalPayableAmount ? "PAY VIA PAYHERE" : "CONFIRM & PAY"} ({displayPrice})</span>
+                      <span>{walletBalance > 0 ? "PAY FULL VIA PAYHERE" : "CONFIRM & PAY"} ({displayPrice})</span>
                       <ArrowRight className="w-3.5 h-3.5 text-[#36D068]" />
                     </>
                   )}

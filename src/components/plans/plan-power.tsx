@@ -611,6 +611,7 @@ export function PlanPower({ packageData }: PlanPowerProps = {}) {
         planId={activeDuration.planId || activeDuration.key}
         planType={activeDuration.planType}
         durationLimit={activeDuration.durationLimit || activeDuration.days}
+        maxDays={activeDuration.maxDays}
         discountId={discount?.id}
         price={`LKR ${discountedPrice.toLocaleString("en-US", {
           minimumFractionDigits: 2,

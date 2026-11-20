@@ -8570,6 +8570,724 @@
                 }
             }
         },
+        "/holidays": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists draft and published holidays ordered by date.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "List holidays",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "DRAFT or PUBLISHED",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "From date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "To date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_holiday.ListHolidaysRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates one or more draft holidays (e.g. a full year calendar). Drafts have no effect until published.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "Create draft holidays",
+                "parameters": [
+                    {
+                        "description": "Holidays to create",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_holiday.CreateHolidaysReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/internal_domain_holiday.HolidayRes"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/holidays/calendar": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists published holidays (no-delivery days) between two dates. Available to any authenticated user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "Holiday calendar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "From date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "To date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/internal_domain_holiday.CalendarDayRes"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/holidays/impact": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the numeric effect of holidays without changing anything: wallet credits for FIXED plans, released CUSTOM days, cancelled optional meals and emails to send. Drafts are projected; published holidays show actual results.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "Preview holiday impact",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Comma-separated holiday IDs",
+                        "name": "ids",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_holiday.ImpactRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/holidays/publications": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Publishes draft holidays permanently. FIXED subscriptions are credited, CUSTOM days are released, and affected customers are emailed. Published holidays cannot be edited or deleted.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "Publish holidays",
+                "parameters": [
+                    {
+                        "description": "Holidays to publish",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_holiday.PublishHolidaysReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_holiday.ImpactRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/holidays/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a holiday with its impact (projected for drafts, actual for published).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "Get a holiday",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Holiday ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_holiday.HolidayDetailRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes a draft holiday. Published holidays return 409.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "Delete a draft holiday",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Holiday ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Partially updates a draft holiday. Published holidays return 409.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "Update a draft holiday",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Holiday ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_holiday.UpdateHolidayReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_holiday.HolidayRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/holidays/{id}/adjustments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists the subscriptions a published holiday compensated, with the action taken.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "List holiday adjustments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Holiday ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_holiday.ListAdjustmentsRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/images": {
             "delete": {
                 "security": [
@@ -12191,6 +12909,412 @@
                 }
             }
         },
+        "internal_domain_holiday.AdjustmentRes": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "example": "FIXED_CREDITED"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "credit_amount": {
+                    "type": "number",
+                    "example": 450
+                },
+                "id": {
+                    "type": "string"
+                },
+                "note_removed": {
+                    "type": "boolean"
+                },
+                "notified_at": {
+                    "type": "string"
+                },
+                "optional_meals_cancelled": {
+                    "type": "integer"
+                },
+                "past_cutoff": {
+                    "type": "boolean"
+                },
+                "plan_type": {
+                    "type": "string",
+                    "example": "FIXED"
+                },
+                "subscription_id": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "wallet_transaction_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_holiday.CalendarDayRes": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2027-01-14"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Thai Pongal"
+                }
+            }
+        },
+        "internal_domain_holiday.CancelledImpact": {
+            "type": "object",
+            "properties": {
+                "subscriptions": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "top_up_total": {
+                    "type": "number",
+                    "example": 450
+                }
+            }
+        },
+        "internal_domain_holiday.CreateHolidaysReq": {
+            "type": "object",
+            "required": [
+                "holidays"
+            ],
+            "properties": {
+                "holidays": {
+                    "type": "array",
+                    "maxItems": 366,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_holiday.HolidayInput"
+                    }
+                }
+            }
+        },
+        "internal_domain_holiday.CustomImpact": {
+            "type": "object",
+            "properties": {
+                "credit_total": {
+                    "type": "number",
+                    "example": 450
+                },
+                "customers": {
+                    "type": "integer",
+                    "example": 40
+                },
+                "days_credited": {
+                    "description": "DaysCredited counts days that could not be released (holiday is today) and were credited instead.",
+                    "type": "integer",
+                    "example": 1
+                },
+                "days_released": {
+                    "type": "integer",
+                    "example": 41
+                },
+                "past_cutoff_overrides": {
+                    "description": "PastCutoffOverrides counts days released although customers could no longer change them.",
+                    "type": "integer",
+                    "example": 10
+                },
+                "subscriptions": {
+                    "type": "integer",
+                    "example": 42
+                }
+            }
+        },
+        "internal_domain_holiday.FixedImpact": {
+            "type": "object",
+            "properties": {
+                "credit_total": {
+                    "type": "number",
+                    "example": 54000
+                },
+                "customers": {
+                    "type": "integer",
+                    "example": 118
+                },
+                "subscriptions": {
+                    "type": "integer",
+                    "example": 120
+                }
+            }
+        },
+        "internal_domain_holiday.HolidayDetailRes": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by_id": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string",
+                    "example": "2027-01-14"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0192f3b0-0000-7000-8000-000000000001"
+                },
+                "impact": {
+                    "$ref": "#/definitions/internal_domain_holiday.HolidayImpact"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Thai Pongal"
+                },
+                "processing_status": {
+                    "type": "string",
+                    "example": "PENDING"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "published_by_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "DRAFT"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "weekday": {
+                    "type": "string",
+                    "example": "THURSDAY"
+                }
+            }
+        },
+        "internal_domain_holiday.HolidayImpact": {
+            "type": "object",
+            "properties": {
+                "already_cancelled": {
+                    "$ref": "#/definitions/internal_domain_holiday.CancelledImpact"
+                },
+                "already_processed": {
+                    "description": "AlreadyProcessed counts subscriptions compensated earlier (published holidays only).",
+                    "type": "integer",
+                    "example": 0
+                },
+                "custom": {
+                    "$ref": "#/definitions/internal_domain_holiday.CustomImpact"
+                },
+                "date": {
+                    "type": "string",
+                    "example": "2027-01-14"
+                },
+                "delivery_notes_removed": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "fixed": {
+                    "$ref": "#/definitions/internal_domain_holiday.FixedImpact"
+                },
+                "holiday_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Thai Pongal"
+                },
+                "optional_meal_requests_cancelled": {
+                    "type": "integer",
+                    "example": 7
+                },
+                "skipped_delivered": {
+                    "type": "integer",
+                    "example": 0
+                }
+            }
+        },
+        "internal_domain_holiday.HolidayInput": {
+            "type": "object",
+            "required": [
+                "date",
+                "name"
+            ],
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2027-01-14"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Public holiday — kitchen closed"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "minLength": 2,
+                    "example": "Thai Pongal"
+                }
+            }
+        },
+        "internal_domain_holiday.HolidayRes": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by_id": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string",
+                    "example": "2027-01-14"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0192f3b0-0000-7000-8000-000000000001"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Thai Pongal"
+                },
+                "processing_status": {
+                    "type": "string",
+                    "example": "PENDING"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "published_by_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "DRAFT"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "weekday": {
+                    "type": "string",
+                    "example": "THURSDAY"
+                }
+            }
+        },
+        "internal_domain_holiday.ImpactRes": {
+            "type": "object",
+            "properties": {
+                "holidays": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_holiday.HolidayImpact"
+                    }
+                },
+                "totals": {
+                    "$ref": "#/definitions/internal_domain_holiday.ImpactTotals"
+                }
+            }
+        },
+        "internal_domain_holiday.ImpactTotals": {
+            "type": "object",
+            "properties": {
+                "customers": {
+                    "type": "integer",
+                    "example": 158
+                },
+                "days_released": {
+                    "type": "integer",
+                    "example": 41
+                },
+                "emails_to_send": {
+                    "type": "integer",
+                    "example": 158
+                },
+                "subscriptions": {
+                    "type": "integer",
+                    "example": 162
+                },
+                "wallet_credit_total": {
+                    "type": "number",
+                    "example": 54450
+                }
+            }
+        },
+        "internal_domain_holiday.ListAdjustmentsRes": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_holiday.AdjustmentRes"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/nu3go_internal_shared_pagination.OffsetMeta"
+                }
+            }
+        },
+        "internal_domain_holiday.ListHolidaysRes": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_holiday.HolidayRes"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/nu3go_internal_shared_pagination.OffsetMeta"
+                }
+            }
+        },
+        "internal_domain_holiday.PublishHolidaysReq": {
+            "type": "object",
+            "required": [
+                "holiday_ids"
+            ],
+            "properties": {
+                "holiday_ids": {
+                    "type": "array",
+                    "maxItems": 366,
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "0192f3b0-0000-7000-8000-000000000001"
+                    ]
+                }
+            }
+        },
+        "internal_domain_holiday.UpdateHolidayReq": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2027-01-15"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Public holiday"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "minLength": 2,
+                    "example": "Thai Pongal"
+                }
+            }
+        },
         "internal_domain_image.UploadRes": {
             "type": "object",
             "properties": {
@@ -14699,6 +15823,9 @@
                     "type": "string"
                 },
                 "description": {
+                    "type": "string"
+                },
+                "holiday_id": {
                     "type": "string"
                 },
                 "id": {

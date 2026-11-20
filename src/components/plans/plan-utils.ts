@@ -14,6 +14,7 @@ export interface DurationPriceOption {
   planId?: string;
   planType?: "FIXED" | "CUSTOM" | string;
   durationLimit?: number;
+  maxDays?: number;
 }
 
 export interface PackageDiscountInfo {
@@ -246,12 +247,14 @@ export function mapPackagePlansToDurations(
     const planType = p.type || (nameLower.includes("custom") || nameLower.includes("flex") ? "CUSTOM" : "FIXED");
     const durationLimit = Number(p.duration_limit) > 0 ? Number(p.duration_limit) : days;
     const returnPrice = typeof p.return_price === "number" && p.return_price > 0 ? p.return_price : undefined;
+    const planMaxDays = typeof p.max_days === "number" && p.max_days > 0 ? p.max_days : undefined;
 
     return {
       key: p.plan_id || `plan-${idx}`,
       planId: p.plan_id,
       planType,
       durationLimit,
+      maxDays: planMaxDays,
       label,
       subLabel,
       days,

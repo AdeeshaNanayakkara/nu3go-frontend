@@ -53,6 +53,32 @@ export interface MarkDeliveredRes {
   invalid?: string[];
 }
 
+export interface MealCountRes {
+  meal_id: string;
+  meal_name: string;
+  total: number;
+  menu: number;
+  optional: number;
+  emergency: number;
+}
+
+export interface DayMealSummaryRes {
+  date: string;
+  weekday: string;
+  total_deliveries: number;
+  unassigned: number;
+  meals: MealCountRes[];
+}
+
+export interface MealSummaryRes {
+  from: string;
+  to: string;
+  total_deliveries: number;
+  unassigned: number;
+  days: DayMealSummaryRes[];
+  totals: MealCountRes[];
+}
+
 export const deliveryService = {
   /**
    * Admin: Get the delivery list for a specific date
@@ -100,6 +126,26 @@ export const deliveryService = {
       return body as MarkDeliveredRes;
     } catch (err: any) {
       const msg = err?.message || err?.error?.message || "Failed to mark deliveries";
+      const customErr = new Error(msg);
+      (customErr as any).status = err?.status;
+      throw customErr;
+    }
+  },
+
+  /**
+   * Admin: Meal preparation counts for a date range
+   * GET /api/v1/deliveries/meal-summary?from=YYYY-MM-DD&to=YYYY-MM-DD
+   */
+  async getMealSummary(from: string, to: string): Promise<MealSummaryRes> {
+    try {
+      const response = await apiClient.get<any>("/api/v1/deliveries/meal-summary", {
+        params: { from, to },
+      });
+      const body = response.data;
+      if (body && body.data) return body.data as MealSummaryRes;
+      return body as MealSummaryRes;
+    } catch (err: any) {
+      const msg = err?.message || err?.error?.message || "Failed to load meal summary";
       const customErr = new Error(msg);
       (customErr as any).status = err?.status;
       throw customErr;

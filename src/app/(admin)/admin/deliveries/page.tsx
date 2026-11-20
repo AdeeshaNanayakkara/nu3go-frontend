@@ -26,6 +26,7 @@ import {
   TrendingUp,
   UtensilsCrossed,
   Layers,
+  ChefHat,
 } from "lucide-react";
 import {
   deliveryService,
@@ -39,6 +40,7 @@ import { DeliveryForecastView } from "@/components/admin/delivery-forecast-view"
 import { DeliveryTrendView } from "@/components/admin/delivery-trend-view";
 import { DeliveryBreakdownView } from "@/components/admin/delivery-breakdown-view";
 import { DeliveryOptionalMealsView } from "@/components/admin/delivery-optional-meals-view";
+import { DeliveryMealBreakdownView } from "@/components/admin/delivery-meal-breakdown-view";
 
 function formatYMD(d: Date): string {
   const y = d.getFullYear();
@@ -92,6 +94,8 @@ function AdminDeliveriesContent() {
       ? "breakdown"
       : viewQuery === "optional-meals"
       ? "optional-meals"
+      : viewQuery === "meal-breakdown"
+      ? "meal-breakdown"
       : viewQuery === "deliveries"
       ? "deliveries"
       : "overview";
@@ -395,6 +399,8 @@ function AdminDeliveriesContent() {
                 ? "Delivery Volume Breakdown"
                 : activeView === "optional-meals"
                 ? "Optional Meal Popularity"
+                : activeView === "meal-breakdown"
+                ? "Meal Preparation Counts"
                 : "Daily Operations"}
             </span>
           </div>
@@ -424,6 +430,11 @@ function AdminDeliveriesContent() {
                 <UtensilsCrossed className="w-7 h-7 text-[#36D068]" />
                 <span>Optional Meal Popularity</span>
               </>
+            ) : activeView === "meal-breakdown" ? (
+              <>
+                <ChefHat className="w-7 h-7 text-[#36D068]" />
+                <span>Meal Breakdown</span>
+              </>
             ) : (
               <>
                 <Truck className="w-7 h-7 text-[#36D068]" />
@@ -442,6 +453,8 @@ function AdminDeliveriesContent() {
               ? "Delivery volume, completion rates, missed meals, and cancellations split by plan type, package, or weekday."
               : activeView === "optional-meals"
               ? "Most requested optional meals for delivery dates, customer recipe swap preferences, and popularity ranking."
+              : activeView === "meal-breakdown"
+              ? "Meal preparation counts per delivery date — menu, optional swaps, and emergency changes. Use for kitchen planning and ingredient ordering."
               : "Live schedule of expected meal deliveries per date. Mark completed deliveries, batch-mark multiple orders, or undo delivery status."}
           </p>
         </div>
@@ -479,6 +492,7 @@ function AdminDeliveriesContent() {
           { id: "trend", label: "Trend", icon: TrendingUp },
           { id: "breakdown", label: "Breakdown", icon: Layers },
           { id: "optional-meals", label: "Optional Meals", icon: UtensilsCrossed },
+          { id: "meal-breakdown", label: "Meal Breakdown", icon: ChefHat },
           { id: "deliveries", label: "Deliveries", icon: Truck },
         ].map((tab) => {
           const TabIcon = tab.icon;
@@ -1033,6 +1047,12 @@ function AdminDeliveriesContent() {
         />
       ) : activeView === "optional-meals" ? (
         <DeliveryOptionalMealsView
+          onSwitchToDeliveriesTab={() => {
+            router.push("/admin/deliveries?view=deliveries");
+          }}
+        />
+      ) : activeView === "meal-breakdown" ? (
+        <DeliveryMealBreakdownView
           onSwitchToDeliveriesTab={() => {
             router.push("/admin/deliveries?view=deliveries");
           }}

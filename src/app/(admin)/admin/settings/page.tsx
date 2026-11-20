@@ -7,6 +7,8 @@ import {
   CreditCard,
   UtensilsCrossed,
   Percent,
+  Star,
+  CalendarDays,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -62,6 +64,26 @@ export default function AdminSettingsPage() {
       description: "Manage promotional discounts, percentage rates, validity periods, and package assignments.",
       icon: Percent,
       href: "/admin/settings/discounts",
+      badge: "Configure",
+      active: true,
+      color: "bg-[#36D068]/15 text-[#36D068] border-[#36D068]/20",
+    },
+    {
+      id: "reviews",
+      title: "Reviews Management",
+      description: "View and manage customer reviews and ratings submitted across all meal packages and services.",
+      icon: Star,
+      href: "/reviews",
+      badge: "Configure",
+      active: true,
+      color: "bg-[#36D068]/15 text-[#36D068] border-[#36D068]/20",
+    },
+    {
+      id: "holidays",
+      title: "Holiday Management",
+      description: "Draft, edit, and publish no-delivery holidays on a live calendar. Weekends are locked automatically.",
+      icon: CalendarDays,
+      href: "/admin/settings/holidays",
       badge: "Configure",
       active: true,
       color: "bg-[#36D068]/15 text-[#36D068] border-[#36D068]/20",

@@ -128,6 +128,8 @@ export const BACKEND_ENDPOINTS = {
     PAYMENTS: (id: string) => `${API_V1}/subscriptions/${id}/payments`,
     BILLING_HISTORY: (id: string) => `${API_V1}/subscriptions/${id}/billing-history`,
     RETRY_BILLING: (id: string) => `${API_V1}/subscriptions/${id}/retry-billing`,
+    DATES: (id: string) => `${API_V1}/subscriptions/${id}/dates`,
+    DATE_DETAIL: (id: string, date: string) => `${API_V1}/subscriptions/${id}/dates/${date}`,
   },
   MEAL_CANCELLATIONS: {
     CREATE: `${API_V1}/meal-cancellations`,
@@ -153,6 +155,17 @@ export const BACKEND_ENDPOINTS = {
     LIST: `${API_V1}/deliveries`,
     MARK: `${API_V1}/deliveries`,
     UNDO: (id: string) => `${API_V1}/deliveries/${id}`,
+    MEAL_SUMMARY: `${API_V1}/deliveries/meal-summary`,
+  },
+  HOLIDAYS: {
+    LIST: `${API_V1}/holidays`,
+    CREATE: `${API_V1}/holidays`,
+    DETAIL: (id: string) => `${API_V1}/holidays/${id}`,
+    UPDATE: (id: string) => `${API_V1}/holidays/${id}`,
+    DELETE: (id: string) => `${API_V1}/holidays/${id}`,
+    PUBLISH: `${API_V1}/holidays/publications`,
+    IMPACT: `${API_V1}/holidays/impact`,
+    CALENDAR: `${API_V1}/holidays/calendar`,
   },
   ANALYTICS: {
     CUSTOMERS_ENGAGEMENT: `${API_V1}/analytics/customers/engagement`,

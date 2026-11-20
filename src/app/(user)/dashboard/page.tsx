@@ -21,6 +21,7 @@ import {
   Calendar as CalendarIcon,
 } from "lucide-react";
 import { SubscriptionCalendarView } from "@/components/dashboard/subscription-calendar-modal";
+import { SubscriptionCalendar } from "@/components/dashboard/subscription-calendar";
 import { userService, type BillingProfileRes } from "@/services/api/user.service";
 
 export default function CustomerDashboardPage() {
@@ -226,6 +227,15 @@ export default function CustomerDashboardPage() {
 
   const getPlanLabel = (sub: SubscriptionResItem | null) => getPlanDetails(sub).fullLabel;
 
+  const isCustomSub = (sub: SubscriptionResItem | null) => {
+    if (!sub) return false;
+    const catalogPlan = packages
+      .find((p) => p.id === sub.package_id)
+      ?.plans?.find((pl) => pl.plan_id === sub.subscription_plan_id);
+    if (catalogPlan?.type) return catalogPlan.type.toUpperCase() === "CUSTOM";
+    return typeof sub.purchased_days === "number" && sub.purchased_days > 0;
+  };
+
   // Default address
   const defaultAddress =
     locations.find((l) => l.is_default)?.address ||
@@ -406,6 +416,15 @@ export default function CustomerDashboardPage() {
                   >
                     <span>{pkgName}</span>
                     <span className="opacity-70 font-normal ml-1">• {planInfo.name}</span>
+                    <span
+                      className={`ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full border ${
+                        isCustomSub(sub)
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-sky-50 text-sky-700 border-sky-200"
+                      }`}
+                    >
+                      {isCustomSub(sub) ? "Custom" : "Fixed"}
+                    </span>
                   </button>
                 );
               })}
@@ -439,14 +458,38 @@ export default function CustomerDashboardPage() {
                 }`}
               >
                 <CalendarIcon className="w-3.5 h-3.5 text-[#15803D]" />
-                <span>Meal Cancellations and Optional Meal Requests</span>
+                <span>
+                  {isCustomSub(activeSubscription)
+                    ? "Delivery Calendar"
+                    : "Meal Cancellations and Optional Meal Requests"}
+                </span>
               </button>
             </div>
           )}
         </div>
 
         {/* Inline View: Calendar OR Plan Card */}
-        {viewTab === "calendar" && isPlanActive ? (
+        {viewTab === "calendar" && isPlanActive && activeSubscription && isCustomSub(activeSubscription) ? (
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setViewTab("card")}
+              className="text-xs font-oswald font-bold uppercase tracking-wider text-[#15803D] hover:underline cursor-pointer"
+            >
+              ← Back to Plan Summary
+            </button>
+            <SubscriptionCalendar
+              key={activeSubscription.id}
+              subscription={activeSubscription}
+              locations={locations}
+              onUpdated={(updated) =>
+                setSubscriptions((prev) =>
+                  prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s))
+                )
+              }
+            />
+          </div>
+        ) : viewTab === "calendar" && isPlanActive ? (
           <SubscriptionCalendarView
             subscription={activeSubscription}
             packageName={getPackageName(activeSubscription)}
@@ -461,7 +504,7 @@ export default function CustomerDashboardPage() {
             packageName={getPackageName(activeSubscription)}
             planName={getPlanDetails(activeSubscription).name}
             planDurationLabel={getPlanLabel(activeSubscription)}
-            planType={getPlanDetails(activeSubscription).type}
+            planType={isCustomSub(activeSubscription) ? "Custom" : "Fixed"}
             billingCycle={getPlanDetails(activeSubscription).billingCycle}
             totalDays={totalPlanDays}
             daysDelivered={daysDeliveredCount}
