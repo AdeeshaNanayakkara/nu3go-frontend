@@ -48,6 +48,7 @@ import {
 import { userService, type BillingProfileRes } from "@/services/api/user.service";
 import { walletService } from "@/services/api/wallet.service";
 import { OpenStreetMapPicker } from "@/components/ui/open-street-map-picker";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 interface SubscribeModalProps {
@@ -679,9 +680,8 @@ export function SubscribeModal({
         setActiveAssignLocationId(targetId);
       }
 
-      setSuccessMessage("Delivery location saved successfully!");
+      toast.success("Delivery location saved successfully!");
       setTimeout(() => {
-        setSuccessMessage(null);
         setStep("CHECKOUT");
       }, 350);
     } catch (err: unknown) {

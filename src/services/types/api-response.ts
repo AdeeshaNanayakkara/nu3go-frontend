@@ -13,6 +13,10 @@ export interface ApiError {
   status: number;
   message: string;
   errors: ApiFieldError[];
+  /** Backend `error.details` — the specific reason (e.g. which day/field failed) */
+  details?: string;
+  /** Backend `error.message` on its own, without details appended */
+  title?: string;
 }
 
 /** Individual field validation error */

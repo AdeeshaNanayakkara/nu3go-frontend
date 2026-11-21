@@ -2,9 +2,26 @@
  * Backend API base URL and endpoints.
  * All backend routes (including auth) live under the /api/v1 base path.
  */
-export const BACKEND_BASE = (
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://13.201.222.82:80"
-).replace(/\/+$/, "");
+const _rawBackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+if (!_rawBackendUrl && process.env.NODE_ENV === "production") {
+  throw new Error("NEXT_PUBLIC_BACKEND_URL is required in production.");
+}
+export const BACKEND_BASE = (_rawBackendUrl || "http://localhost:3001").replace(
+  /\/+$/,
+  "",
+);
+
+if (
+  process.env.NODE_ENV === "production" &&
+  _rawBackendUrl &&
+  _rawBackendUrl.startsWith("http://")
+) {
+  console.warn(
+    "[SECURITY] NEXT_PUBLIC_BACKEND_URL uses plain HTTP. " +
+      "BFF-to-backend traffic (including tokens) is unencrypted. " +
+      "Use HTTPS in production or ensure both services share a private network.",
+  );
+}
 
 export const API_V1 = `${BACKEND_BASE}/api/v1`;
 export const SWAGGER_DOC_URL = `${BACKEND_BASE}/swagger/index.html#/`;

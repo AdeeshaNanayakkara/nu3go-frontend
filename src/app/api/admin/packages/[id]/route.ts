@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -37,7 +38,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/admin/packages/[id] PUT] Error:", err);
+    logBffError("[BFF /api/admin/packages/[id] PUT]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error updating package." } },
       { status: 500 }
@@ -68,7 +69,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/admin/packages/[id] DELETE] Error:", err);
+    logBffError("[BFF /api/admin/packages/[id] DELETE]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error deleting package." } },
       { status: 500 }

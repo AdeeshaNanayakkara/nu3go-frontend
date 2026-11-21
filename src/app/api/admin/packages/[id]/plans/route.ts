@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/admin/packages/[id]/plans GET] Error:", err);
+    logBffError("[BFF /api/admin/packages/[id]/plans GET]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error fetching package plans." } },
       { status: 500 }
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/admin/packages/[id]/plans POST] Error:", err);
+    logBffError("[BFF /api/admin/packages/[id]/plans POST]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error assigning plans to package." } },
       { status: 500 }

@@ -35,6 +35,8 @@ import {
   type OptionalMealRequestRes,
 } from "@/services/api/optional-meal-request.service";
 import { packageService, type PublicPackage } from "@/services/api/package.service";
+import { type OptionalMealItem } from "@/services/api/menu.service";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 interface SubscriptionCalendarProps {
@@ -104,6 +106,7 @@ export function SubscriptionCalendar({ subscription, locations, onUpdated }: Sub
   const [actionDate, setActionDate] = useState<string | null>(null);
   const [actionView, setActionView] = useState<"choose" | "address" | "unschedule" | "optional">("choose");
   const [actionLocationId, setActionLocationId] = useState<string>("");
+  const [selectedOptionalId, setSelectedOptionalId] = useState<string>("");
   const [isActing, setIsActing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -292,6 +295,7 @@ export function SubscriptionCalendar({ subscription, locations, onUpdated }: Sub
       setActionDate(dateStr);
       setActionView("choose");
       setActionLocationId(scheduled.location_id);
+      setSelectedOptionalId("");
       setActionError(null);
       return;
     }
@@ -329,8 +333,7 @@ export function SubscriptionCalendar({ subscription, locations, onUpdated }: Sub
       }
     }
     if (savedCount > 0) {
-      setSuccess(`${savedCount} meal${savedCount === 1 ? "" : "s"} requested successfully!`);
-      setTimeout(() => setSuccess(null), 3500);
+      toast.success(`${savedCount} meal${savedCount === 1 ? "" : "s"} requested successfully!`);
     }
     if (failures.length > 0) setError(failures.join(" • "));
     setIsSaving(false);
@@ -348,8 +351,7 @@ export function SubscriptionCalendar({ subscription, locations, onUpdated }: Sub
   };
 
   const showSuccess = (msg: string) => {
-    setSuccess(msg);
-    setTimeout(() => setSuccess(null), 3500);
+    toast.success(msg);
   };
 
   // PATCH /api/v1/subscriptions/{id}/dates/{date}
@@ -389,7 +391,7 @@ export function SubscriptionCalendar({ subscription, locations, onUpdated }: Sub
   };
 
   // Chef's alternative dish configured for the weekday of a scheduled date
-  const getOptionalMealForDate = (dateStr: string) => {
+  const getOptionalMealsForDate = (dateStr: string): OptionalMealItem[] | null => {
     const menus = packageDetail?.menus;
     if (!menus || !Array.isArray(menus) || menus.length === 0) return null;
     const parsed = parseYMD(dateStr);
@@ -410,15 +412,10 @@ export function SubscriptionCalendar({ subscription, locations, onUpdated }: Sub
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const slot = activeMenu.meals.find((m: any) => m.day && String(m.day).toUpperCase() === dayNames[dow]);
     if (!slot) return null;
-    const opt = slot.optional_meal;
-    const optId = opt?.id || slot.optional_meal_id;
-    if (!optId) return null;
-    return {
-      id: String(optId),
-      name: (opt?.name as string) || "Chef's Daily Alternative",
-      description: opt?.description as string | undefined,
-      image_url: opt?.image_url as string | undefined,
-    };
+    const options: OptionalMealItem[] = Array.isArray(slot.optional_meals) ? slot.optional_meals : [];
+    return options
+      .filter((o) => o?.id)
+      .map((o) => ({ ...o, id: String(o.id), name: o.name || "Chef's Daily Alternative" }));
   };
 
   // POST /api/v1/optional-meal-requests
@@ -478,7 +475,9 @@ export function SubscriptionCalendar({ subscription, locations, onUpdated }: Sub
 
   const actionScheduled = actionDate ? scheduledMap[actionDate] : undefined;
   const actionOptionalReq = actionDate ? optionalRequestsMap.get(actionDate) : undefined;
-  const actionOptionalMeal = actionDate && actionView === "optional" ? getOptionalMealForDate(actionDate) : null;
+  const actionOptionalMeals: OptionalMealItem[] =
+    (actionDate && actionView === "optional" ? getOptionalMealsForDate(actionDate) : null) ?? [];
+  const actionOptionalMeal = actionOptionalMeals.find((m) => m.id === selectedOptionalId) ?? actionOptionalMeals[0] ?? null;
 
   const monthLabel = monthDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const hasScheduledDates = Object.keys(scheduledByLocation).length > 0;
@@ -1258,6 +1257,31 @@ export function SubscriptionCalendar({ subscription, locations, onUpdated }: Sub
                           </span>
                           <span className="text-[11px] text-slate-400 font-medium">Available</span>
                         </div>
+
+                        {actionOptionalMeals.length > 1 && (
+                          <div className="space-y-1.5">
+                            <span className="block text-[10px] font-oswald font-bold uppercase tracking-wider text-slate-600">
+                              Choose one of {actionOptionalMeals.length} alternatives
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {actionOptionalMeals.map((m) => (
+                                <button
+                                  key={m.id}
+                                  type="button"
+                                  onClick={() => setSelectedOptionalId(m.id)}
+                                  className={cn(
+                                    "px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border",
+                                    actionOptionalMeal.id === m.id
+                                      ? "bg-purple-600 text-white border-purple-600"
+                                      : "bg-white text-slate-700 border-slate-200 hover:bg-purple-50"
+                                  )}
+                                >
+                                  {m.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         {actionOptionalMeal.image_url && (
                           <div className="relative w-full h-44 rounded-xl overflow-hidden border border-slate-200 bg-slate-100">

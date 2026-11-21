@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * GET /api/v1/analytics/sales/cohorts
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/v1/analytics/sales/cohorts GET] Error:", err);
+    logBffError("[BFF /api/v1/analytics/sales/cohorts GET]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error fetching sales cohorts analytics." } },
       { status: 500 }

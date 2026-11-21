@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * GET /api/zones — Public endpoint to fetch all available delivery zones
@@ -20,7 +21,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, data: [] });
   } catch (err) {
-    console.error("[BFF /api/zones GET] Error:", err);
+    logBffError("[BFF /api/zones GET]", err);
     return NextResponse.json({ success: true, data: [] });
   }
 }

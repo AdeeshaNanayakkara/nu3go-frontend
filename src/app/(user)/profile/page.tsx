@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { userService, type BillingProfileRes } from "@/services/api/user.service";
+import { toast } from "@/lib/toast";
 import {
   User,
   Mail,
@@ -120,8 +121,7 @@ export default function UserProfilePage() {
         });
       }
 
-      setSuccessMsg("Profile details updated successfully via PUT /api/v1/me/profile!");
-      setTimeout(() => setSuccessMsg(null), 4000);
+      toast.success("Profile details updated successfully!");
     } catch (err: unknown) {
       console.error("Failed to update profile:", err);
       const msg =
@@ -131,6 +131,7 @@ export default function UserProfilePage() {
           ? err.message
           : "Failed to update profile. Please try again.";
       setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setIsSaving(false);
     }

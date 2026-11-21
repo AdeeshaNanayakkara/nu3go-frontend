@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * POST /api/v1/optional-meal-requests/[id]/cancel — Cancel an optional meal request
@@ -47,7 +48,7 @@ export async function POST(
     }
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/v1/optional-meal-requests/[id]/cancel POST] Error:", err);
+    logBffError("[BFF /api/v1/optional-meal-requests/[id]/cancel POST]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error cancelling optional meal request." } },
       { status: 500 }

@@ -9,6 +9,8 @@
  * instead of triggering 3 separate refresh calls (race condition prevention).
  */
 
+import { csrfHeaders } from "@/lib/auth/csrf";
+
 /** Shared in-flight refresh promise — null when no refresh is happening */
 let activeRefreshPromise: Promise<boolean> | null = null;
 
@@ -35,6 +37,7 @@ export async function refreshAccessToken(): Promise<boolean> {
   activeRefreshPromise = fetch("/api/auth/refresh", {
     method: "POST",
     credentials: "include", // Send HttpOnly refresh token cookie
+    headers: csrfHeaders(),
   })
     .then((res) => res.ok)
     .catch(() => false)

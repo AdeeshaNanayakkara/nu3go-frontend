@@ -133,6 +133,7 @@ export function SubscriptionCalendarView({
   const [optionalRequests, setOptionalRequests] = useState<OptionalMealRequestRes[]>([]);
   const [isLoadingOptionalRequests, setIsLoadingOptionalRequests] = useState(false);
   const [isSubmittingOptional, setIsSubmittingOptional] = useState(false);
+  const [selectedOptionalId, setSelectedOptionalId] = useState<string>("");
   const [optionalError, setOptionalError] = useState<string | null>(null);
 
   // Package & Menus State
@@ -609,7 +610,7 @@ export function SubscriptionCalendarView({
   }, [allPlanDates]);
 
   // Resolve available optional meal for a specific date from package menus
-  const getOptionalMealForDate = (dateStr: string) => {
+  const getOptionalMealsForDate = (dateStr: string) => {
     const availableMenus = packageDetail?.menus || (subscription?.package as any)?.menus;
     if (!availableMenus || !Array.isArray(availableMenus) || availableMenus.length === 0) return null;
     const parsed = parseDateYMD(dateStr);
@@ -636,17 +637,15 @@ export function SubscriptionCalendarView({
     );
     if (!slot) return null;
 
-    const optMealObj = slot.optional_meal;
-    const optMealId = optMealObj?.id || slot.optional_meal_id;
-    if (optMealId) {
-      return {
-        id: String(optMealId),
-        name: optMealObj?.name || "Chef's Daily Alternative",
-        description: optMealObj?.description,
-        image_url: optMealObj?.image_url,
-      };
-    }
-    return null;
+    const options: any[] = Array.isArray(slot.optional_meals) ? slot.optional_meals : [];
+    return options
+      .filter((o) => o?.id)
+      .map((o) => ({
+        id: String(o.id),
+        name: (o.name as string) || "Chef's Daily Alternative",
+        description: o.description as string | undefined,
+        image_url: o.image_url as string | undefined,
+      }));
   };
 
   // Open Date Action Dialog (defaulting to choose between Cancel Meal & Optional Meal Request)
@@ -655,6 +654,7 @@ export function SubscriptionCalendarView({
     initialView: "choose" | "cancel" | "optional" = "choose"
   ) => {
     setActionModalDate(dateStr);
+    setSelectedOptionalId("");
     setActionModalView(initialView);
     setSelectedDateStr(dateStr);
     setCancelReason("");
@@ -1846,7 +1846,8 @@ export function SubscriptionCalendarView({
                       );
                     }
 
-                    const optMeal = getOptionalMealForDate(actionModalDate);
+                    const optMeals = getOptionalMealsForDate(actionModalDate) ?? [];
+                    const optMeal = optMeals.find((m) => m.id === selectedOptionalId) ?? optMeals[0] ?? null;
 
                     if (optMeal) {
                       return (
@@ -1859,6 +1860,30 @@ export function SubscriptionCalendarView({
                               </span>
                               <span className="text-[11px] text-slate-400 font-medium">Available</span>
                             </div>
+
+                            {optMeals.length > 1 && (
+                              <div className="space-y-1.5">
+                                <span className="block text-[10px] font-oswald font-bold uppercase tracking-wider text-slate-600">
+                                  Choose one of {optMeals.length} alternatives
+                                </span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {optMeals.map((m) => (
+                                    <button
+                                      key={m.id}
+                                      type="button"
+                                      onClick={() => setSelectedOptionalId(m.id)}
+                                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                                        optMeal.id === m.id
+                                          ? "bg-purple-600 text-white border-purple-600"
+                                          : "bg-white text-slate-700 border-slate-200 hover:bg-purple-50"
+                                      }`}
+                                    >
+                                      {m.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
 
                             {optMeal.image_url && (
                               <div className="relative w-full h-44 rounded-xl overflow-hidden border border-slate-200 bg-slate-100">

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * GET /api/v1/holidays
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/v1/holidays GET] Error:", err);
+    logBffError("[BFF /api/v1/holidays GET]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error fetching holidays." } },
       { status: 500 }
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/v1/holidays POST] Error:", err);
+    logBffError("[BFF /api/v1/holidays POST]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error creating holidays." } },
       { status: 500 }

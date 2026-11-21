@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 async function proxy(
   request: NextRequest,
@@ -53,7 +54,7 @@ export async function DELETE(
     const { id, date } = await params;
     return await proxy(request, id, date, "DELETE");
   } catch (err) {
-    console.error("[BFF /api/v1/subscriptions/[id]/dates/[date] DELETE] Error:", err);
+    logBffError("[BFF /api/v1/subscriptions/[id]/dates/[date] DELETE]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error unscheduling delivery date." } },
       { status: 500 }
@@ -73,7 +74,7 @@ export async function PATCH(
     const body = await request.json();
     return await proxy(request, id, date, "PATCH", body);
   } catch (err) {
-    console.error("[BFF /api/v1/subscriptions/[id]/dates/[date] PATCH] Error:", err);
+    logBffError("[BFF /api/v1/subscriptions/[id]/dates/[date] PATCH]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error updating delivery date." } },
       { status: 500 }

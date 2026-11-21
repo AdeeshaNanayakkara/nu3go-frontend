@@ -23,6 +23,7 @@ import {
   holidayService,
   type HolidayRes,
 } from "@/services/api/holiday.service";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 function formatYMD(d: Date): string {
@@ -176,8 +177,7 @@ export default function HolidayManagementPage() {
   };
 
   const flashSuccess = (msg: string) => {
-    setSuccessMessage(msg);
-    setTimeout(() => setSuccessMessage(null), 3500);
+    toast.success(msg);
   };
 
   // ─── Cell click: open create or edit modal ───

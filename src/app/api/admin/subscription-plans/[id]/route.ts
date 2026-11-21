@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * GET /api/admin/subscription-plans/[id] — Fetch subscription plan details
@@ -34,7 +35,7 @@ export async function GET(
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/admin/subscription-plans/[id] GET] Error:", err);
+    logBffError("[BFF /api/admin/subscription-plans/[id] GET]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error fetching subscription plan detail." } },
       { status: 500 }
@@ -71,7 +72,7 @@ export async function PUT(
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/admin/subscription-plans/[id] PUT] Error:", err);
+    logBffError("[BFF /api/admin/subscription-plans/[id] PUT]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error updating subscription plan." } },
       { status: 500 }
@@ -105,7 +106,7 @@ export async function DELETE(
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/admin/subscription-plans/[id] DELETE] Error:", err);
+    logBffError("[BFF /api/admin/subscription-plans/[id] DELETE]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error deleting subscription plan." } },
       { status: 500 }

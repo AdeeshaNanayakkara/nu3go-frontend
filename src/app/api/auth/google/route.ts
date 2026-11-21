@@ -2,32 +2,17 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { googleLoginSchema } from "@/schemas/auth.schema";
+import { parseBody } from "@/lib/api/validate";
+import { logBffError } from "@/lib/api/safe-log";
 
-/**
- * POST /api/auth/google
- *
- * BFF proxy for Google OAuth sign-in:
- *  1. Receives { id_token } from the client (credential from Google Identity Services).
- *  2. Forwards to backend POST /api/v1/auth/google.
- *  3. Backend validates the Google ID token, creates/finds the user.
- *  4. Returns access_token, refresh_token, and user — stored in HttpOnly cookies.
- *  5. Returns user object to client (no raw tokens).
- *
- * No GOOGLE_CLIENT_SECRET is required here — the id_token is obtained directly
- * from the GoogleLogin component which uses Google's GIS iframe to handle the
- * full sign-in flow including consent and credential issuance.
- */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id_token } = body;
+    const parsed = parseBody(body, googleLoginSchema);
+    if ("error" in parsed) return parsed.error;
 
-    if (!id_token) {
-      return NextResponse.json(
-        { success: false, error: { message: "Google ID token is required." } },
-        { status: 400 }
-      );
-    }
+    const { id_token } = parsed.data;
 
     const backendRes = await fetch(BACKEND_ENDPOINTS.AUTH.GOOGLE, {
       method: "POST",
@@ -67,7 +52,7 @@ export async function POST(request: NextRequest) {
       secure: isProduction,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60, // 1 hour
+      maxAge: 60 * 60,
     });
 
     if (refresh_token) {
@@ -76,13 +61,13 @@ export async function POST(request: NextRequest) {
         secure: isProduction,
         sameSite: "lax",
         path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 7 days
+        maxAge: 60 * 60 * 24 * 7,
       });
     }
 
     return response;
   } catch (err) {
-    console.error("[BFF /api/auth/google] Error:", err);
+    logBffError("[BFF /api/auth/google]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error. Please try again later." } },
       { status: 500 }

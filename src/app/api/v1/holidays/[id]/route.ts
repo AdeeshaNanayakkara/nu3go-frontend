@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 async function proxy(
   request: NextRequest,
@@ -52,7 +53,7 @@ export async function GET(
     const { id } = await params;
     return await proxy(request, id, "GET");
   } catch (err) {
-    console.error("[BFF /api/v1/holidays/[id] GET] Error:", err);
+    logBffError("[BFF /api/v1/holidays/[id] GET]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error fetching holiday." } },
       { status: 500 }
@@ -72,7 +73,7 @@ export async function PATCH(
     const body = await request.json();
     return await proxy(request, id, "PATCH", body);
   } catch (err) {
-    console.error("[BFF /api/v1/holidays/[id] PATCH] Error:", err);
+    logBffError("[BFF /api/v1/holidays/[id] PATCH]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error updating holiday." } },
       { status: 500 }
@@ -91,7 +92,7 @@ export async function DELETE(
     const { id } = await params;
     return await proxy(request, id, "DELETE");
   } catch (err) {
-    console.error("[BFF /api/v1/holidays/[id] DELETE] Error:", err);
+    logBffError("[BFF /api/v1/holidays/[id] DELETE]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error deleting holiday." } },
       { status: 500 }

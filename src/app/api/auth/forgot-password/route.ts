@@ -1,26 +1,17 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
+import { forgotPasswordSchema } from "@/schemas/auth.schema";
+import { parseBody } from "@/lib/api/validate";
+import { logBffError } from "@/lib/api/safe-log";
 
-/**
- * POST /api/auth/forgot-password
- *
- * BFF proxy for forgot password:
- *  1. Receives { email } from client
- *  2. Forwards to backend POST /api/v1/auth/forgot-password
- *  3. Backend sends a 6-digit OTP to the user's email
- */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email } = body;
+    const parsed = parseBody(body, forgotPasswordSchema);
+    if ("error" in parsed) return parsed.error;
 
-    if (!email) {
-      return NextResponse.json(
-        { success: false, error: { message: "Email address is required." } },
-        { status: 400 }
-      );
-    }
+    const { email } = parsed.data;
 
     const backendRes = await fetch(BACKEND_ENDPOINTS.AUTH.FORGOT_PASSWORD, {
       method: "POST",
@@ -43,7 +34,7 @@ export async function POST(request: NextRequest) {
       message: data.message || "OTP sent successfully to your email.",
     });
   } catch (err) {
-    console.error("[BFF /api/auth/forgot-password] Error:", err);
+    logBffError("[BFF /api/auth/forgot-password]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error. Please try again later." } },
       { status: 500 }

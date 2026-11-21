@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * POST /api/v1/subscriptions/[id]/dates — Schedule delivery dates (CUSTOM plan)
@@ -48,7 +49,7 @@ export async function POST(
 
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/v1/subscriptions/[id]/dates POST] Error:", err);
+    logBffError("[BFF /api/v1/subscriptions/[id]/dates POST]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error scheduling delivery dates." } },
       { status: 500 }

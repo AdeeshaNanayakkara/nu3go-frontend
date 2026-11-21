@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * GET /api/admin/menus — List menus (supports ?package_id=uuid, ?search=..., ?page=X, ?limit=Y)
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/admin/menus GET] Error:", err);
+    logBffError("[BFF /api/admin/menus GET]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error fetching menus." } },
       { status: 500 }
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/admin/menus POST] Error:", err);
+    logBffError("[BFF /api/admin/menus POST]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error creating menu." } },
       { status: 500 }

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * GET /api/public/packages/[id]
@@ -34,7 +35,7 @@ export async function GET(
       { status: res.status }
     );
   } catch (err) {
-    console.error("[BFF /api/public/packages/[id] GET] Error:", err);
+    logBffError("[BFF /api/public/packages/[id] GET]", err);
     return NextResponse.json(
       { success: false, message: "Internal server error fetching package details" },
       { status: 500 }

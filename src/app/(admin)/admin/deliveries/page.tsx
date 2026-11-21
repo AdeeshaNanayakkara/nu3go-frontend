@@ -34,6 +34,7 @@ import {
   type DeliveryPaginationMeta,
 } from "@/services/api/delivery.service";
 import { formatUserFriendlyError } from "@/utils/response-handler";
+import { toast } from "@/lib/toast";
 import { DeliveryPdfModal } from "@/components/admin/delivery-pdf-modal";
 import { DeliveryOverviewSummary } from "@/components/admin/delivery-overview-summary";
 import { DeliveryForecastView } from "@/components/admin/delivery-forecast-view";
@@ -138,18 +139,6 @@ function AdminDeliveriesContent() {
   // PDF Export Modal State
   const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
 
-  // System Toast / Alert Feedback
-  const [toastMessage, setToastMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-
-  const showToast = useCallback((text: string, type: "success" | "error" = "success") => {
-    setToastMessage({ type, text });
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 4500);
-  }, []);
 
   // Fetch Deliveries
   const fetchDeliveries = useCallback(async () => {
@@ -226,18 +215,17 @@ function AdminDeliveriesContent() {
       });
 
       if (res.marked && res.marked.includes(item.subscription_id)) {
-        showToast(`Delivery for ${item.customer_email} marked as Delivered!`, "success");
+        toast.success(`Delivery for ${item.customer_email} marked as Delivered!`);
       } else if (res.already_marked && res.already_marked.includes(item.subscription_id)) {
-        showToast(`Delivery for ${item.customer_email} was already marked as delivered.`, "success");
+        toast.success(`Delivery for ${item.customer_email} was already marked as delivered.`);
       } else {
-        showToast(`Delivery marked as completed.`, "success");
+        toast.success(`Delivery marked as completed.`);
       }
       fetchDeliveries();
     } catch (err: unknown) {
       console.warn("[AdminDeliveriesPage] Error marking delivery:", err);
-      showToast(
-        formatUserFriendlyError(err, { fallback: "Failed to mark delivery. Please try again." }),
-        "error"
+      toast.error(
+        formatUserFriendlyError(err, { fallback: "Failed to mark delivery. Please try again." })
       );
     } finally {
       setProcessingSubId(null);
@@ -255,14 +243,13 @@ function AdminDeliveriesContent() {
       });
 
       const count = res.marked?.length || selectedSubscriptionIds.length;
-      showToast(`Successfully marked ${count} deliveries as delivered!`, "success");
+      toast.success(`Successfully marked ${count} deliveries as delivered!`);
       setSelectedSubscriptionIds([]);
       fetchDeliveries();
     } catch (err: unknown) {
       console.warn("[AdminDeliveriesPage] Error marking batch deliveries:", err);
-      showToast(
-        formatUserFriendlyError(err, { fallback: "Failed to mark selected deliveries. Please try again." }),
-        "error"
+      toast.error(
+        formatUserFriendlyError(err, { fallback: "Failed to mark selected deliveries. Please try again." })
       );
     } finally {
       setIsBatchMarking(false);
@@ -275,17 +262,15 @@ function AdminDeliveriesContent() {
     setIsUndoing(true);
     try {
       await deliveryService.undoDelivery(undoModalItem.delivery_id);
-      showToast(
-        `Delivery status undone for ${undoModalItem.customer_email}. Returned to Pending.`,
-        "success"
+      toast.success(
+        `Delivery status undone for ${undoModalItem.customer_email}. Returned to Pending.`
       );
       setUndoModalItem(null);
       fetchDeliveries();
     } catch (err: unknown) {
       console.warn("[AdminDeliveriesPage] Error undoing delivery:", err);
-      showToast(
-        formatUserFriendlyError(err, { fallback: "Failed to undo delivery status. Please try again." }),
-        "error"
+      toast.error(
+        formatUserFriendlyError(err, { fallback: "Failed to undo delivery status. Please try again." })
       );
     } finally {
       setIsUndoing(false);
@@ -358,29 +343,6 @@ function AdminDeliveriesContent() {
 
   return (
     <div className="space-y-6">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-white font-medium text-sm transition-all animate-in slide-in-from-bottom-2 duration-200 ${
-            toastMessage.type === "success" ? "bg-[#36D068]" : "bg-rose-600"
-          }`}
-        >
-          {toastMessage.type === "success" ? (
-            <CheckCircle2 className="w-5 h-5 shrink-0 text-white" />
-          ) : (
-            <AlertCircle className="w-5 h-5 shrink-0 text-white" />
-          )}
-          <span>{toastMessage.text}</span>
-          <button
-            type="button"
-            onClick={() => setToastMessage(null)}
-            className="ml-2 p-1 hover:bg-white/20 rounded-lg cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
       {/* ─── Header Banner ─── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200/80 p-6 rounded-3xl shadow-sm">
         <div>

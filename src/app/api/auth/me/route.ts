@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * GET /api/auth/me
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("[BFF /api/auth/me] Error decoding token:", err);
+    logBffError("[BFF /api/auth/me]", err);
     return NextResponse.json(
       { success: false, error: { message: "Invalid token." } },
       { status: 401 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * GET /api/v1/subscriptions/[id]/optional-meal-requests — List optional meal requests for a subscription
@@ -46,7 +47,7 @@ export async function GET(
     }
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/v1/subscriptions/[id]/optional-meal-requests GET] Error:", err);
+    logBffError("[BFF /api/v1/subscriptions/[id]/optional-meal-requests GET]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error fetching subscription optional meal requests." } },
       { status: 500 }

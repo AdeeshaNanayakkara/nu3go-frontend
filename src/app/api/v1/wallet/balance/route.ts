@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * GET /api/v1/wallet/balance — Retrieve current customer or specified user's wallet balance
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
   } catch (err) {
-    console.error("[BFF /api/v1/wallet/balance GET] Unexpected error:", err);
+    logBffError("[BFF /api/v1/wallet/balance GET]", err);
     return NextResponse.json(
       {
         success: true,

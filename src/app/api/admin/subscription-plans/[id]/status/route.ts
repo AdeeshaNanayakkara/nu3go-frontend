@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * PATCH /api/admin/subscription-plans/[id]/status — Toggle active status of a subscription plan
@@ -38,7 +39,7 @@ export async function PATCH(
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/admin/subscription-plans/[id]/status PATCH] Error:", err);
+    logBffError("[BFF /api/admin/subscription-plans/[id]/status PATCH]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error updating subscription plan status." } },
       { status: 500 }
