@@ -6,9 +6,24 @@ import {
   Phone,
   Mail,
   CheckCircle2,
+  AlertCircle,
+  Loader2,
+  X,
 } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { cn } from "@/lib/utils";
+import {
+  CONTACT_FIELDS,
+  CONTACT_LIMITS,
+  EMPTY_CONTACT_FORM,
+  validateContactField,
+  validateContactForm,
+  type ContactField,
+  type ContactFieldErrors,
+  type ContactFormInput,
+} from "@/schemas/contact.schema";
+import { submitContactForm } from "@/services/api/contact.service";
 
 // Register ScrollTrigger plugin on client side
 if (typeof window !== "undefined") {
@@ -22,40 +37,126 @@ export function ContactCardSection() {
   const leftColRef = useRef<HTMLDivElement | null>(null);
   const rightColRef = useRef<HTMLDivElement | null>(null);
 
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    subject: "",
-    message: "",
-  });
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const submittingRef = useRef(false); // synchronous guard against double-submit
+  const mountedAtRef = useRef(0);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [formData, setFormData] = useState<ContactFormInput>(EMPTY_CONTACT_FORM);
+  const [honeypot, setHoneypot] = useState("");
+  const [errors, setErrors] = useState<ContactFieldErrors>({});
+  const [touched, setTouched] = useState<Partial<Record<ContactField, boolean>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    mountedAtRef.current = Date.now();
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    };
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const field = e.target.name as ContactField;
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Re-validate live once the user has left the field at least once.
+    if (touched[field]) {
+      setErrors((prev) => ({ ...prev, [field]: validateContactField(field, value) }));
+    }
+    if (errorMessage) setErrorMessage(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitted(true);
-      setFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        subject: "",
-        message: "",
-      });
-      setTimeout(() => setSubmitted(false), 7000);
-    }, 800);
+  const handleBlur = (
+    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const field = e.target.name as ContactField;
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    setErrors((prev) => ({ ...prev, [field]: validateContactField(field, e.target.value) }));
   };
+
+  const focusFirstError = (fieldErrors: ContactFieldErrors) => {
+    const first = CONTACT_FIELDS.find((f) => fieldErrors[f]);
+    if (first) formRef.current?.querySelector<HTMLElement>(`[name="${first}"]`)?.focus();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submittingRef.current) return;
+
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    // Client-side validation (the API validates again on the server).
+    const validation = validateContactForm(formData);
+    if (!validation.success) {
+      setErrors(validation.errors);
+      setTouched(Object.fromEntries(CONTACT_FIELDS.map((f) => [f, true])));
+      focusFirstError(validation.errors);
+      return;
+    }
+
+    submittingRef.current = true;
+    setIsSubmitting(true);
+
+    const result = await submitContactForm({
+      ...validation.data,
+      website: honeypot,
+      elapsedMs: Date.now() - mountedAtRef.current,
+    });
+
+    submittingRef.current = false;
+    setIsSubmitting(false);
+
+    if (result.ok) {
+      setFormData(EMPTY_CONTACT_FORM);
+      setErrors({});
+      setTouched({});
+      setSuccessMessage(result.message);
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      successTimerRef.current = setTimeout(() => setSuccessMessage(null), 10000);
+      return;
+    }
+
+    if (result.fieldErrors && Object.keys(result.fieldErrors).length > 0) {
+      setErrors(result.fieldErrors);
+      focusFirstError(result.fieldErrors);
+    }
+    setErrorMessage(result.message);
+  };
+
+  /** Shared input styling with an error state. */
+  const inputClass = (field: ContactField) =>
+    cn(
+      "w-full bg-[#F9F9F9] border rounded-lg px-4 py-3 text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-hidden focus:bg-white transition-all duration-200 disabled:opacity-60",
+      errors[field]
+        ? "border-red-400 focus:border-red-500 bg-red-50/40"
+        : "border-neutral-200/90 focus:border-neutral-900"
+    );
+
+  /** Accessible props for each field. */
+  const fieldProps = (field: ContactField) => ({
+    id: `contact-${field}`,
+    name: field,
+    value: formData[field],
+    onChange: handleChange,
+    onBlur: handleBlur,
+    disabled: isSubmitting,
+    "aria-invalid": errors[field] ? true : undefined,
+    "aria-describedby": errors[field] ? `contact-${field}-error` : undefined,
+    className: inputClass(field),
+  });
+
+  const renderFieldError = (field: ContactField) =>
+    errors[field] ? (
+      <p id={`contact-${field}-error`} className="mt-1.5 text-[11px] sm:text-xs text-red-600 flex items-center gap-1">
+        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+        {errors[field]}
+      </p>
+    ) : null;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -238,116 +339,182 @@ export function ContactCardSection() {
                 Whether you need guidance choosing the right meal subscription, customized nutrition advice, corporate catering, or delivery schedule support, our team is ready to assist you.
               </p>
 
-              {/* Form Success State */}
-              {submitted ? (
-                <div className="bg-[#36D068]/15 border border-[#36D068] text-neutral-900 p-6 rounded-2xl flex items-center gap-3.5 mb-6 animate-in fade-in zoom-in-95">
-                  <CheckCircle2 className="w-6 h-6 text-[#36D068] shrink-0" />
-                  <div>
-                    <span className="font-bold text-sm sm:text-base block">
-                      Message Sent Successfully!
-                    </span>
-                    <span className="text-xs sm:text-sm text-neutral-600 block mt-0.5">
-                      Thank you for contacting Nu3Go. Our wellness team will reach out to you within 24 hours.
-                    </span>
+              {/* Form Status Messages (announced to screen readers) */}
+              <div aria-live="polite" role="status">
+                {successMessage ? (
+                  <div className="bg-[#36D068]/15 border border-[#36D068] text-neutral-900 p-5 sm:p-6 rounded-2xl flex items-start gap-3.5 mb-6 animate-in fade-in zoom-in-95">
+                    <CheckCircle2 className="w-6 h-6 text-[#36D068] shrink-0" />
+                    <div className="flex-1">
+                      <span className="font-bold text-sm sm:text-base block">
+                        Message Sent Successfully!
+                      </span>
+                      <span className="text-xs sm:text-sm text-neutral-600 block mt-0.5">
+                        {successMessage} A confirmation email is on its way to your inbox.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSuccessMessage(null)}
+                      aria-label="Dismiss message"
+                      className="text-neutral-500 hover:text-neutral-900 transition-colors cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                </div>
-              ) : null}
+                ) : null}
+              </div>
+              <div aria-live="assertive">
+                {errorMessage ? (
+                  <div role="alert" className="bg-red-50 border border-red-300 text-neutral-900 p-5 sm:p-6 rounded-2xl flex items-start gap-3.5 mb-6 animate-in fade-in zoom-in-95">
+                    <AlertCircle className="w-6 h-6 text-red-500 shrink-0" />
+                    <div className="flex-1">
+                      <span className="font-bold text-sm sm:text-base block">
+                        Message Not Sent
+                      </span>
+                      <span className="text-xs sm:text-sm text-neutral-600 block mt-0.5">
+                        {errorMessage}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setErrorMessage(null)}
+                      aria-label="Dismiss error"
+                      className="text-neutral-500 hover:text-neutral-900 transition-colors cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : null}
+              </div>
 
               {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+              <form
+                ref={formRef}
+                onSubmit={handleSubmit}
+                noValidate
+                aria-busy={isSubmitting}
+                className="relative space-y-4 sm:space-y-5"
+              >
+                {/* Honeypot: hidden from people and assistive tech; bots tend to fill it */}
+                <div aria-hidden="true" className="absolute -left-[10000px] top-auto w-px h-px overflow-hidden">
+                  <label htmlFor="contact-website">Leave this field empty</label>
+                  <input
+                    type="text"
+                    id="contact-website"
+                    name="website"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                  />
+                </div>
+
                 {/* Row 1: First Name & Last Name */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <div>
-                    <label className="block text-xs font-bold text-neutral-800 mb-1.5">
+                    <label htmlFor="contact-firstName" className="block text-xs font-bold text-neutral-800 mb-1.5">
                       First Name <span className="text-[#36D068]">*</span>
                     </label>
                     <input
                       type="text"
-                      name="firstName"
                       required
-                      value={formData.firstName}
-                      onChange={handleChange}
+                      autoComplete="given-name"
+                      maxLength={CONTACT_LIMITS.NAME_MAX}
                       placeholder="Your first name"
-                      className="w-full bg-[#F9F9F9] border border-neutral-200/90 focus:border-neutral-900 focus:bg-white rounded-lg px-4 py-3 text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-hidden transition-all duration-200"
+                      {...fieldProps("firstName")}
                     />
+                    {renderFieldError("firstName")}
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-neutral-800 mb-1.5">
+                    <label htmlFor="contact-lastName" className="block text-xs font-bold text-neutral-800 mb-1.5">
                       Last Name <span className="text-[#36D068]">*</span>
                     </label>
                     <input
                       type="text"
-                      name="lastName"
                       required
-                      value={formData.lastName}
-                      onChange={handleChange}
+                      autoComplete="family-name"
+                      maxLength={CONTACT_LIMITS.NAME_MAX}
                       placeholder="Your last name"
-                      className="w-full bg-[#F9F9F9] border border-neutral-200/90 focus:border-neutral-900 focus:bg-white rounded-lg px-4 py-3 text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-hidden transition-all duration-200"
+                      {...fieldProps("lastName")}
                     />
+                    {renderFieldError("lastName")}
                   </div>
                 </div>
 
                 {/* Row 2: Email */}
                 <div>
-                  <label className="block text-xs font-bold text-neutral-800 mb-1.5">
+                  <label htmlFor="contact-email" className="block text-xs font-bold text-neutral-800 mb-1.5">
                     Email <span className="text-[#36D068]">*</span>
                   </label>
                   <input
                     type="email"
-                    name="email"
                     required
-                    value={formData.email}
-                    onChange={handleChange}
+                    autoComplete="email"
+                    inputMode="email"
+                    maxLength={CONTACT_LIMITS.EMAIL_MAX}
                     placeholder="name@example.com"
-                    className="w-full bg-[#F9F9F9] border border-neutral-200/90 focus:border-neutral-900 focus:bg-white rounded-lg px-4 py-3 text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-hidden transition-all duration-200"
+                    {...fieldProps("email")}
                   />
+                  {renderFieldError("email")}
                 </div>
 
                 {/* Row 3: Phone Number (Optional) */}
                 <div>
-                  <label className="block text-xs font-bold text-neutral-800 mb-1.5">
+                  <label htmlFor="contact-phone" className="block text-xs font-bold text-neutral-800 mb-1.5">
                     Phone Number <span className="text-neutral-400 font-normal">(Optional)</span>
                   </label>
                   <input
                     type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
+                    autoComplete="tel"
+                    inputMode="tel"
+                    maxLength={CONTACT_LIMITS.PHONE_MAX}
                     placeholder="+94 77 123 4567"
-                    className="w-full bg-[#F9F9F9] border border-neutral-200/90 focus:border-neutral-900 focus:bg-white rounded-lg px-4 py-3 text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-hidden transition-all duration-200"
+                    {...fieldProps("phone")}
                   />
+                  {renderFieldError("phone")}
                 </div>
 
                 {/* Row 4: Subject */}
                 <div>
-                  <label className="block text-xs font-bold text-neutral-800 mb-1.5">
+                  <label htmlFor="contact-subject" className="block text-xs font-bold text-neutral-800 mb-1.5">
                     Subject <span className="text-[#36D068]">*</span>
                   </label>
                   <input
                     type="text"
-                    name="subject"
                     required
-                    value={formData.subject}
-                    onChange={handleChange}
+                    maxLength={CONTACT_LIMITS.SUBJECT_MAX}
                     placeholder="e.g. Subscription Meal Plan Inquiry"
-                    className="w-full bg-[#F9F9F9] border border-neutral-200/90 focus:border-neutral-900 focus:bg-white rounded-lg px-4 py-3 text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-hidden transition-all duration-200"
+                    {...fieldProps("subject")}
                   />
+                  {renderFieldError("subject")}
                 </div>
 
                 {/* Row 5: Comment or Message (Required) */}
                 <div>
-                  <label className="block text-xs font-bold text-neutral-800 mb-1.5">
-                    Comment or Message <span className="text-[#36D068]">*</span>
-                  </label>
+                  <div className="flex items-baseline justify-between mb-1.5">
+                    <label htmlFor="contact-message" className="block text-xs font-bold text-neutral-800">
+                      Comment or Message <span className="text-[#36D068]">*</span>
+                    </label>
+                    <span
+                      className={cn(
+                        "text-[11px] tabular-nums",
+                        formData.message.length > CONTACT_LIMITS.MESSAGE_MAX * 0.9
+                          ? "text-amber-600"
+                          : "text-neutral-400"
+                      )}
+                    >
+                      {formData.message.length}/{CONTACT_LIMITS.MESSAGE_MAX}
+                    </span>
+                  </div>
                   <textarea
-                    name="message"
                     required
                     rows={4}
-                    value={formData.message}
-                    onChange={handleChange}
+                    maxLength={CONTACT_LIMITS.MESSAGE_MAX}
                     placeholder="Write your message or inquiry here..."
-                    className="w-full bg-[#F9F9F9] border border-neutral-200/90 focus:border-neutral-900 focus:bg-white rounded-lg px-4 py-3 text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-hidden transition-all duration-200 resize-y"
+                    {...fieldProps("message")}
+                    className={cn(inputClass("message"), "resize-y")}
                   />
+                  {renderFieldError("message")}
                 </div>
 
                 {/* Submit Button */}
@@ -355,9 +522,16 @@ export function ContactCardSection() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="inline-block bg-[#36D068] hover:bg-[#2EB859] text-neutral-950 px-9 py-3.5 rounded-xs font-oswald text-xs sm:text-sm font-bold tracking-[0.18em] uppercase transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 cursor-pointer"
+                    className="inline-flex items-center gap-2 bg-[#36D068] hover:bg-[#2EB859] text-neutral-950 px-9 py-3.5 rounded-xs font-oswald text-xs sm:text-sm font-bold tracking-[0.18em] uppercase transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 cursor-pointer"
                   >
-                    {isSubmitting ? "SENDING..." : "SUBMIT"}
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                        SENDING...
+                      </>
+                    ) : (
+                      "SUBMIT"
+                    )}
                   </button>
                 </div>
               </form>
