@@ -32,6 +32,7 @@ export function Header() {
   // Auth store
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
   const logout = useAuthStore((s) => s.logout);
 
   useEffect(() => {
@@ -226,7 +227,7 @@ export function Header() {
 
           {/* ─── RIGHT: Dashboard / Sign In Button + Profile Icon (Logged In User) ─── */}
           <div className="w-auto lg:w-1/4 flex items-center justify-end">
-            <div className="flex items-center">
+            <div className={`flex items-center transition-opacity duration-200 ${mounted && isHydrated ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
               {/* Primary Nav Button (Dashboard if authenticated, Sign In if guest) */}
               {mounted && isAuthenticated && user ? (
                 <Link
@@ -246,7 +247,7 @@ export function Header() {
 
               {/* Profile Dropdown (Centered in the gap between Dashboard button and UI right end) */}
               {mounted && isAuthenticated && user && (
-                <div className="flex items-center justify-center px-2.5 sm:px-3.5 lg:px-4">
+                <div className="hidden lg:flex items-center justify-center lg:px-4">
                   <div ref={profileDropdownRef} className="relative">
                     {/* Profile Avatar Button */}
                     <button
@@ -442,7 +443,7 @@ export function Header() {
             </nav>
 
             {/* Mobile Primary CTA (Dashboard if logged in, Sign In if guest) */}
-            <div className="pt-2 w-full max-w-xs space-y-2">
+            <div className={`pt-2 w-full max-w-xs space-y-2 ${mounted && isHydrated ? "" : "opacity-0 pointer-events-none"}`}>
               {mounted && isAuthenticated && user ? (
                 <Link
                   href={dashboardHref}

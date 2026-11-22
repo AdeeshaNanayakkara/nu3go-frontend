@@ -11,6 +11,9 @@ import { packageService, type PublicPackage } from "@/services/api/package.servi
 import { locationService, type LocationItem } from "@/services/api/location.service";
 import { InvoiceReceiptModal } from "@/components/dashboard/invoice-receipt-modal";
 import { SubscriptionCalendar } from "@/components/dashboard/subscription-calendar";
+import { OrdersMobileView } from "@/components/dashboard/orders-mobile-view";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { toast } from "@/lib/toast";
 import {
   UtensilsCrossed,
   Sparkles,
@@ -27,6 +30,7 @@ import {
 } from "lucide-react";
 
 export default function SubscriptionsOrdersPage() {
+  const isMobile = useIsMobile();
   const [subscriptions, setSubscriptions] = useState<SubscriptionResItem[]>([]);
   const [packages, setPackages] = useState<PublicPackage[]>([]);
   const [locations, setLocations] = useState<LocationItem[]>([]);
@@ -98,6 +102,7 @@ export default function SubscriptionsOrdersPage() {
     setIsCancelling(true);
     try {
       await subscriptionService.cancelSubscription(cancelModalId);
+      toast.success("Subscription cancelled.");
       setCancelModalId(null);
       await fetchSubscriptions();
     } catch (err) {
@@ -147,6 +152,50 @@ export default function SubscriptionsOrdersPage() {
     setSubscriptions((prev) => prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)));
     setSelectedSub((prev) => (prev && prev.id === updated.id ? { ...prev, ...updated } : prev));
   };
+
+  if (isMobile === null) {
+    return <div className="h-64 animate-pulse rounded-3xl bg-slate-200/60" aria-busy="true" />;
+  }
+
+  if (isMobile) {
+    return (
+      <>
+        <OrdersMobileView
+          items={subscriptions.map((sub) => ({
+            id: sub.id,
+            packageName: getPackageName(sub),
+            isCustom: isCustomSubscription(sub),
+            status: sub.status || "ACTIVE",
+            startedAt: sub.started_at || sub.created_at,
+            validUntil: sub.valid_until,
+            scheduledDays: sub.scheduled_days,
+            purchasedDays: sub.purchased_days,
+            autoRenew: Boolean(sub.auto_renew),
+            invoice: (subInvoicesMap[sub.id] || [])[0] || null,
+          }))}
+          selectedId={selectedSub?.id ?? null}
+          onSelect={(id) => setSelectedSub(subscriptions.find((s) => s.id === id) ?? null)}
+          isLoading={isLoading}
+          onViewInvoice={setSelectedInvoice}
+          onConfirmCancel={async (id) => {
+            await subscriptionService.cancelSubscription(id);
+            toast.success("Subscription cancelled.");
+            await fetchSubscriptions();
+          }}
+        >
+          {selectedSub && isCustomSubscription(selectedSub) && (
+            <SubscriptionCalendar
+              key={selectedSub.id}
+              subscription={selectedSub}
+              locations={locations}
+              onUpdated={handleCalendarUpdated}
+            />
+          )}
+        </OrdersMobileView>
+        <InvoiceReceiptModal invoice={selectedInvoice} onClose={() => setSelectedInvoice(null)} />
+      </>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300 font-poppins">
