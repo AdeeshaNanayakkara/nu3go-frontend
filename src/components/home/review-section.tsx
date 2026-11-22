@@ -12,6 +12,8 @@ import {
   Truck,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   X,
   MessageSquarePlus,
   Send,
@@ -163,10 +165,87 @@ const CATEGORIES = [
   { key: "family", label: "Family & Iskool" },
 ] as const;
 
+/**
+ * Reusable Review Card Component
+ */
+function ReviewCard({ review }: { review: Review }) {
+  return (
+    <div className="relative bg-white rounded-3xl p-7 sm:p-8 border border-neutral-200/90 shadow-sm hover:shadow-xl hover:border-[#36D068]/50 transition-all duration-300 flex flex-col justify-between group h-full select-none">
+      {/* Top Row: Stars + Quote Icon */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-1 text-amber-400">
+            {[...Array(review.rating)].map((_, i) => (
+              <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+            ))}
+          </div>
+          <Quote className="w-8 h-8 text-neutral-200 group-hover:text-[#36D068]/30 transition-colors" />
+        </div>
+
+        {/* Plan Badge */}
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 text-neutral-700 text-[11px] font-bold uppercase tracking-wider font-oswald mb-4">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#36D068]" />
+          <span>{review.plan}</span>
+        </div>
+
+        {/* Testimonial Quote */}
+        <p className="text-neutral-700 text-sm sm:text-[15px] leading-relaxed font-normal mb-6">
+          &ldquo;{review.quote}&rdquo;
+        </p>
+      </div>
+
+      {/* Bottom Row: User Info + Tags */}
+      <div className="pt-5 border-t border-neutral-100">
+        <div className="flex items-center gap-3.5 mb-3">
+          <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-[#36D068] shrink-0 shadow-sm">
+            <Image
+              src={review.avatar}
+              alt={review.name}
+              fill
+              className="object-cover"
+              sizes="48px"
+            />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h4 className="font-oswald text-base font-bold text-neutral-900 tracking-tight truncate">
+                {review.name}
+              </h4>
+              <CheckCircle2 className="w-4 h-4 text-[#36D068] shrink-0" />
+            </div>
+            <p className="text-xs text-neutral-500 font-light truncate">
+              {review.role} &bull; {review.location}
+            </p>
+          </div>
+        </div>
+
+        {/* Tags */}
+        <div className="flex flex-wrap gap-1.5">
+          {review.tags.map((tag) => (
+            <span
+              key={tag}
+              className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-600 font-oswald tracking-wide"
+            >
+              #{tag}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ReviewSection() {
   const [reviews, setReviews] = useState<Review[]>(INITIAL_REVIEWS);
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [showAll, setShowAll] = useState(false);
+
+  // Mobile Carousel & Auto-scroll State
+  const [mobileIndex, setMobileIndex] = useState(0);
+  const [isAutoScrollPaused, setIsAutoScrollPaused] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const autoScrollResumeTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Review Submission Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -192,7 +271,55 @@ export function ReviewSection() {
       ? reviews
       : reviews.filter((r) => r.category === activeCategory);
 
-  // Initial display limit: 3 reviews; when expanded, show all filtered reviews
+  // Safety: reset mobileIndex if filtered list shrinks
+  useEffect(() => {
+    if (mobileIndex >= filteredReviews.length) {
+      setMobileIndex(0);
+    }
+  }, [filteredReviews.length, mobileIndex]);
+
+  // Mobile Auto-scroll Interval (every 3.8s)
+  useEffect(() => {
+    if (isAutoScrollPaused || filteredReviews.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setMobileIndex((prev) => (prev + 1) % filteredReviews.length);
+    }, 3800);
+
+    return () => clearInterval(interval);
+  }, [filteredReviews.length, isAutoScrollPaused]);
+
+  // Clean up resume timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoScrollResumeTimer.current) {
+        clearTimeout(autoScrollResumeTimer.current);
+      }
+    };
+  }, []);
+
+  // Temporary pause on user interaction so reading is not disrupted
+  const pauseAutoScrollTemporarily = (durationMs = 5000) => {
+    setIsAutoScrollPaused(true);
+    if (autoScrollResumeTimer.current) {
+      clearTimeout(autoScrollResumeTimer.current);
+    }
+    autoScrollResumeTimer.current = setTimeout(() => {
+      setIsAutoScrollPaused(false);
+    }, durationMs);
+  };
+
+  const handlePrev = () => {
+    pauseAutoScrollTemporarily();
+    setMobileIndex((prev) => (prev === 0 ? filteredReviews.length - 1 : prev - 1));
+  };
+
+  const handleNext = () => {
+    pauseAutoScrollTemporarily();
+    setMobileIndex((prev) => (prev + 1) % filteredReviews.length);
+  };
+
+  // Initial display limit for desktop: 3 reviews; when expanded, show all filtered reviews
   const visibleReviews = showAll ? filteredReviews : filteredReviews.slice(0, 3);
   const hasMoreReviews = filteredReviews.length > 3;
   const remainingCount = filteredReviews.length - 3;
@@ -242,7 +369,7 @@ export function ReviewSection() {
         );
       }
 
-      // 3. Grid cards entrance
+      // 3. Grid cards entrance (desktop)
       if (gridRef.current) {
         gsap.fromTo(
           gridRef.current.children,
@@ -266,6 +393,36 @@ export function ReviewSection() {
     return () => ctx.revert();
   }, []);
 
+  // Touch handlers for mobile swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    pauseAutoScrollTemporarily(6000);
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+
+    const deltaX = touchStartX.current - touchEndX;
+    const deltaY = touchStartY.current - touchEndY;
+
+    // Detect horizontal swipe if deltaX is sufficiently larger than deltaY
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+      if (deltaX > 0) {
+        // Swiped left -> next card
+        handleNext();
+      } else {
+        // Swiped right -> prev card
+        handlePrev();
+      }
+    }
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+
   const handleSubmitReview = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.quote.trim()) return;
@@ -284,6 +441,7 @@ export function ReviewSection() {
     };
 
     setReviews([newReview, ...reviews]);
+    setMobileIndex(0);
     setIsSubmitted(true);
 
     setTimeout(() => {
@@ -323,61 +481,75 @@ export function ReviewSection() {
 
           <p className="text-neutral-600 text-sm sm:text-base md:text-lg leading-relaxed font-normal">
             From busy corporate leaders in Colombo to athletes and families in Wattala, discover how
-            nu3go delivers fresh, ready-to-eat weekday breakfast directly to their doorstep by <strong>7:30 AM</strong>.
+            nu3go delivers fresh, ready-to-eat weekday breakfast directly to their doorstep <strong>Before 9:00 AM</strong>.
           </p>
         </div>
 
         {/* ─── Metric Trust Bar ─── */}
         <div
           ref={statsRef}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-12 sm:mb-16 max-w-4xl mx-auto"
+          className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-6 mb-10 sm:mb-14 lg:mb-16 max-w-4xl mx-auto"
         >
-          <div className="bg-white rounded-2xl p-5 border border-neutral-200/80 shadow-sm text-center">
-            <div className="flex items-center justify-center gap-1 text-amber-500 mb-1">
+          {/* Rating: 4.5 / 5.0 */}
+          <div className="bg-white rounded-2xl p-3.5 sm:p-5 border border-neutral-200/80 shadow-xs hover:shadow-md hover:border-[#36D068]/40 transition-all duration-300 text-center flex flex-col items-center justify-center min-h-[110px] sm:min-h-[128px]">
+            <div className="h-5 sm:h-6 flex items-center justify-center gap-0.5 sm:gap-1 text-amber-500 mb-1">
               {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <Star key={i} className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-400 text-amber-400" />
               ))}
             </div>
-            <span className="font-oswald text-2xl sm:text-3xl font-black text-neutral-900 block tracking-tight">
-              4.9 / 5.0
-            </span>
-            <span className="text-xs text-neutral-500 font-medium uppercase tracking-wider font-oswald">
+            <div className="flex items-baseline justify-center gap-1 leading-tight">
+              <span className="font-oswald text-xl sm:text-2xl md:text-3xl font-black text-neutral-900 tracking-tight">
+                4.5
+              </span>
+              <span className="font-oswald text-xs sm:text-sm text-neutral-400 font-bold">
+                / 5.0
+              </span>
+            </div>
+            <span className="text-[10px] sm:text-xs text-neutral-500 font-medium uppercase tracking-wider font-oswald leading-tight mt-1">
               Subscriber Rating
             </span>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 border border-neutral-200/80 shadow-sm text-center">
-            <div className="w-6 h-6 mx-auto mb-1 flex items-center justify-center text-[#36D068]">
-              <Clock className="w-5 h-5 text-[#36D068]" />
+          {/* Delivery: before 9:00 AM */}
+          <div className="bg-white rounded-2xl p-3.5 sm:p-5 border border-neutral-200/80 shadow-xs hover:shadow-md hover:border-[#36D068]/40 transition-all duration-300 text-center flex flex-col items-center justify-center min-h-[110px] sm:min-h-[128px]">
+            <div className="h-5 sm:h-6 flex items-center justify-center text-[#36D068] mb-1">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-[#36D068]" />
             </div>
-            <span className="font-oswald text-2xl sm:text-3xl font-black text-neutral-900 block tracking-tight">
-              7:30 AM
-            </span>
-            <span className="text-xs text-neutral-500 font-medium uppercase tracking-wider font-oswald">
+            <div className="flex items-baseline justify-center gap-1 leading-tight">
+              <span className="text-[10px] sm:text-xs text-neutral-500 font-bold uppercase tracking-wider font-oswald">
+                before
+              </span>
+              <span className="font-oswald text-xl sm:text-2xl md:text-3xl font-black text-neutral-900 tracking-tight">
+                9:00 AM
+              </span>
+            </div>
+            <span className="text-[10px] sm:text-xs text-neutral-500 font-medium uppercase tracking-wider font-oswald leading-tight mt-1">
               Guaranteed Delivery
             </span>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 border border-neutral-200/80 shadow-sm text-center">
-            <div className="w-6 h-6 mx-auto mb-1 flex items-center justify-center text-[#36D068]">
-              <Truck className="w-5 h-5 text-[#36D068]" />
+          {/* Free Shipping */}
+          <div className="bg-white rounded-2xl p-3.5 sm:p-5 border border-neutral-200/80 shadow-xs hover:shadow-md hover:border-[#36D068]/40 transition-all duration-300 text-center flex flex-col items-center justify-center min-h-[110px] sm:min-h-[128px]">
+            <div className="h-5 sm:h-6 flex items-center justify-center text-[#36D068] mb-1">
+              <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-[#36D068]" />
             </div>
-            <span className="font-oswald text-2xl sm:text-3xl font-black text-neutral-900 block tracking-tight">
+            <span className="font-oswald text-xl sm:text-2xl md:text-3xl font-black text-neutral-900 block tracking-tight leading-tight">
               100% Free
             </span>
-            <span className="text-xs text-neutral-500 font-medium uppercase tracking-wider font-oswald">
+            <span className="text-[10px] sm:text-xs text-neutral-500 font-medium uppercase tracking-wider font-oswald leading-tight mt-1">
               Zero Hidden Shipping
             </span>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 border border-neutral-200/80 shadow-sm text-center">
-            <div className="w-6 h-6 mx-auto mb-1 flex items-center justify-center text-[#36D068]">
-              <ShieldCheck className="w-5 h-5 text-[#36D068]" />
+          {/* Deliveries: 5,000+ */}
+          <div className="bg-white rounded-2xl p-3.5 sm:p-5 border border-neutral-200/80 shadow-xs hover:shadow-md hover:border-[#36D068]/40 transition-all duration-300 text-center flex flex-col items-center justify-center min-h-[110px] sm:min-h-[128px]">
+            <div className="h-5 sm:h-6 flex items-center justify-center text-[#36D068] mb-1">
+              <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-[#36D068]" />
             </div>
-            <span className="font-oswald text-2xl sm:text-3xl font-black text-neutral-900 block tracking-tight">
-              150,000+
+            <span className="font-oswald text-xl sm:text-2xl md:text-3xl font-black text-neutral-900 block tracking-tight leading-tight">
+              5,000+
             </span>
-            <span className="text-xs text-neutral-500 font-medium uppercase tracking-wider font-oswald">
+            <span className="text-[10px] sm:text-xs text-neutral-500 font-medium uppercase tracking-wider font-oswald leading-tight mt-1">
               Fresh Meals Delivered
             </span>
           </div>
@@ -392,6 +564,8 @@ export function ReviewSection() {
               onClick={() => {
                 setActiveCategory(cat.key);
                 setShowAll(false);
+                setMobileIndex(0);
+                pauseAutoScrollTemporarily();
               }}
               className={`px-5 py-2.5 rounded-full font-oswald text-xs sm:text-sm font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                 activeCategory === cat.key
@@ -404,89 +578,109 @@ export function ReviewSection() {
           ))}
         </div>
 
-        {/* ─── Reviews Grid ─── */}
+        {/* ─── Mobile Horizontal One-by-One Carousel with Auto-Scroll (< md) ─── */}
         <div
-          ref={gridRef}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-10"
+          className="block md:hidden mb-10"
+          onMouseEnter={() => setIsAutoScrollPaused(true)}
+          onMouseLeave={() => setIsAutoScrollPaused(false)}
         >
-          {visibleReviews.map((review) => (
+          <div
+            className="overflow-hidden rounded-3xl touch-pan-y"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
             <div
-              key={review.id}
-              className="relative bg-white rounded-3xl p-7 sm:p-8 border border-neutral-200/90 shadow-sm hover:shadow-xl hover:border-[#36D068]/50 transition-all duration-300 flex flex-col justify-between group"
+              className="flex transition-transform duration-500 ease-out"
+              style={{ transform: `translateX(-${mobileIndex * 100}%)` }}
             >
-              {/* Top Row: Stars + Quote Icon */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-1 text-amber-400">
-                    {[...Array(review.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  <Quote className="w-8 h-8 text-neutral-200 group-hover:text-[#36D068]/30 transition-colors" />
+              {filteredReviews.map((review) => (
+                <div key={review.id} className="w-full shrink-0">
+                  <ReviewCard review={review} />
                 </div>
+              ))}
+            </div>
+          </div>
 
-                {/* Plan Badge */}
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 text-neutral-700 text-[11px] font-bold uppercase tracking-wider font-oswald mb-4">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#36D068]" />
-                  <span>{review.plan}</span>
-                </div>
-
-                {/* Testimonial Quote */}
-                <p className="text-neutral-700 text-sm sm:text-[15px] leading-relaxed font-normal mb-6">
-                  &ldquo;{review.quote}&rdquo;
-                </p>
+          {/* Mobile Carousel Controls: Step Counter, Interactive Dots, Prev/Next Arrows */}
+          <div className="flex flex-col gap-3 mt-5">
+            <div className="flex items-center justify-between px-1">
+              {/* Step Counter */}
+              <div className="flex items-center gap-1.5 font-oswald text-xs font-bold uppercase tracking-wider text-neutral-500">
+                <span>REVIEW</span>
+                <span className="text-[#36D068] font-black text-sm">{mobileIndex + 1}</span>
+                <span>/</span>
+                <span>{filteredReviews.length}</span>
               </div>
 
-              {/* Bottom Row: User Info + Tags */}
-              <div className="pt-5 border-t border-neutral-100">
-                <div className="flex items-center gap-3.5 mb-3">
-                  <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-[#36D068] shrink-0 shadow-sm">
-                    <Image
-                      src={review.avatar}
-                      alt={review.name}
-                      fill
-                      className="object-cover"
-                      sizes="48px"
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <h4 className="font-oswald text-base font-bold text-neutral-900 tracking-tight truncate">
-                        {review.name}
-                      </h4>
-                      <CheckCircle2 className="w-4 h-4 text-[#36D068] shrink-0" />
-                    </div>
-                    <p className="text-xs text-neutral-500 font-light truncate">
-                      {review.role} &bull; {review.location}
-                    </p>
-                  </div>
-                </div>
+              {/* Dots Indicator */}
+              <div className="flex items-center gap-1.5">
+                {filteredReviews.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setMobileIndex(idx);
+                      pauseAutoScrollTemporarily();
+                    }}
+                    aria-label={`Go to review ${idx + 1}`}
+                    className={`h-2 transition-all duration-300 rounded-full cursor-pointer ${
+                      mobileIndex === idx
+                        ? "w-6 bg-[#36D068]"
+                        : "w-2 bg-neutral-300 hover:bg-neutral-400"
+                    }`}
+                  />
+                ))}
+              </div>
 
-                {/* Tags */}
-                <div className="flex flex-wrap gap-1.5">
-                  {review.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-600 font-oswald tracking-wide"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
+              {/* Navigation Arrows: Left & Right with looping */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handlePrev}
+                  aria-label="Previous review"
+                  className="w-9 h-9 rounded-full bg-white border border-neutral-300 text-neutral-800 flex items-center justify-center shadow-sm hover:bg-neutral-100 hover:border-neutral-900 active:scale-95 transition-all cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  aria-label="Next review"
+                  className="w-9 h-9 rounded-full bg-white border border-neutral-300 text-neutral-800 flex items-center justify-center shadow-sm hover:bg-neutral-100 hover:border-neutral-900 active:scale-95 transition-all cursor-pointer"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
+
+            {/* Swipe & Auto-scroll guidance hint */}
+            {/* <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-400 font-medium">
+              <span>Auto-scrolling • Swipe or tap arrows to navigate</span>
+            </div> */}
+          </div>
+        </div>
+
+        {/* ─── Desktop Reviews Grid (Unchanged Layout: md:grid md:grid-cols-2 lg:grid-cols-3) ─── */}
+        <div
+          ref={gridRef}
+          className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-10"
+        >
+          {visibleReviews.map((review) => (
+            <ReviewCard key={review.id} review={review} />
           ))}
         </div>
 
-        {/* ─── View More / Show Less Button ─── */}
+        {/* ─── Desktop View More / Show Less Button ─── */}
         {hasMoreReviews && (
-          <div className="flex justify-center mb-14 sm:mb-16">
+          <div className="hidden md:flex justify-center mb-14 sm:mb-16">
             <button
               type="button"
               onClick={() => setShowAll(!showAll)}
               className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full font-oswald text-xs sm:text-sm font-bold uppercase tracking-[0.15em] bg-white text-neutral-900 border border-neutral-300 hover:border-neutral-900 hover:bg-neutral-50 transition-all duration-300 shadow-sm cursor-pointer group"
             >
-              <span>{showAll ? "SHOW LESS REVIEWS" : `VIEW MORE REVIEWS (${remainingCount} MORE)`}</span>
+              <span>
+                {showAll ? "SHOW LESS REVIEWS" : `VIEW MORE REVIEWS (${remainingCount} MORE)`}
+              </span>
               {showAll ? (
                 <ChevronUp className="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
               ) : (
@@ -496,7 +690,7 @@ export function ReviewSection() {
           </div>
         )}
 
-        {/* ─── Bottom Banner: Share Your Review Action (Matching Image Styling) ─── */}
+        {/* ─── Bottom Banner: Share Your Review Action ─── */}
         <div className="bg-neutral-950 rounded-3xl p-8 sm:p-10 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl border border-white/10">
           <div className="text-center md:text-left">
             <span className="font-oswald text-xs font-bold tracking-[0.2em] uppercase text-[#36D068] block mb-1">
