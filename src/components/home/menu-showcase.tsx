@@ -341,9 +341,9 @@ export function MenuShowcase() {
             <div className="absolute inset-0 bg-gradient-to-r from-black/10 via-transparent to-white/15 pointer-events-none" />
 
             {/* Inner Content */}
-            <div className="flex flex-col-reverse sm:flex-row items-center justify-between sm:justify-end gap-6 sm:gap-8 lg:gap-10 xl:gap-12 relative z-10">
+            <div className="flex flex-col-reverse sm:flex-row items-center justify-between sm:justify-end gap-6 sm:gap-8 lg:gap-6 xl:gap-10 relative z-10">
               {/* Text Info (Left side) */}
-              <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+              <div className="flex flex-col items-center sm:items-start text-center sm:text-left min-w-0">
                 <span className="font-oswald text-xs sm:text-sm font-black tracking-[0.2em] uppercase text-white mb-1 bg-black/25 px-2.5 py-0.5 rounded backdrop-blur-xs">
                   HIGH PROTEIN MEALS
                 </span>
@@ -353,16 +353,16 @@ export function MenuShowcase() {
                 <p className="text-white/95 text-xs sm:text-sm leading-relaxed mt-2 max-w-[210px] sm:max-w-[230px] font-medium drop-shadow-xs">
                   Max protein &amp; clean macros to fuel intense performance.
                 </p>
-                <div className="mt-5 inline-flex items-center gap-1.5 bg-black text-white hover:bg-neutral-900 px-5 py-2.5 rounded-full font-oswald text-xs sm:text-sm font-bold tracking-wider uppercase shadow-md transition-all duration-300 group-hover:scale-105">
-                  <span>EXPLORE POWER PLAN</span>
-                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                <div className="mt-5 inline-flex items-center gap-1.5 bg-black text-white hover:bg-neutral-900 px-5 py-2.5 rounded-full font-oswald text-xs sm:text-sm font-bold tracking-wider uppercase shadow-md transition-all duration-300 group-hover:scale-105 whitespace-nowrap shrink-0">
+                  <span className="whitespace-nowrap">EXPLORE POWER PLAN</span>
+                  <ArrowRight className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:translate-x-1" />
                 </div>
               </div>
 
               {/* Circular Dish Outer Container (Entrance Target) */}
               <div
                 ref={powerDishContainerRef}
-                className="relative w-48 h-48 sm:w-56 sm:h-56 lg:w-60 lg:h-60 xl:w-72 xl:h-72 drop-shadow-2xl shrink-0"
+                className="relative w-48 h-48 sm:w-56 sm:h-56 lg:w-52 lg:h-52 xl:w-64 xl:h-64 2xl:w-72 2xl:h-72 drop-shadow-2xl shrink-0"
               >
                 {/* Parallax Scrub Target (No CSS transition) */}
                 <div
@@ -394,11 +394,11 @@ export function MenuShowcase() {
             <div className="absolute inset-0 bg-gradient-to-l from-black/10 via-transparent to-white/15 pointer-events-none" />
 
             {/* Inner Content */}
-            <div className="flex flex-col sm:flex-row items-center justify-between sm:justify-start gap-6 sm:gap-8 lg:gap-10 xl:gap-12 relative z-10">
+            <div className="flex flex-col sm:flex-row items-center justify-between sm:justify-start gap-6 sm:gap-8 lg:gap-6 xl:gap-10 relative z-10">
               {/* Circular Dish Outer Container (Entrance Target) */}
               <div
                 ref={classicDishContainerRef}
-                className="relative w-48 h-48 sm:w-56 sm:h-56 lg:w-60 lg:h-60 xl:w-72 xl:h-72 drop-shadow-2xl shrink-0"
+                className="relative w-48 h-48 sm:w-56 sm:h-56 lg:w-52 lg:h-52 xl:w-64 xl:h-64 2xl:w-72 2xl:h-72 drop-shadow-2xl shrink-0"
               >
                 {/* Parallax Scrub Target (No CSS transition) */}
                 <div
@@ -419,7 +419,7 @@ export function MenuShowcase() {
               </div>
 
               {/* Text Info (Right side) */}
-              <div className="flex flex-col items-center sm:items-end text-center sm:text-right">
+              <div className="flex flex-col items-center sm:items-end text-center sm:text-right min-w-0">
                 <span className="font-oswald text-xs sm:text-sm font-black tracking-[0.2em] uppercase text-white mb-1 bg-black/25 px-2.5 py-0.5 rounded backdrop-blur-xs">
                   WHOLESOME BALANCED
                 </span>
@@ -429,9 +429,9 @@ export function MenuShowcase() {
                 <p className="text-white/95 text-xs sm:text-sm leading-relaxed mt-2 max-w-[210px] sm:max-w-[230px] font-medium drop-shadow-xs">
                   Fresh farm vegetables &amp; chef crafted wholesome balance.
                 </p>
-                <div className="mt-5 inline-flex items-center gap-1.5 bg-black text-white hover:bg-neutral-900 px-5 py-2.5 rounded-full font-oswald text-xs sm:text-sm font-bold tracking-wider uppercase shadow-md transition-all duration-300 group-hover:scale-105">
-                  <span>EXPLORE CLASSIC PLAN</span>
-                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                <div className="mt-5 inline-flex items-center gap-1.5 bg-black text-white hover:bg-neutral-900 px-5 py-2.5 rounded-full font-oswald text-xs sm:text-sm font-bold tracking-wider uppercase shadow-md transition-all duration-300 group-hover:scale-105 whitespace-nowrap shrink-0">
+                  <span className="whitespace-nowrap">EXPLORE CLASSIC PLAN</span>
+                  <ArrowRight className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:translate-x-1" />
                 </div>
               </div>
             </div>
@@ -452,9 +452,9 @@ export function MenuShowcase() {
             <div className="absolute inset-0 bg-gradient-to-r from-black/10 via-transparent to-white/15 pointer-events-none" />
 
             {/* Inner Content */}
-            <div className="flex flex-col-reverse sm:flex-row items-center justify-between sm:justify-end gap-6 sm:gap-8 lg:gap-10 xl:gap-12 relative z-10">
+            <div className="flex flex-col-reverse sm:flex-row items-center justify-between sm:justify-end gap-6 sm:gap-8 lg:gap-6 xl:gap-10 relative z-10">
               {/* Text Info (Left side) */}
-              <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+              <div className="flex flex-col items-center sm:items-start text-center sm:text-left min-w-0">
                 <span className="font-oswald text-xs sm:text-sm font-black tracking-[0.2em] uppercase text-white mb-1 bg-black/25 px-2.5 py-0.5 rounded backdrop-blur-xs">
                   KIDS SCHOOL BREAKFAST
                 </span>
@@ -464,16 +464,16 @@ export function MenuShowcase() {
                 <p className="text-white/95 text-xs sm:text-sm leading-relaxed mt-2 max-w-[210px] sm:max-w-[240px] font-medium drop-shadow-xs">
                   Chicken, egg &amp; meat-led protein to power growing kids with all-day focus.
                 </p>
-                <div className="mt-5 inline-flex items-center gap-1.5 bg-black text-white hover:bg-neutral-900 px-5 py-2.5 rounded-full font-oswald text-xs sm:text-sm font-bold tracking-wider uppercase shadow-md transition-all duration-300 group-hover:scale-105">
-                  <span>EXPLORE ISKOOL PLAN</span>
-                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                <div className="mt-5 inline-flex items-center gap-1.5 bg-black text-white hover:bg-neutral-900 px-5 py-2.5 rounded-full font-oswald text-xs sm:text-sm font-bold tracking-wider uppercase shadow-md transition-all duration-300 group-hover:scale-105 whitespace-nowrap shrink-0">
+                  <span className="whitespace-nowrap">EXPLORE ISKOOL PLAN</span>
+                  <ArrowRight className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:translate-x-1" />
                 </div>
               </div>
 
               {/* Circular Dish Outer Container (Entrance Target) */}
               <div
                 ref={iskoolDishContainerRef}
-                className="relative w-48 h-48 sm:w-56 sm:h-56 lg:w-60 lg:h-60 xl:w-72 xl:h-72 drop-shadow-2xl shrink-0"
+                className="relative w-48 h-48 sm:w-56 sm:h-56 lg:w-52 lg:h-52 xl:w-64 xl:h-64 2xl:w-72 2xl:h-72 drop-shadow-2xl shrink-0"
               >
                 {/* Parallax Scrub Target (No CSS transition) */}
                 <div
@@ -505,11 +505,11 @@ export function MenuShowcase() {
             <div className="absolute inset-0 bg-gradient-to-l from-black/10 via-transparent to-white/15 pointer-events-none" />
 
             {/* Inner Content */}
-            <div className="flex flex-col sm:flex-row items-center justify-between sm:justify-start gap-6 sm:gap-8 lg:gap-10 xl:gap-12 relative z-10">
+            <div className="flex flex-col sm:flex-row items-center justify-between sm:justify-start gap-6 sm:gap-8 lg:gap-6 xl:gap-10 relative z-10">
               {/* Circular Dish Outer Container (Entrance Target) */}
               <div
                 ref={fourtigDishContainerRef}
-                className="relative w-48 h-48 sm:w-56 sm:h-56 lg:w-60 lg:h-60 xl:w-72 xl:h-72 drop-shadow-2xl shrink-0"
+                className="relative w-48 h-48 sm:w-56 sm:h-56 lg:w-52 lg:h-52 xl:w-64 xl:h-64 2xl:w-72 2xl:h-72 drop-shadow-2xl shrink-0"
               >
                 {/* Parallax Scrub Target (No CSS transition) */}
                 <div
@@ -530,7 +530,7 @@ export function MenuShowcase() {
               </div>
 
               {/* Text Info (Right side) */}
-              <div className="flex flex-col items-center sm:items-end text-center sm:text-right">
+              <div className="flex flex-col items-center sm:items-end text-center sm:text-right min-w-0">
                 <span className="font-oswald text-xs sm:text-sm font-black tracking-[0.2em] uppercase text-white mb-1 bg-black/25 px-2.5 py-0.5 rounded backdrop-blur-xs">
                   40G PROTEIN BREAKFAST
                 </span>
@@ -540,9 +540,9 @@ export function MenuShowcase() {
                 <p className="text-white/95 text-xs sm:text-sm leading-relaxed mt-2 max-w-[210px] sm:max-w-[240px] font-medium drop-shadow-xs">
                   Built for hustlers. 40g+ protein, 15 rotational chef meals delivered fresh every morning.
                 </p>
-                <div className="mt-5 inline-flex items-center gap-1.5 bg-black text-white hover:bg-neutral-900 px-5 py-2.5 rounded-full font-oswald text-xs sm:text-sm font-bold tracking-wider uppercase shadow-md transition-all duration-300 group-hover:scale-105">
-                  <span>EXPLORE fourtiG PLAN</span>
-                  <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                <div className="mt-5 inline-flex items-center gap-1.5 bg-black text-white hover:bg-neutral-900 px-5 py-2.5 rounded-full font-oswald text-xs sm:text-sm font-bold tracking-wider uppercase shadow-md transition-all duration-300 group-hover:scale-105 whitespace-nowrap shrink-0">
+                  <span className="whitespace-nowrap">EXPLORE fourtiG PLAN</span>
+                  <ArrowRight className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:translate-x-1" />
                 </div>
               </div>
             </div>

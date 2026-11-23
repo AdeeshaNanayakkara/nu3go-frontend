@@ -337,7 +337,7 @@ export default function SubscriptionsOrdersPage() {
                   <span>Doorstep Delivery Schedule</span>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-relaxed">
-                  Morning deliveries occur between 7:00 AM and 8:30 AM daily. Any delivery address changes or skip requests must be confirmed before 5:00 PM the previous day.
+                  Morning deliveries occur between 7:00 AM and 8:30 AM daily. Any delivery address changes or skip requests must be confirmed before 6:00 PM the previous day.
                 </p>
               </div>
             </div>

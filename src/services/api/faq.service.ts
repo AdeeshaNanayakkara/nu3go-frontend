@@ -55,7 +55,7 @@ export const DEFAULT_FAQS: FAQItem[] = [
     id: "faq-3",
     question: "Can I pause, skip, or cancel my subscription anytime?",
     answer:
-      "Yes! You have complete flexibility. You can pause or skip upcoming delivery days from your Customer Dashboard before 5:00 PM on the previous day. Missed meals are automatically credited to your account balance.",
+      "Yes! You have complete flexibility. You can pause or skip upcoming delivery days from your Customer Dashboard before 6:00 PM on the previous day. Missed meals are automatically credited to your account balance.",
     display_order: 3,
     is_active: true,
   },

@@ -24,50 +24,50 @@ const TIMELINE_STEPS = [
     icon: Sunrise,
     accent: "text-amber-500 bg-amber-500/10 border-amber-500/30",
     badge: "STAGE 01 // FRESH ARRIVAL",
-    title: "Dawn Farm Sourcing",
-    desc: "Long before dawn, fresh farm ingredients arrive at our central kitchen. Non-GMO greens, farm-fresh eggs, and clean lean proteins inspected daily for peak freshness.",
+    title: "Fresh Ingredient Washing & Preparation",
+    desc: "Every morning starts with fresh ingredients arriving at our kitchen. Vegetables, fruits and other raw ingredients are carefully inspected, washed and cleaned before preparation begins. We prepare fresh each day rather than relying on pre-cooked meals from previous days.",
     image: "/images/insta-1.jpg",
-    metric: "100% Fresh Daily",
+    metric: "FRESH INGREDIENTS • DAILY PREPARATION",
   },
   {
     time: "04:30 AM",
     icon: Flame,
     accent: "text-orange-500 bg-orange-500/10 border-orange-500/30",
     badge: "STAGE 02 // CHEF PREPARATION",
-    title: "Small-Batch Weekday Cooking",
-    desc: "Executive chefs fire up the kitchen, freshly cooking every breakfast rotation—from overnight oats and high-protein pastas to fluffy specialized omelets, weighing each portion on digital scales for macro precision.",
+    title: "Freshly Cooked, Every Morning",
+    desc: "Our kitchen team prepares each meal fresh in daily batches using carefully selected ingredients and standardised recipes. From wholesome everyday favourites to protein-rich meals, every portion is prepared with attention to taste, quality and consistency.",
     image: "/images/how-to-work.jpg",
-    metric: "Digital Scale Accuracy",
+    metric: "FRESH DAILY COOKING • PORTION CONTROL",
   },
   {
     time: "05:45 AM",
     icon: PackageCheck,
     accent: "text-[#36D068] bg-[#36D068]/10 border-[#36D068]/30",
-    badge: "STAGE 03 // SEALING",
-    title: "Airtight Thermal Fresh-Lock",
-    desc: "Breakfasts are sealed in microwave-safe, food-grade eco containers. Thermal packaging locks in heat, aroma, and vitamins naturally—with zero artificial preservatives.",
+    badge: "STAGE 03 // QUALITY & PACKAGING",
+    title: "Packed Fresh. Ready to Enjoy.",
+    desc: "Once prepared, every meal is portioned, checked and packed in food-grade containers designed for safe and convenient handling. Each order is carefully organised to maintain food quality and make your meals easy to enjoy at home or at work.",
     image: "/images/hero-bg-4.jpeg",
-    metric: "0% Preservatives",
+    metric: "FOOD-GRADE PACKAGING • QUALITY CHECKS",
   },
   {
     time: "06:30 AM",
     icon: Truck,
     accent: "text-blue-500 bg-blue-500/10 border-blue-500/30",
-    badge: "STAGE 04 // 100% FREE DELIVERY",
-    title: "Early Morning Zone Dispatch",
-    desc: "Our delivery fleet rolls out across the Colombo and Wattala areas. Operating on zone-optimized routes, breakfasts travel safely in insulated carriers with 100% free delivery.",
+    badge: "STAGE 04 // DELIVERY DISPATCH",
+    title: "Packed & Out for Delivery",
+    desc: "Every order is organised according to its delivery zone and dispatched through our morning delivery network. Our delivery team follows planned routes across our service areas to get your meals to the right doorstep or workplace on time.",
     image: "/images/contact-hero-bg.jpg",
-    metric: "Free Shipping",
+    metric: "ZONE-BASED DISPATCH • FREE STANDARD DELIVERY",
   },
   {
-    time: "07:30 AM",
+    time: "BY 07:30 AM",
     icon: UtensilsCrossed,
     accent: "text-emerald-500 bg-emerald-500/10 border-emerald-500/30",
-    badge: "STAGE 05 // DELIVERED BY 7:30 AM",
-    title: "Ready-To-Eat Breakfast on Your Desk",
-    desc: "Delivered directly to your doorstep or office by 7:30 AM sharp. Hot, fresh, and ready to eat before your first meeting, commute, or school bell rings—fueling your morning with zero hassle.",
+    badge: "STAGE 05 // AT YOUR DOORSTEP",
+    title: "Your Meals. Your Routine. Simplified.",
+    desc: "Your freshly prepared meals arrive at your home or workplace, ready to enjoy. Whether you're getting ready for work, starting your day at the office or managing a busy routine, nu3go makes eating well one less thing to worry about.",
     image: "/images/hero-dish.png",
-    metric: "Delivered by 7:30 AM",
+    metric: "CONVENIENT HOME & OFFICE DELIVERY",
   },
 ];
 
@@ -134,18 +134,18 @@ export function StoryJourney() {
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#36D068]/15 border border-[#36D068]/30 mb-4">
             <Clock className="w-3.5 h-3.5 text-[#36D068]" />
             <span className="font-oswald text-xs font-bold tracking-[0.2em] uppercase text-emerald-800">
-              DAWN TO DOORSTEP
+              HOW nu3go WORKS
             </span>
           </div>
 
           <h2 className="font-oswald text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tight text-neutral-900 leading-[1.08] mb-5">
-            From Dawn Kitchen <br className="hidden sm:inline" />
-            <span className="text-[#36D068]">To Your Doorstep by 7:30 AM</span>
+            FROM FRESH INGREDIENTS <br className="hidden sm:inline" />
+            <span className="text-[#36D068]">TO YOUR DOORSTEP.</span>
           </h2>
 
           <p className="text-neutral-600 text-base sm:text-lg leading-relaxed font-normal">
-            Because breakfast belongs to the early morning, nu3go guarantees delivery by <strong>7:30 AM every weekday (Monday to Friday)</strong>.
-            Follow the early morning clock that powers Colombo and Wattala&apos;s freshest breakfasts.
+            Every meal has a process behind it. From sourcing fresh ingredients to preparing,
+            packing and delivering your meals, we focus on freshness, quality and convenience at every step.
           </p>
         </div>
 

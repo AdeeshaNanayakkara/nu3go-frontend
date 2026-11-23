@@ -51,7 +51,7 @@ const POWER_DURATIONS: DurationPriceOption[] = [
     rules: [
       "Doorstep delivery",
       "A consistent daily routine",
-      "Subscription confirmation before 5:00 PM previous day",
+      "Subscription confirmation before 6:00 PM previous day",
       "Missed meals added to credit",
     ],
     planType: "FIXED",
@@ -68,7 +68,7 @@ const POWER_DURATIONS: DurationPriceOption[] = [
     rules: [
       "Doorstep delivery",
       "Try us before committing",
-      "Renewal confirmation Sundays 5:00 PM and Wednesdays 5:00 PM",
+      "Renewal confirmation Sundays 6:00 PM and Wednesdays 6:00 PM",
       "Missed meals added to credit",
     ],
     planType: "FIXED",
@@ -85,8 +85,8 @@ const POWER_DURATIONS: DurationPriceOption[] = [
     rules: [
       "Doorstep delivery",
       "Designed for hybrid workers",
-      "Subscription confirmation before 5:00 PM previous day",
-      "Confirm your delivery previous day before 5:00 PM",
+      "Subscription confirmation before 6:00 PM previous day",
+      "Confirm your delivery previous day before 6:00 PM",
     ],
     planType: "CUSTOM",
     durationLimit: 12,

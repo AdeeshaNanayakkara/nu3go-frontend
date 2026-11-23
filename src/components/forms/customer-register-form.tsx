@@ -256,7 +256,11 @@ export function CustomerRegisterForm() {
                 className="w-3.5 h-3.5 accent-[#0B3B17] rounded cursor-pointer"
               />
               <label htmlFor="agree-terms" className="text-[11px] text-slate-600 font-medium leading-tight cursor-pointer">
-                I agree to the Nu3Go Terms and Privacy Policy.
+                I agree to the Nu3Go{" "}
+                <Link href="/terms" target="_blank" className="underline hover:text-[#0B3B17]">
+                  Terms &amp; Conditions
+                </Link>{" "}
+                and Privacy Policy.
               </label>
             </div>
 

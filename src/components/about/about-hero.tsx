@@ -105,7 +105,7 @@ export function AboutHero() {
           ref={tagRef}
           className="font-oswald text-xs sm:text-sm font-bold tracking-[0.25em] uppercase text-[#36D068] mb-3 will-change-[transform,opacity]"
         >
-          OUR ESSENCE & PHILOSOPHY
+          GOOD FOOD. BETTER DAYS.
         </span>
 
         <h1
@@ -119,7 +119,7 @@ export function AboutHero() {
           ref={descRef}
           className="text-white/90 text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl mx-auto font-light will-change-[transform,opacity]"
         >
-          Pioneering the future of gourmet wellness. We combine fine dining culinary mastery with precision sports nutrition to deliver fresh, macro-balanced meals directly to your doorstep.
+          We believe eating well shouldn&apos;t be complicated, time-consuming or something you have to compromise on because life gets busy. That&apos;s why we created nu3go to make fresh, healthy and convenient everyday meals accessible to people who want to live better without changing their entire routine.
         </p>
       </div>
 

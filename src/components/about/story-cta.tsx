@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { ArrowRight, Sunrise, ShieldCheck, Zap, RefreshCw, Truck, UtensilsCrossed } from "lucide-react";
+import { ArrowRight, Sunrise, ShieldCheck, RefreshCw, Truck, UtensilsCrossed } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -66,20 +66,20 @@ export function StoryCta() {
             {/* Main Headline */}
             <h2 className="font-oswald text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tight leading-[1.08] mb-6">
               Join Sri Lanka&apos;s <span className="text-[#36D068]">#1</span> <br />
-              Breakfast Subscription Service.
+              Meal Subscription Service.
             </h2>
 
             {/* Subtitle */}
             <p className="text-white/80 text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl mx-auto mb-10 font-light">
-              Choose your weekly or monthly subscription today. Enjoy chef-prepared, ready-to-eat breakfasts
-              delivered right to your doorstep or office across Colombo and Wattala by <strong>7:30 AM every Monday to Friday</strong>—with 100% free delivery.
+              Choose your weekly or monthly subscription today. Enjoy freshly prepared, ready-to-eat meals
+              delivered right to your doorstep or office across Colombo and Wattala, Monday to Friday — with 100% free standard delivery.
             </p>
 
             {/* Feature Pills */}
             <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 mb-10 text-xs sm:text-sm text-neutral-300 font-medium">
               <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full">
                 <Truck className="w-4 h-4 text-[#36D068]" />
-                <span>Delivered by 7:30 AM Sharp</span>
+                <span>Delivered Monday to Friday</span>
               </div>
               <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full">
                 <RefreshCw className="w-4 h-4 text-[#36D068]" />
@@ -97,7 +97,7 @@ export function StoryCta() {
                 href="/plans"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-9 py-4 rounded-full font-oswald text-sm sm:text-base font-bold uppercase tracking-[0.15em] bg-[#36D068] text-neutral-950 hover:bg-emerald-400 transition-all duration-300 shadow-xl shadow-[#36D068]/25 group hover:scale-105"
               >
-                <span>Choose Your Breakfast Plan</span>
+                <span>Choose Your Meal Plan</span>
                 <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
 

@@ -142,7 +142,7 @@ export function mapPackagePlansToDurations(
     const rules = [
       "Doorstep delivery",
       `${days} chef-crafted fresh meals included`,
-      "Subscription confirmation before 5:00 PM previous day",
+      "Subscription confirmation before 6:00 PM previous day",
       "Missed meals added to credit",
     ];
 
