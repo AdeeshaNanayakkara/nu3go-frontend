@@ -8,17 +8,58 @@ export interface DeliveryListItem {
   mobile?: string;
   mobile_number?: string;
   contact_number?: string;
+  user_phone?: string;
   name?: string;
   first_name?: string;
   last_name?: string;
   delivered: boolean;
   delivered_at?: string;
   delivery_id?: string;
+  delivery_note?: string;
+  delivery_type?: string;
   location_address?: string;
   location_id?: string;
+  meal_id?: string;
+  meal_name?: string;
+  meal_source?: string;
   plan_type?: string; // "FIXED" | "CUSTOM" | string
   subscription_id: string;
   user_id: string;
+}
+
+export function formatDeliveryType(type?: string): string {
+  if (!type) return "—";
+  switch (type.toUpperCase()) {
+    case "CALL_AND_HANDOVER":
+      return "Call & Hand Over";
+    case "LEAVE_AT_GUARDROOM":
+      return "Leave at Guardroom";
+    case "LEAVE_AT_GUARDROOM_AND_NOTIFY":
+      return "Leave at Guardroom & Notify";
+    case "HANG_AT_DESIGNATED_LOCATION":
+      return "Hang at Location";
+    case "LEAVE_AT_DESIGNATED_LOCATION":
+      return "Leave at Location";
+    case "CALL_FOR_COLLECTION":
+      return "Call for Collection";
+    default:
+      return type
+        .replace(/_/g, " ")
+        .toLowerCase()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+}
+
+export function getCustomerPhone(item: DeliveryListItem): string {
+  const phone =
+    item.customer_phone ||
+    item.phone ||
+    item.mobile ||
+    item.mobile_number ||
+    item.contact_number ||
+    item.user_phone;
+  if (phone && phone.trim()) return phone.trim();
+  return "—";
 }
 
 export interface DeliveryPaginationMeta {

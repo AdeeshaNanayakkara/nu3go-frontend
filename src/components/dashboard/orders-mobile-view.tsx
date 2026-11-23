@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   AlertTriangle,
   Calendar,
-  ChevronRight,
   Compass,
   Plus,
   Receipt,
@@ -35,8 +34,6 @@ interface OrdersMobileViewProps {
   isLoading: boolean;
   onViewInvoice: (invoice: InvoiceItem) => void;
   onConfirmCancel: (id: string) => Promise<void>;
-  /** Delivery calendar for the selected custom plan */
-  children?: React.ReactNode;
 }
 
 const formatDate = (dateStr?: string) => {
@@ -53,7 +50,6 @@ export function OrdersMobileView({
   isLoading,
   onViewInvoice,
   onConfirmCancel,
-  children,
 }: OrdersMobileViewProps) {
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -159,11 +155,6 @@ export function OrdersMobileView({
                       </span>
                     </div>
                   </div>
-                  {isSelected && item.isCustom && (
-                    <span className="shrink-0 rounded-full bg-[#36D068]/15 px-2.5 py-1 font-oswald text-[10px] font-bold uppercase tracking-wider text-[#15803D]">
-                      Calendar below
-                    </span>
-                  )}
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 p-3 text-xs">
@@ -229,17 +220,6 @@ export function OrdersMobileView({
               </article>
             );
           })}
-
-          {children && selected && (
-            <div className="space-y-2 pt-2">
-              <h3 className="flex items-center gap-1.5 px-2 font-oswald text-[11px] font-bold uppercase tracking-widest text-slate-500">
-                Delivery calendar
-                <ChevronRight className="h-3 w-3" />
-                <span className="truncate text-slate-700">{selected.packageName}</span>
-              </h3>
-              {children}
-            </div>
-          )}
         </div>
       )}
 

@@ -8,9 +8,7 @@ import {
 } from "@/services/api/subscription.service";
 import { invoiceService, type InvoiceItem } from "@/services/api/invoice.service";
 import { packageService, type PublicPackage } from "@/services/api/package.service";
-import { locationService, type LocationItem } from "@/services/api/location.service";
 import { InvoiceReceiptModal } from "@/components/dashboard/invoice-receipt-modal";
-import { SubscriptionCalendar } from "@/components/dashboard/subscription-calendar";
 import { OrdersMobileView } from "@/components/dashboard/orders-mobile-view";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { toast } from "@/lib/toast";
@@ -33,7 +31,6 @@ export default function SubscriptionsOrdersPage() {
   const isMobile = useIsMobile();
   const [subscriptions, setSubscriptions] = useState<SubscriptionResItem[]>([]);
   const [packages, setPackages] = useState<PublicPackage[]>([]);
-  const [locations, setLocations] = useState<LocationItem[]>([]);
   const [subInvoicesMap, setSubInvoicesMap] = useState<Record<string, InvoiceItem[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSub, setSelectedSub] = useState<SubscriptionResItem | null>(null);
@@ -44,10 +41,9 @@ export default function SubscriptionsOrdersPage() {
   const fetchSubscriptions = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [allSubs, pkgsData, locsData] = await Promise.all([
+      const [allSubs, pkgsData] = await Promise.all([
         subscriptionService.getSubscriptions(),
         packageService.getPublicPackages().catch(() => []),
-        locationService.getLocations().catch(() => []),
       ]);
 
       // Only show active subscriptions
@@ -57,7 +53,6 @@ export default function SubscriptionsOrdersPage() {
 
       setSubscriptions(activeSubs);
       setPackages(pkgsData || []);
-      setLocations(locsData || []);
       setSelectedSub((prev) => {
         if (activeSubs.length === 0) return null;
         const stillSelected = prev && activeSubs.find((s) => s.id === prev.id);
@@ -148,11 +143,6 @@ export default function SubscriptionsOrdersPage() {
     return typeof sub.purchased_days === "number" && sub.purchased_days > 0;
   };
 
-  const handleCalendarUpdated = (updated: SubscriptionResItem) => {
-    setSubscriptions((prev) => prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)));
-    setSelectedSub((prev) => (prev && prev.id === updated.id ? { ...prev, ...updated } : prev));
-  };
-
   if (isMobile === null) {
     return <div className="h-64 animate-pulse rounded-3xl bg-slate-200/60" aria-busy="true" />;
   }
@@ -182,16 +172,7 @@ export default function SubscriptionsOrdersPage() {
             toast.success("Subscription cancelled.");
             await fetchSubscriptions();
           }}
-        >
-          {selectedSub && isCustomSubscription(selectedSub) && (
-            <SubscriptionCalendar
-              key={selectedSub.id}
-              subscription={selectedSub}
-              locations={locations}
-              onUpdated={handleCalendarUpdated}
-            />
-          )}
-        </OrdersMobileView>
+        />
         <InvoiceReceiptModal invoice={selectedInvoice} onClose={() => setSelectedInvoice(null)} />
       </>
     );
@@ -206,7 +187,7 @@ export default function SubscriptionsOrdersPage() {
             Active Subscriptions & Meal Plans
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 mt-1 font-normal">
-            Manage your active meal subscriptions, weekday delivery calendar, invoices, and auto-renew preferences.
+            Manage your active meal subscriptions, invoices, and auto-renew preferences.
           </p>
         </div>
 
@@ -342,16 +323,6 @@ export default function SubscriptionsOrdersPage() {
                 );
               })}
             </div>
-
-            {/* Custom-plan delivery calendar for the selected subscription */}
-            {selectedSub && isCustomSubscription(selectedSub) && (
-              <SubscriptionCalendar
-                key={selectedSub.id}
-                subscription={selectedSub}
-                locations={locations}
-                onUpdated={handleCalendarUpdated}
-              />
-            )}
         </div>
       )}
 

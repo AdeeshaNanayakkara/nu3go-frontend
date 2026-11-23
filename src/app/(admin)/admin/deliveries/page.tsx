@@ -27,15 +27,21 @@ import {
   UtensilsCrossed,
   Layers,
   ChefHat,
+  Phone,
+  FileText,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   deliveryService,
   type DeliveryListItem,
   type DeliveryPaginationMeta,
+  formatDeliveryType,
+  getCustomerPhone,
 } from "@/services/api/delivery.service";
 import { formatUserFriendlyError } from "@/utils/response-handler";
 import { toast } from "@/lib/toast";
 import { DeliveryPdfModal } from "@/components/admin/delivery-pdf-modal";
+import { exportDeliveriesToExcel } from "@/utils/export-deliveries-excel";
 import { DeliveryOverviewSummary } from "@/components/admin/delivery-overview-summary";
 import { DeliveryForecastView } from "@/components/admin/delivery-forecast-view";
 import { DeliveryTrendView } from "@/components/admin/delivery-trend-view";
@@ -294,11 +300,13 @@ function AdminDeliveriesContent() {
         const q = searchQuery.toLowerCase();
         const emailMatch = item.customer_email?.toLowerCase().includes(q);
         const nameMatch = (item.customer_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`)?.toLowerCase().includes(q);
-        const phoneMatch = (item.customer_phone || item.mobile || item.phone || item.mobile_number)?.toLowerCase().includes(q);
+        const phoneMatch = (item.customer_phone || item.mobile || item.phone || item.mobile_number || item.user_phone)?.toLowerCase().includes(q);
+        const noteMatch = item.delivery_note?.toLowerCase().includes(q);
+        const typeMatch = item.delivery_type?.toLowerCase().includes(q);
         const addrMatch = item.location_address?.toLowerCase().includes(q);
         const subIdMatch = item.subscription_id?.toLowerCase().includes(q);
         const locIdMatch = item.location_id?.toLowerCase().includes(q);
-        if (!emailMatch && !nameMatch && !phoneMatch && !addrMatch && !subIdMatch && !locIdMatch) {
+        if (!emailMatch && !nameMatch && !phoneMatch && !noteMatch && !typeMatch && !addrMatch && !subIdMatch && !locIdMatch) {
           return false;
         }
       }
@@ -423,6 +431,17 @@ function AdminDeliveriesContent() {
 
         {activeView === "deliveries" && (
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => exportDeliveriesToExcel(filteredDeliveries, selectedDate)}
+              disabled={filteredDeliveries.length === 0}
+              className="px-4 py-2.5 rounded-xl bg-white hover:bg-emerald-50/70 text-slate-700 hover:text-emerald-800 font-semibold text-sm transition-all flex items-center gap-2 border border-slate-200/90 hover:border-emerald-300 shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Export Deliveries to Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              <span>Export Excel</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setIsPdfModalOpen(true)}
@@ -815,7 +834,10 @@ function AdminDeliveriesContent() {
                     </button>
                   </th>
                   <th className="py-3 px-4">Customer</th>
+                  <th className="py-3 px-4">Phone Number</th>
                   <th className="py-3 px-4">Delivery Address</th>
+                  <th className="py-3 px-4 text-center">Delivery Type</th>
+                  <th className="py-3 px-4">Delivery Note</th>
                   <th className="py-3 px-4 text-center">Plan Type</th>
                   <th className="py-3 px-4 text-center">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
@@ -869,6 +891,23 @@ function AdminDeliveriesContent() {
                         </div>
                       </td>
 
+                      {/* Phone Number */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {getCustomerPhone(item) !== "—" ? (
+                          <div className="flex items-center gap-1.5 text-slate-700">
+                            <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <a
+                              href={`tel:${getCustomerPhone(item)}`}
+                              className="font-mono text-xs font-semibold hover:text-[#36D068] hover:underline"
+                            >
+                              {getCustomerPhone(item)}
+                            </a>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs font-mono">—</span>
+                        )}
+                      </td>
+
                       {/* Delivery Address */}
                       <td className="py-3.5 px-4 max-w-xs">
                         <div className="flex items-start gap-1.5 text-slate-700">
@@ -877,6 +916,32 @@ function AdminDeliveriesContent() {
                             {item.location_address || "No delivery address specified"}
                           </span>
                         </div>
+                      </td>
+
+                      {/* Delivery Type */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        {item.delivery_type ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                            <Truck className="w-3 h-3 text-slate-500" />
+                            <span>{formatDeliveryType(item.delivery_type)}</span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
+                      </td>
+
+                      {/* Delivery Note */}
+                      <td className="py-3.5 px-4 max-w-[200px]">
+                        {item.delivery_note?.trim() ? (
+                          <div className="flex items-start gap-1.5 bg-amber-50/70 border border-amber-200/80 rounded-lg p-1.5 text-amber-900">
+                            <FileText className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
+                            <p className="text-[11px] leading-snug line-clamp-2" title={item.delivery_note}>
+                              {item.delivery_note}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs italic">—</span>
+                        )}
                       </td>
 
                       {/* Plan Type */}
