@@ -48,6 +48,7 @@ export const ROUTES = {
   ADMIN_ORDERS: "/admin/orders",
   ADMIN_ORDER_DETAIL: (id: string) => `/admin/orders/${id}` as const,
   ADMIN_SETTINGS: "/admin/settings",
+  ADMIN_REVIEWS: "/admin/settings/reviews",
 } as const;
 
 /**

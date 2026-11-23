@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Star,
   Quote,
@@ -17,7 +18,13 @@ import {
   X,
   MessageSquarePlus,
   Send,
+  Loader2,
+  AlertCircle,
+  User as UserIcon,
 } from "lucide-react";
+import { useAuthStore } from "@/store/auth.store";
+import { reviewService } from "@/services/api/review.service";
+import { toast } from "@/lib/toast";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -158,13 +165,6 @@ const INITIAL_REVIEWS: Review[] = [
   },
 ];
 
-const CATEGORIES = [
-  { key: "all", label: "All Reviews" },
-  { key: "classic", label: "Classic Vitality" },
-  { key: "power", label: "Power Athletes" },
-  { key: "family", label: "Family & Iskool" },
-] as const;
-
 /**
  * Reusable Review Card Component
  */
@@ -235,9 +235,77 @@ function ReviewCard({ review }: { review: Review }) {
   );
 }
 
+const AVATAR_POOL = [
+  "/images/insta-1.jpg",
+  "/images/insta-2.jpg",
+  "/images/insta-3.jpg",
+  "/images/insta-4.jpg",
+  "/images/insta-5.jpg",
+  "/images/insta-6.jpg",
+  "/images/insta-7.jpg",
+  "/images/insta-8.jpg",
+  "/images/insta-9.jpg",
+  "/images/insta-10.jpg",
+  "/images/insta-11.jpg",
+  "/images/insta-12.jpg",
+];
+
+interface PublicReviewApiItem {
+  id: string;
+  reviewer_name?: string;
+  rating: number;
+  title?: string;
+  comment: string;
+  published_at?: string;
+}
+
+function mapPublicReview(pub: PublicReviewApiItem, index: number): Review {
+  const idHash = pub.id
+    ? pub.id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    : index;
+  const avatar = AVATAR_POOL[Math.abs(idHash) % AVATAR_POOL.length];
+
+  const plan = pub.title && pub.title.trim()
+    ? pub.title.trim()
+    : "Verified Subscriber • Breakfast Plan";
+
+  let location = "Colombo";
+  if (pub.published_at) {
+    try {
+      const d = new Date(pub.published_at);
+      if (!isNaN(d.getTime())) {
+        location = d.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      }
+    } catch {
+      location = "Colombo";
+    }
+  }
+
+  const tags: string[] = ["Verified Subscriber", "Weekday Breakfast"];
+  if (pub.rating === 5) {
+    tags.push("5-Star Experience");
+  }
+
+  return {
+    id: pub.id,
+    name: pub.reviewer_name || "Verified Customer",
+    role: "Verified Subscriber",
+    location,
+    plan,
+    category: "classic",
+    rating: pub.rating || 5,
+    quote: pub.comment,
+    avatar,
+    tags,
+  };
+}
+
 export function ReviewSection() {
   const [reviews, setReviews] = useState<Review[]>(INITIAL_REVIEWS);
-  const [activeCategory, setActiveCategory] = useState<string>("all");
   const [showAll, setShowAll] = useState(false);
 
   // Mobile Carousel & Auto-scroll State
@@ -247,17 +315,59 @@ export function ReviewSection() {
   const touchStartY = useRef<number | null>(null);
   const autoScrollResumeTimer = useRef<NodeJS.Timeout | null>(null);
 
+  // Dynamic Aggregate Summary from /public/reviews/summary API
+  const [summaryData, setSummaryData] = useState<{ average_rating: number; total_reviews: number } | null>(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadPublicReviews() {
+      try {
+        const [summaryRes, publicReviewsRes] = await Promise.all([
+          reviewService.getReviewSummary().catch(() => null),
+          reviewService.getPublicReviews({ page: 1, limit: 50 }).catch(() => null),
+        ]);
+
+        if (isCancelled) return;
+
+        if (summaryRes && typeof summaryRes.average_rating === "number") {
+          setSummaryData(summaryRes);
+        }
+
+        if (publicReviewsRes && Array.isArray(publicReviewsRes.reviews) && publicReviewsRes.reviews.length > 0) {
+          const apiReviews: Review[] = publicReviewsRes.reviews.map((r, i) =>
+            mapPublicReview(r as unknown as PublicReviewApiItem, i)
+          );
+
+          // Real published reviews appear first, followed by default sample reviews (deduped)
+          const fallbackReviews = INITIAL_REVIEWS.filter(
+            (init) => !apiReviews.some((api) => api.id === init.id)
+          );
+
+          setReviews([...apiReviews, ...fallbackReviews]);
+        }
+      } catch (err) {
+        console.error("[ReviewSection] Error fetching reviews from API:", err);
+      }
+    }
+
+    loadPublicReviews();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
   // Review Submission Modal State
+  const { user, isAuthenticated } = useAuthStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: "",
-    role: "",
-    location: "Colombo",
-    plan: "Classic Plan",
-    category: "classic" as "all" | "classic" | "power" | "family",
     rating: 5,
-    quote: "",
+    title: "",
+    comment: "",
   });
   const [hoverRating, setHoverRating] = useState<number | null>(null);
 
@@ -266,17 +376,9 @@ export function ReviewSection() {
   const statsRef = useRef<HTMLDivElement | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
 
-  const filteredReviews =
-    activeCategory === "all"
-      ? reviews
-      : reviews.filter((r) => r.category === activeCategory);
+  const filteredReviews = reviews;
 
-  // Safety: reset mobileIndex if filtered list shrinks
-  useEffect(() => {
-    if (mobileIndex >= filteredReviews.length) {
-      setMobileIndex(0);
-    }
-  }, [filteredReviews.length, mobileIndex]);
+  const safeMobileIndex = mobileIndex >= filteredReviews.length ? 0 : mobileIndex;
 
   // Mobile Auto-scroll Interval (every 3.8s)
   useEffect(() => {
@@ -423,40 +525,63 @@ export function ReviewSection() {
     touchStartY.current = null;
   };
 
-  const handleSubmitReview = (e: React.FormEvent) => {
+  const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.quote.trim()) return;
+    setSubmitError(null);
 
-    const newReview: Review = {
-      id: Date.now().toString(),
-      name: formData.name.trim(),
-      role: formData.role.trim() || "Verified Subscriber",
-      location: formData.location.trim() || "Colombo",
-      plan: `${formData.plan} • Subscriber`,
-      category: formData.category,
-      rating: formData.rating,
-      quote: formData.quote.trim(),
-      avatar: "/images/insta-7.jpg",
-      tags: ["Verified Subscriber", "Community Review"],
-    };
+    if (!isAuthenticated) {
+      setSubmitError("Please sign in with your subscriber account to submit a review.");
+      return;
+    }
 
-    setReviews([newReview, ...reviews]);
-    setMobileIndex(0);
-    setIsSubmitted(true);
+    const trimmedComment = formData.comment.trim();
+    if (trimmedComment.length < 10) {
+      setSubmitError("Review must be at least 10 characters long.");
+      return;
+    }
 
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setIsModalOpen(false);
-      setFormData({
-        name: "",
-        role: "",
-        location: "Colombo",
-        plan: "Classic Plan",
-        category: "classic",
-        rating: 5,
-        quote: "",
+    if (trimmedComment.length > 2000) {
+      setSubmitError("Review cannot exceed 2,000 characters.");
+      return;
+    }
+
+    if (formData.rating < 1 || formData.rating > 5) {
+      setSubmitError("Please select a rating between 1 and 5 stars.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await reviewService.submitReview({
+        rating: formData.rating,
+        title: formData.title.trim() || undefined,
+        comment: trimmedComment,
       });
-    }, 1800);
+
+      setIsSubmitted(true);
+      toast.success("Thank you! Your review has been submitted for verification.");
+
+      setTimeout(() => {
+        setIsSubmitted(false);
+        setIsModalOpen(false);
+        setFormData({
+          rating: 5,
+          title: "",
+          comment: "",
+        });
+        setSubmitError(null);
+      }, 2200);
+    } catch (err: unknown) {
+      const error = err as { message?: string; error?: { message?: string } };
+      const errorMsg =
+        error?.message ||
+        error?.error?.message ||
+        "Failed to submit review. Only active or past subscribers can submit reviews.";
+      setSubmitError(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -493,20 +618,34 @@ export function ReviewSection() {
           {/* Rating: 4.5 / 5.0 */}
           <div className="bg-white rounded-2xl p-3.5 sm:p-5 border border-neutral-200/80 shadow-xs hover:shadow-md hover:border-[#36D068]/40 transition-all duration-300 text-center flex flex-col items-center justify-center min-h-[110px] sm:min-h-[128px]">
             <div className="h-5 sm:h-6 flex items-center justify-center gap-0.5 sm:gap-1 text-amber-500 mb-1">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-400 text-amber-400" />
-              ))}
+              {[...Array(5)].map((_, i) => {
+                const currentRating = summaryData && summaryData.total_reviews > 0 ? summaryData.average_rating : 5;
+                return (
+                  <Star
+                    key={i}
+                    className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
+                      i + 1 <= Math.round(currentRating)
+                        ? "fill-amber-400 text-amber-400"
+                        : "text-neutral-300"
+                    }`}
+                  />
+                );
+              })}
             </div>
             <div className="flex items-baseline justify-center gap-1 leading-tight">
               <span className="font-oswald text-xl sm:text-2xl md:text-3xl font-black text-neutral-900 tracking-tight">
-                4.5
+                {summaryData && summaryData.total_reviews > 0
+                  ? Number(summaryData.average_rating).toFixed(1)
+                  : "4.5"}
               </span>
               <span className="font-oswald text-xs sm:text-sm text-neutral-400 font-bold">
                 / 5.0
               </span>
             </div>
             <span className="text-[10px] sm:text-xs text-neutral-500 font-medium uppercase tracking-wider font-oswald leading-tight mt-1">
-              Subscriber Rating
+              {summaryData && summaryData.total_reviews > 0
+                ? `Based on ${summaryData.total_reviews} ${summaryData.total_reviews === 1 ? "Review" : "Reviews"}`
+                : "Subscriber Rating"}
             </span>
           </div>
 
@@ -555,29 +694,6 @@ export function ReviewSection() {
           </div>
         </div>
 
-        {/* ─── Category Filter Pills ─── */}
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-10 sm:mb-12">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.key}
-              type="button"
-              onClick={() => {
-                setActiveCategory(cat.key);
-                setShowAll(false);
-                setMobileIndex(0);
-                pauseAutoScrollTemporarily();
-              }}
-              className={`px-5 py-2.5 rounded-full font-oswald text-xs sm:text-sm font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-                activeCategory === cat.key
-                  ? "bg-neutral-950 text-white shadow-md scale-105"
-                  : "bg-white text-neutral-700 border border-neutral-300/80 hover:bg-neutral-100"
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
-
         {/* ─── Mobile Horizontal One-by-One Carousel with Auto-Scroll (< md) ─── */}
         <div
           className="block md:hidden mb-10"
@@ -591,7 +707,7 @@ export function ReviewSection() {
           >
             <div
               className="flex transition-transform duration-500 ease-out"
-              style={{ transform: `translateX(-${mobileIndex * 100}%)` }}
+              style={{ transform: `translateX(-${safeMobileIndex * 100}%)` }}
             >
               {filteredReviews.map((review) => (
                 <div key={review.id} className="w-full shrink-0">
@@ -607,7 +723,7 @@ export function ReviewSection() {
               {/* Step Counter */}
               <div className="flex items-center gap-1.5 font-oswald text-xs font-bold uppercase tracking-wider text-neutral-500">
                 <span>REVIEW</span>
-                <span className="text-[#36D068] font-black text-sm">{mobileIndex + 1}</span>
+                <span className="text-[#36D068] font-black text-sm">{safeMobileIndex + 1}</span>
                 <span>/</span>
                 <span>{filteredReviews.length}</span>
               </div>
@@ -624,7 +740,7 @@ export function ReviewSection() {
                     }}
                     aria-label={`Go to review ${idx + 1}`}
                     className={`h-2 transition-all duration-300 rounded-full cursor-pointer ${
-                      mobileIndex === idx
+                      safeMobileIndex === idx
                         ? "w-6 bg-[#36D068]"
                         : "w-2 bg-neutral-300 hover:bg-neutral-400"
                     }`}
@@ -727,8 +843,13 @@ export function ReviewSection() {
             {/* Close Button */}
             <button
               type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-5 right-5 p-2 rounded-full text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+              disabled={isSubmitting}
+              onClick={() => {
+                setIsModalOpen(false);
+                setSubmitError(null);
+              }}
+              className="absolute top-5 right-5 p-2 rounded-full text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer disabled:opacity-50"
+              aria-label="Close review dialog"
             >
               <X className="w-5 h-5" />
             </button>
@@ -742,7 +863,7 @@ export function ReviewSection() {
                   Thank You for Your Review!
                 </h3>
                 <p className="text-neutral-600 text-sm max-w-sm">
-                  Your review has been successfully posted to our community. Thank you for powering nu3go mornings!
+                  Your review has been successfully submitted and will appear in our community feed once verified by our team.
                 </p>
               </div>
             ) : (
@@ -761,25 +882,63 @@ export function ReviewSection() {
                   </div>
                 </div>
 
-                <p className="text-neutral-500 text-xs mb-6 font-light">
+                <p className="text-neutral-500 text-xs mb-4 font-light">
                   Tell us about your weekday mornings with nu3go. We value your honest feedback!
                 </p>
+
+                {/* Account Status Indicator */}
+                {isAuthenticated && user ? (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50/70 border border-emerald-200/60 rounded-xl mb-4 text-xs text-emerald-900">
+                    <div className="w-5 h-5 rounded-full bg-[#36D068]/20 flex items-center justify-center shrink-0">
+                      <UserIcon className="w-3 h-3 text-emerald-700" />
+                    </div>
+                    <span className="truncate">
+                      Posting as <strong className="font-semibold">{user.name || user.email}</strong>
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2.5 p-3 bg-amber-50/80 border border-amber-200 rounded-xl mb-4 text-xs text-amber-900">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold">Subscriber Sign-In Required</p>
+                      <p className="text-amber-700 font-light mt-0.5">
+                        Only subscribed nu3go customers can publish verified reviews.{" "}
+                        <Link
+                          href="/login"
+                          className="font-semibold underline hover:text-amber-950 inline-flex items-center gap-1"
+                        >
+                          Sign in here &rarr;
+                        </Link>
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Banner */}
+                {submitError && (
+                  <div className="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-xl mb-4 text-xs text-red-800">
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                    <p className="flex-1 font-medium">{submitError}</p>
+                  </div>
+                )}
 
                 <form onSubmit={handleSubmitReview} className="space-y-4">
                   {/* Rating Selector */}
                   <div>
                     <label className="block text-xs font-oswald font-bold uppercase text-neutral-700 tracking-wider mb-1.5">
-                      Your Rating
+                      Your Rating *
                     </label>
                     <div className="flex items-center gap-1.5">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
                           key={star}
                           type="button"
+                          disabled={isSubmitting}
                           onMouseEnter={() => setHoverRating(star)}
                           onMouseLeave={() => setHoverRating(null)}
                           onClick={() => setFormData({ ...formData, rating: star })}
-                          className="p-1 cursor-pointer transition-transform hover:scale-125"
+                          className="p-1 cursor-pointer transition-transform hover:scale-125 disabled:cursor-not-allowed"
+                          aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
                         >
                           <Star
                             className={`w-6 h-6 transition-colors ${
@@ -796,84 +955,55 @@ export function ReviewSection() {
                     </div>
                   </div>
 
-                  {/* Name & Role Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-oswald font-bold uppercase text-neutral-700 tracking-wider mb-1">
-                        Your Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="e.g. Suren Dharmaratne"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm focus:outline-none focus:border-[#36D068] focus:ring-1 focus:ring-[#36D068]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-oswald font-bold uppercase text-neutral-700 tracking-wider mb-1">
-                        Role / Profession
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.role}
-                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                        placeholder="e.g. Tech Lead, Athlete"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm focus:outline-none focus:border-[#36D068] focus:ring-1 focus:ring-[#36D068]"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Location & Plan Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-oswald font-bold uppercase text-neutral-700 tracking-wider mb-1">
-                        Delivery Area
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.location}
-                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                        placeholder="e.g. Colombo 03, Wattala"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm focus:outline-none focus:border-[#36D068] focus:ring-1 focus:ring-[#36D068]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-oswald font-bold uppercase text-neutral-700 tracking-wider mb-1">
-                        Your Plan
-                      </label>
-                      <select
-                        value={formData.plan}
-                        onChange={(e) => {
-                          const plan = e.target.value;
-                          let category: "all" | "classic" | "power" | "family" = "classic";
-                          if (plan.includes("Power")) category = "power";
-                          else if (plan.includes("Iskool")) category = "family";
-                          setFormData({ ...formData, plan, category });
-                        }}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm bg-white focus:outline-none focus:border-[#36D068] focus:ring-1 focus:ring-[#36D068]"
-                      >
-                        <option value="Classic Plan">Classic Plan</option>
-                        <option value="Power Plan">Power Plan</option>
-                        <option value="fourtiG Plan">fourtiG Plan</option>
-                        <option value="Iskool Plan">Iskool Plan</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Review Text */}
+                  {/* Review Title (Optional) */}
                   <div>
-                    <label className="block text-xs font-oswald font-bold uppercase text-neutral-700 tracking-wider mb-1">
-                      Your Review *
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-oswald font-bold uppercase text-neutral-700 tracking-wider">
+                        Headline / Title <span className="text-neutral-400 font-normal lowercase">(optional)</span>
+                      </label>
+                      <span className="text-[11px] text-neutral-400">
+                        {formData.title.length}/120
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      maxLength={120}
+                      disabled={isSubmitting}
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      placeholder="e.g. Healthy and on time"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm focus:outline-none focus:border-[#36D068] focus:ring-1 focus:ring-[#36D068] disabled:bg-neutral-100"
+                    />
+                  </div>
+
+                  {/* Review Comment (Required) */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-oswald font-bold uppercase text-neutral-700 tracking-wider">
+                        Your Review *
+                      </label>
+                      <span
+                        className={`text-[11px] ${
+                          formData.comment.length > 2000
+                            ? "text-red-500 font-semibold"
+                            : formData.comment.length > 0 && formData.comment.length < 10
+                            ? "text-amber-600"
+                            : "text-neutral-400"
+                        }`}
+                      >
+                        {formData.comment.length}/2000 {formData.comment.length > 0 && formData.comment.length < 10 && "(min 10 chars)"}
+                      </span>
+                    </div>
                     <textarea
                       required
-                      rows={3}
-                      value={formData.quote}
-                      onChange={(e) => setFormData({ ...formData, quote: e.target.value })}
-                      placeholder="Share your experience with nu3go weekday mornings, taste, freshness, and delivery..."
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm focus:outline-none focus:border-[#36D068] focus:ring-1 focus:ring-[#36D068] resize-none"
+                      rows={4}
+                      minLength={10}
+                      maxLength={2000}
+                      disabled={isSubmitting}
+                      value={formData.comment}
+                      onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
+                      placeholder="e.g. The meals are fresh and the delivery is always punctual."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm focus:outline-none focus:border-[#36D068] focus:ring-1 focus:ring-[#36D068] resize-none disabled:bg-neutral-100"
                     />
                   </div>
 
@@ -881,17 +1011,31 @@ export function ReviewSection() {
                   <div className="pt-2 flex items-center justify-end gap-3">
                     <button
                       type="button"
-                      onClick={() => setIsModalOpen(false)}
-                      className="px-5 py-2.5 rounded-xl text-xs font-oswald font-bold uppercase tracking-wider text-neutral-600 hover:bg-neutral-100 transition-colors cursor-pointer"
+                      disabled={isSubmitting}
+                      onClick={() => {
+                        setIsModalOpen(false);
+                        setSubmitError(null);
+                      }}
+                      className="px-5 py-2.5 rounded-xl text-xs font-oswald font-bold uppercase tracking-wider text-neutral-600 hover:bg-neutral-100 transition-colors cursor-pointer disabled:opacity-50"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-oswald text-xs font-bold uppercase tracking-wider bg-[#36D068] text-neutral-950 hover:bg-emerald-400 transition-colors shadow-md cursor-pointer"
+                      disabled={isSubmitting || formData.comment.trim().length < 10 || !isAuthenticated}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-oswald text-xs font-bold uppercase tracking-wider bg-[#36D068] text-neutral-950 hover:bg-emerald-400 transition-colors shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>Submit Review</span>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Submitting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Submit Review</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </form>

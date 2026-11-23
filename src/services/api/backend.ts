@@ -184,6 +184,17 @@ export const BACKEND_ENDPOINTS = {
     IMPACT: `${API_V1}/holidays/impact`,
     CALENDAR: `${API_V1}/holidays/calendar`,
   },
+  REVIEWS: {
+    CREATE: `${API_V1}/reviews`,
+    LIST: `${API_V1}/reviews`,
+    ME: `${API_V1}/reviews/me`,
+    PUBLIC_LIST: `${API_V1}/public/reviews`,
+    PUBLIC_SUMMARY: `${API_V1}/public/reviews/summary`,
+    DETAIL: (id: string) => `${API_V1}/reviews/${id}`,
+    UPDATE: (id: string) => `${API_V1}/reviews/${id}`,
+    DELETE: (id: string) => `${API_V1}/reviews/${id}`,
+    VISIBILITY: (id: string) => `${API_V1}/reviews/${id}/visibility`,
+  },
   ANALYTICS: {
     CUSTOMERS_ENGAGEMENT: `${API_V1}/analytics/customers/engagement`,
     CUSTOMERS_SUMMARY: `${API_V1}/analytics/customers/summary`,

@@ -73,7 +73,7 @@ export default function AdminSettingsPage() {
       title: "Reviews Management",
       description: "View and manage customer reviews and ratings submitted across all meal packages and services.",
       icon: Star,
-      href: "/reviews",
+      href: "/admin/settings/reviews",
       badge: "Configure",
       active: true,
       color: "bg-[#36D068]/15 text-[#36D068] border-[#36D068]/20",

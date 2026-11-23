@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { Logo } from "@/components/shared/logo";
 import { ROUTES } from "@/constants/routes";
@@ -15,14 +15,16 @@ import {
   Package, 
   Settings, 
   Shield, 
-  ChevronDown 
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
 
 export function Header() {
   const pathname = usePathname();
-  const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+    const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -32,17 +34,7 @@ export function Header() {
   // Auth store
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const isHydrated = useAuthStore((s) => s.isHydrated);
   const logout = useAuthStore((s) => s.logout);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Reset avatar error when user changes
-  useEffect(() => {
-    setAvatarError(false);
-  }, [user?.profile_picture_url]);
 
   // Monitor scroll for dynamic transparent-to-frosted glass transition
   useEffect(() => {
@@ -226,8 +218,8 @@ export function Header() {
           </div>
 
           {/* ─── RIGHT: Dashboard / Sign In Button + Profile Icon (Logged In User) ─── */}
-          <div className="w-auto lg:w-1/4 flex items-center justify-end">
-            <div className={`flex items-center transition-opacity duration-200 ${mounted && isHydrated ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+          <div className="w-auto lg:w-1/4 flex items-center justify-end relative z-10">
+            <div className="flex items-center">
               {/* Primary Nav Button (Dashboard if authenticated, Sign In if guest) */}
               {mounted && isAuthenticated && user ? (
                 <Link
@@ -239,7 +231,7 @@ export function Header() {
               ) : (
                 <Link
                   href={ROUTES.LOGIN}
-                  className="border border-white/80 hover:border-[#36D068] text-white hover:bg-[#36D068] hover:text-white px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 rounded-xs text-[10px] sm:text-xs xl:text-sm font-bold tracking-wider sm:tracking-[0.16em] uppercase transition-all duration-300 shadow-sm hover:shadow-[#36D068]/30 hover:shadow-lg text-center whitespace-nowrap"
+                  className="border border-white/80 hover:border-[#36D068] text-white hover:bg-[#36D068] hover:text-white px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 rounded-xs text-[10px] sm:text-xs xl:text-sm font-bold tracking-wider sm:tracking-[0.16em] uppercase transition-all duration-300 shadow-sm hover:shadow-[#36D068]/30 hover:shadow-lg text-center whitespace-nowrap cursor-pointer"
                 >
                   Sign In
                 </Link>
@@ -443,7 +435,7 @@ export function Header() {
             </nav>
 
             {/* Mobile Primary CTA (Dashboard if logged in, Sign In if guest) */}
-            <div className={`pt-2 w-full max-w-xs space-y-2 ${mounted && isHydrated ? "" : "opacity-0 pointer-events-none"}`}>
+            <div className="pt-2 w-full max-w-xs space-y-2">
               {mounted && isAuthenticated && user ? (
                 <Link
                   href={dashboardHref}
