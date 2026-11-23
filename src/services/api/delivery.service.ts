@@ -8,17 +8,58 @@ export interface DeliveryListItem {
   mobile?: string;
   mobile_number?: string;
   contact_number?: string;
+  user_phone?: string;
   name?: string;
   first_name?: string;
   last_name?: string;
   delivered: boolean;
   delivered_at?: string;
   delivery_id?: string;
+  delivery_note?: string;
+  delivery_type?: string;
   location_address?: string;
   location_id?: string;
+  meal_id?: string;
+  meal_name?: string;
+  meal_source?: string;
   plan_type?: string; // "FIXED" | "CUSTOM" | string
   subscription_id: string;
   user_id: string;
+}
+
+export function formatDeliveryType(type?: string): string {
+  if (!type) return "—";
+  switch (type.toUpperCase()) {
+    case "CALL_AND_HANDOVER":
+      return "Call & Hand Over";
+    case "LEAVE_AT_GUARDROOM":
+      return "Leave at Guardroom";
+    case "LEAVE_AT_GUARDROOM_AND_NOTIFY":
+      return "Leave at Guardroom & Notify";
+    case "HANG_AT_DESIGNATED_LOCATION":
+      return "Hang at Location";
+    case "LEAVE_AT_DESIGNATED_LOCATION":
+      return "Leave at Location";
+    case "CALL_FOR_COLLECTION":
+      return "Call for Collection";
+    default:
+      return type
+        .replace(/_/g, " ")
+        .toLowerCase()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+}
+
+export function getCustomerPhone(item: DeliveryListItem): string {
+  const phone =
+    item.customer_phone ||
+    item.phone ||
+    item.mobile ||
+    item.mobile_number ||
+    item.contact_number ||
+    item.user_phone;
+  if (phone && phone.trim()) return phone.trim();
+  return "—";
 }
 
 export interface DeliveryPaginationMeta {
@@ -51,6 +92,32 @@ export interface MarkDeliveredRes {
   marked: string[];
   already_marked?: string[];
   invalid?: string[];
+}
+
+export interface MealCountRes {
+  meal_id: string;
+  meal_name: string;
+  total: number;
+  menu: number;
+  optional: number;
+  emergency: number;
+}
+
+export interface DayMealSummaryRes {
+  date: string;
+  weekday: string;
+  total_deliveries: number;
+  unassigned: number;
+  meals: MealCountRes[];
+}
+
+export interface MealSummaryRes {
+  from: string;
+  to: string;
+  total_deliveries: number;
+  unassigned: number;
+  days: DayMealSummaryRes[];
+  totals: MealCountRes[];
 }
 
 export const deliveryService = {
@@ -100,6 +167,26 @@ export const deliveryService = {
       return body as MarkDeliveredRes;
     } catch (err: any) {
       const msg = err?.message || err?.error?.message || "Failed to mark deliveries";
+      const customErr = new Error(msg);
+      (customErr as any).status = err?.status;
+      throw customErr;
+    }
+  },
+
+  /**
+   * Admin: Meal preparation counts for a date range
+   * GET /api/v1/deliveries/meal-summary?from=YYYY-MM-DD&to=YYYY-MM-DD
+   */
+  async getMealSummary(from: string, to: string): Promise<MealSummaryRes> {
+    try {
+      const response = await apiClient.get<any>("/api/v1/deliveries/meal-summary", {
+        params: { from, to },
+      });
+      const body = response.data;
+      if (body && body.data) return body.data as MealSummaryRes;
+      return body as MealSummaryRes;
+    } catch (err: any) {
+      const msg = err?.message || err?.error?.message || "Failed to load meal summary";
       const customErr = new Error(msg);
       (customErr as any).status = err?.status;
       throw customErr;

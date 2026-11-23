@@ -160,6 +160,15 @@ export function ActivePlanCard({
                 <span className="w-1.5 h-1.5 rounded-full bg-[#36D068] animate-pulse" />
                 Active Subscription
               </span>
+              <span
+                className={`font-oswald text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border shadow-2xs ${
+                  planType.toLowerCase().startsWith("custom")
+                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                    : "bg-sky-50 text-sky-700 border-sky-200"
+                }`}
+              >
+                {planType.toLowerCase().startsWith("custom") ? "Custom Plan" : "Fixed Plan"}
+              </span>
             </div>
 
             <h2 className="font-oswald text-2xl sm:text-3xl font-black uppercase text-neutral-900 tracking-tight leading-tight group-hover:text-[#15803D] transition-colors">

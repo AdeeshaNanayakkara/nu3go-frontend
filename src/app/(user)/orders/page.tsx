@@ -9,6 +9,9 @@ import {
 import { invoiceService, type InvoiceItem } from "@/services/api/invoice.service";
 import { packageService, type PublicPackage } from "@/services/api/package.service";
 import { InvoiceReceiptModal } from "@/components/dashboard/invoice-receipt-modal";
+import { OrdersMobileView } from "@/components/dashboard/orders-mobile-view";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { toast } from "@/lib/toast";
 import {
   UtensilsCrossed,
   Sparkles,
@@ -25,6 +28,7 @@ import {
 } from "lucide-react";
 
 export default function SubscriptionsOrdersPage() {
+  const isMobile = useIsMobile();
   const [subscriptions, setSubscriptions] = useState<SubscriptionResItem[]>([]);
   const [packages, setPackages] = useState<PublicPackage[]>([]);
   const [subInvoicesMap, setSubInvoicesMap] = useState<Record<string, InvoiceItem[]>>({});
@@ -49,11 +53,11 @@ export default function SubscriptionsOrdersPage() {
 
       setSubscriptions(activeSubs);
       setPackages(pkgsData || []);
-      if (activeSubs.length > 0) {
-        setSelectedSub(activeSubs[0]);
-      } else {
-        setSelectedSub(null);
-      }
+      setSelectedSub((prev) => {
+        if (activeSubs.length === 0) return null;
+        const stillSelected = prev && activeSubs.find((s) => s.id === prev.id);
+        return stillSelected || activeSubs[0];
+      });
 
       // Fetch active subscription invoices for each active subscription
       const invoicePromises = activeSubs.map(async (sub) => {
@@ -93,6 +97,7 @@ export default function SubscriptionsOrdersPage() {
     setIsCancelling(true);
     try {
       await subscriptionService.cancelSubscription(cancelModalId);
+      toast.success("Subscription cancelled.");
       setCancelModalId(null);
       await fetchSubscriptions();
     } catch (err) {
@@ -126,6 +131,53 @@ export default function SubscriptionsOrdersPage() {
     return "Chef-Crafted Meal Plan";
   };
 
+  // A subscription is CUSTOM when its plan is flagged CUSTOM in the package catalog,
+  // falling back to the presence of a purchased/remaining day balance (CUSTOM-only fields).
+  const isCustomSubscription = (sub: SubscriptionResItem | null) => {
+    if (!sub) return false;
+    if (sub.package_id && sub.subscription_plan_id) {
+      const pkg = packages.find((p) => p.id === sub.package_id);
+      const plan = pkg?.plans?.find((pl) => pl.plan_id === sub.subscription_plan_id);
+      if (plan?.type) return plan.type.toUpperCase() === "CUSTOM";
+    }
+    return typeof sub.purchased_days === "number" && sub.purchased_days > 0;
+  };
+
+  if (isMobile === null) {
+    return <div className="h-64 animate-pulse rounded-3xl bg-slate-200/60" aria-busy="true" />;
+  }
+
+  if (isMobile) {
+    return (
+      <>
+        <OrdersMobileView
+          items={subscriptions.map((sub) => ({
+            id: sub.id,
+            packageName: getPackageName(sub),
+            isCustom: isCustomSubscription(sub),
+            status: sub.status || "ACTIVE",
+            startedAt: sub.started_at || sub.created_at,
+            validUntil: sub.valid_until,
+            scheduledDays: sub.scheduled_days,
+            purchasedDays: sub.purchased_days,
+            autoRenew: Boolean(sub.auto_renew),
+            invoice: (subInvoicesMap[sub.id] || [])[0] || null,
+          }))}
+          selectedId={selectedSub?.id ?? null}
+          onSelect={(id) => setSelectedSub(subscriptions.find((s) => s.id === id) ?? null)}
+          isLoading={isLoading}
+          onViewInvoice={setSelectedInvoice}
+          onConfirmCancel={async (id) => {
+            await subscriptionService.cancelSubscription(id);
+            toast.success("Subscription cancelled.");
+            await fetchSubscriptions();
+          }}
+        />
+        <InvoiceReceiptModal invoice={selectedInvoice} onClose={() => setSelectedInvoice(null)} />
+      </>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300 font-poppins">
       {/* Header */}
@@ -135,7 +187,7 @@ export default function SubscriptionsOrdersPage() {
             Active Subscriptions & Meal Plans
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 mt-1 font-normal">
-            Manage your active meal subscriptions, weekday delivery calendar, invoices, and auto-renew preferences.
+            Manage your active meal subscriptions, invoices, and auto-renew preferences.
           </p>
         </div>
 
@@ -200,19 +252,36 @@ export default function SubscriptionsOrdersPage() {
                       <span className="font-oswald text-sm font-bold uppercase text-neutral-900 truncate">
                         {getPackageName(sub)}
                       </span>
-                      <span
-                        className={`font-oswald text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${isActive
-                            ? "bg-emerald-50 text-[#15803D] border border-emerald-200"
-                            : "bg-slate-100 text-slate-600 border border-slate-200"
-                          }`}
-                      >
-                        {sub.status || "ACTIVE"}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isCustomSubscription(sub) ? (
+                          <span className="font-oswald text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                            Custom
+                          </span>
+                        ) : (
+                          <span className="font-oswald text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200">
+                            Fixed
+                          </span>
+                        )}
+                        <span
+                          className={`font-oswald text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${isActive
+                              ? "bg-emerald-50 text-[#15803D] border border-emerald-200"
+                              : "bg-slate-100 text-slate-600 border border-slate-200"
+                            }`}
+                        >
+                          {sub.status || "ACTIVE"}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="text-xs text-slate-500 space-y-1">
                       <p>Started: {formatDate(sub.started_at || sub.created_at)}</p>
                       <p>Valid Until: {formatDate(sub.valid_until)}</p>
+                      {isCustomSubscription(sub) && (
+                        <p>
+                          Days: <strong className="text-neutral-900">{sub.scheduled_days ?? 0}</strong> scheduled /{" "}
+                          <strong className="text-neutral-900">{sub.purchased_days ?? 0}</strong> purchased
+                        </p>
+                      )}
                     </div>
 
                     <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs gap-2">
@@ -254,85 +323,7 @@ export default function SubscriptionsOrdersPage() {
                 );
               })}
             </div>
-<<<<<<< HEAD
-=======
-          </div>
 
-          {/* Right Column: Weekly Meal Delivery Schedule Calendar */}
-          <div className="lg:col-span-7 space-y-4">
-            <div className="rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-7 shadow-sm space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-emerald-50 text-[#15803D]">
-                    <Calendar className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-oswald text-base sm:text-lg font-bold uppercase text-neutral-900 tracking-tight">
-                      Weekly Meal Schedule
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Monday to Friday Morning Breakfast Deliveries
-                    </p>
-                  </div>
-                </div>
-
-                <span className="font-oswald text-xs font-bold uppercase tracking-wider text-[#15803D] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-2xs">
-                  Week 3 of 4
-                </span>
-              </div>
-
-              {/* Schedule Days List */}
-              <div className="space-y-3">
-                {weekSchedule.map((item, idx) => {
-                  const isDelivered = item.status === "Delivered";
-                  return (
-                    <div
-                      key={idx}
-                      className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-oswald text-xs font-bold uppercase tracking-wider text-neutral-900">{item.day}</span>
-                          <span
-                            className={`font-oswald text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${isDelivered
-                                ? "bg-emerald-100/80 text-[#15803D]"
-                                : "bg-blue-100/80 text-blue-700"
-                              }`}
-                          >
-                            {item.status}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-700 font-medium">
-                          {item.meal}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0 text-xs">
-                        <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 text-slate-600 font-medium">
-                          {item.calories}
-                        </span>
-                        <span className="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-[#15803D] font-oswald font-bold uppercase tracking-wide">
-                          {item.protein} Protein
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Delivery Guidelines Box */}
-              <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-xs text-slate-700 space-y-1.5">
-                <div className="flex items-center gap-1.5 text-[#15803D] font-oswald font-bold uppercase tracking-wider text-xs">
-                  <Zap className="w-4 h-4 text-[#36D068]" />
-                  <span>Doorstep Delivery Schedule</span>
-                </div>
-                <p className="text-[11px] text-slate-600 leading-relaxed">
-                  Morning deliveries occur between 7:00 AM and 8:30 AM daily. Any delivery address changes or skip requests must be confirmed before 6:00 PM the previous day.
-                </p>
-              </div>
-            </div>
-          </div>
->>>>>>> contactFormSetup
         </div>
       )}
 

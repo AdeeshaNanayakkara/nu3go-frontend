@@ -21,6 +21,7 @@ import {
 } from "@/services/api/menu.service";
 import type { PaginationMeta } from "@/services/api/admin.service";
 import { formatUserFriendlyError } from "@/utils/response-handler";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import {
   Package as PackageIcon,
@@ -165,17 +166,20 @@ export default function AdminPackagesPage() {
     { key: "FRIDAY", label: "Fri" },
   ];
 
-  type SlotType = "meal_id" | "optional_meal_id" | "emergency_meal_change_id" | "emergency_optional_meal_change_id";
+  type SlotType = "meal_id" | "emergency_meal_change_id";
+  type DaySlots = Record<SlotType, string> & { optional_meal_ids: string[] };
 
-  const emptySlots = (): Record<MenuDay, Record<SlotType, string>> => ({
-    MONDAY: { meal_id: "", optional_meal_id: "", emergency_meal_change_id: "", emergency_optional_meal_change_id: "" },
-    TUESDAY: { meal_id: "", optional_meal_id: "", emergency_meal_change_id: "", emergency_optional_meal_change_id: "" },
-    WEDNESDAY: { meal_id: "", optional_meal_id: "", emergency_meal_change_id: "", emergency_optional_meal_change_id: "" },
-    THURSDAY: { meal_id: "", optional_meal_id: "", emergency_meal_change_id: "", emergency_optional_meal_change_id: "" },
-    FRIDAY: { meal_id: "", optional_meal_id: "", emergency_meal_change_id: "", emergency_optional_meal_change_id: "" },
+  const emptyDay = (): DaySlots => ({ meal_id: "", emergency_meal_change_id: "", optional_meal_ids: [] });
+
+  const emptySlots = (): Record<MenuDay, DaySlots> => ({
+    MONDAY: emptyDay(),
+    TUESDAY: emptyDay(),
+    WEDNESDAY: emptyDay(),
+    THURSDAY: emptyDay(),
+    FRIDAY: emptyDay(),
   });
 
-  const [menuSlots, setMenuSlots] = useState<Record<MenuDay, Record<SlotType, string>>>(emptySlots);
+  const [menuSlots, setMenuSlots] = useState<Record<MenuDay, DaySlots>>(emptySlots);
 
   // Toggle state to show emergency meal slots on demand per day
   const [showEmergencySlots, setShowEmergencySlots] = useState<Record<MenuDay, boolean>>({
@@ -190,18 +194,6 @@ export default function AdminPackagesPage() {
   const [deletingMenu, setDeletingMenu] = useState<MenuItem | null>(null);
   const [isDeletingMenu, setIsDeletingMenu] = useState(false);
 
-  // System Toast Notification State
-  const [toastMessage, setToastMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-
-  const showToast = useCallback((text: string, type: "success" | "error" = "success") => {
-    setToastMessage({ type, text });
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 4000);
-  }, []);
 
 
   // ─── API FETCH HANDLERS ───
@@ -492,7 +484,7 @@ export default function AdminPackagesPage() {
       }
 
       setIsPackageModalOpen(false);
-      showToast(editingPackage ? "Package updated successfully!" : "Package created successfully!", "success");
+      toast.success(editingPackage ? "Package updated successfully!" : "Package created successfully!");
       fetchPackages();
     } catch (err: unknown) {
       console.error("[AdminPackagesPage] Package save error:", err);
@@ -511,11 +503,11 @@ export default function AdminPackagesPage() {
         setSelectedPackageForMenus(null);
       }
       setDeletingPackage(null);
-      showToast("Package deleted successfully!", "success");
+      toast.success("Package deleted successfully!");
       fetchPackages();
     } catch (err: unknown) {
       console.error("[AdminPackagesPage] Delete package error:", err);
-      showToast(formatUserFriendlyError(err, { fallback: "Failed to delete package." }), "error");
+      toast.error(formatUserFriendlyError(err, { fallback: "Failed to delete package." }));
     } finally {
       setIsDeletingPackage(false);
     }
@@ -676,11 +668,12 @@ export default function AdminPackagesPage() {
       const uploadedUrl = await mealService.uploadMealImage(file);
       setMealFormImageUrl(uploadedUrl);
       setMealUploadSuccess(true);
+      toast.success("Meal image uploaded successfully!");
     } catch (err: unknown) {
       console.error("[AdminPackagesPage] Image upload failed:", err);
-      setMealModalError(
-        err instanceof Error ? err.message : "Failed to upload meal image."
-      );
+      const uploadMsg = err instanceof Error ? err.message : "Failed to upload meal image.";
+      setMealModalError(uploadMsg);
+      toast.error(uploadMsg);
     } finally {
       setIsUploadingMealImage(false);
     }
@@ -716,7 +709,7 @@ export default function AdminPackagesPage() {
       }
 
       setIsMealModalOpen(false);
-      showToast(editingMeal ? "Meal updated successfully!" : "Meal created successfully!", "success");
+      toast.success(editingMeal ? "Meal updated successfully!" : "Meal created successfully!");
       fetchMeals();
     } catch (err: unknown) {
       console.error("[AdminPackagesPage] Meal save error:", err);
@@ -734,11 +727,11 @@ export default function AdminPackagesPage() {
     try {
       await mealService.deleteMeal(deletingMeal.id);
       setDeletingMeal(null);
-      showToast("Meal deleted successfully!", "success");
+      toast.success("Meal deleted successfully!");
       fetchMeals();
     } catch (err: unknown) {
       console.error("[AdminPackagesPage] Delete meal error:", err);
-      showToast(err instanceof Error ? err.message : "Failed to delete meal.", "error");
+      toast.error(err instanceof Error ? err.message : "Failed to delete meal.");
     } finally {
       setIsDeletingMeal(false);
     }
@@ -802,12 +795,12 @@ export default function AdminPackagesPage() {
       menu.meals.forEach((slot) => {
         if (slot.day && newSlots[slot.day]) {
           newSlots[slot.day].meal_id = slot.meal_id || "";
-          newSlots[slot.day].optional_meal_id = slot.optional_meal_id || "";
+          newSlots[slot.day].optional_meal_ids =
+            slot.optional_meal_ids ?? slot.optional_meals?.map((m) => m.id) ?? [];
           newSlots[slot.day].emergency_meal_change_id = slot.emergency_meal_change_id || "";
-          newSlots[slot.day].emergency_optional_meal_change_id = slot.emergency_optional_meal_change_id || "";
 
-          // If emergency meals exist on this slot, automatically expand emergency boxes
-          if (slot.emergency_meal_change_id || slot.emergency_optional_meal_change_id) {
+          // If an emergency meal exists on this slot, automatically expand the emergency box
+          if (slot.emergency_meal_change_id) {
             newEmergencyShows[slot.day] = true;
           }
         }
@@ -833,6 +826,27 @@ export default function AdminPackagesPage() {
     }));
   };
 
+  const handleDropOptionalMeal = (day: MenuDay, e: React.DragEvent) => {
+    e.preventDefault();
+    const droppedMealId = e.dataTransfer.getData("meal_id") || e.dataTransfer.getData("text/plain");
+    if (!droppedMealId) return;
+
+    setMenuSlots((prev) => {
+      if (prev[day].optional_meal_ids.includes(droppedMealId)) return prev;
+      return {
+        ...prev,
+        [day]: { ...prev[day], optional_meal_ids: [...prev[day].optional_meal_ids, droppedMealId] },
+      };
+    });
+  };
+
+  const handleRemoveOptionalMeal = (day: MenuDay, mealId: string) => {
+    setMenuSlots((prev) => ({
+      ...prev,
+      [day]: { ...prev[day], optional_meal_ids: prev[day].optional_meal_ids.filter((id) => id !== mealId) },
+    }));
+  };
+
   const handleClearSlot = (day: MenuDay, slotType: SlotType) => {
     setMenuSlots((prev) => ({
       ...prev,
@@ -853,8 +867,8 @@ export default function AdminPackagesPage() {
   const handleMenuBuilderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!menuFormName.trim()) {
-      setMenuBuilderError("Menu name is required (e.g. Standard Week 1).");
+    if (menuFormName.trim().length < 2) {
+      setMenuBuilderError("Menu name is required (at least 2 characters, e.g. Standard Week 1).");
       return;
     }
 
@@ -877,14 +891,11 @@ export default function AdminPackagesPage() {
         day: d.key,
         meal_id: s.meal_id,
       };
-      if (s.optional_meal_id?.trim()) {
-        slotObj.optional_meal_id = s.optional_meal_id.trim();
+      if (s.optional_meal_ids.length > 0) {
+        slotObj.optional_meal_ids = s.optional_meal_ids;
       }
       if (s.emergency_meal_change_id?.trim()) {
         slotObj.emergency_meal_change_id = s.emergency_meal_change_id.trim();
-      }
-      if (s.emergency_optional_meal_change_id?.trim()) {
-        slotObj.emergency_optional_meal_change_id = s.emergency_optional_meal_change_id.trim();
       }
       return slotObj;
     });
@@ -896,9 +907,8 @@ export default function AdminPackagesPage() {
       let saved: MenuItem;
       if (editingMenu) {
         saved = await menuService.updateMenu(editingMenu.id, {
-          package_id: selectedPackageForMenus.id,
           name: menuFormName.trim(),
-          sequence: Number(menuFormSequence) || 1,
+          sequence: Math.min(3, Math.max(1, Number(menuFormSequence) || 1)),
           meals: mealsPayload,
         });
       } else {
@@ -914,12 +924,12 @@ export default function AdminPackagesPage() {
       const updatedMenus = await menuService.getMenus(selectedPackageForMenus.id);
       setPackageMenus(updatedMenus);
       setEditingMenu(saved);
-      showToast(editingMenu ? "Menu schedule updated successfully!" : "Menu schedule created successfully!", "success");
+      toast.success(editingMenu ? "Menu schedule updated successfully!" : "Menu schedule created successfully!");
     } catch (err: unknown) {
       console.error("[AdminPackagesPage] Save menu error:", err);
       const errMsg = err instanceof Error ? err.message : "Failed to save menu.";
       setMenuBuilderError(errMsg);
-      showToast(errMsg, "error");
+      toast.error(errMsg);
     } finally {
       setIsSavingMenu(false);
     }
@@ -931,7 +941,7 @@ export default function AdminPackagesPage() {
     try {
       await menuService.deleteMenu(deletingMenu.id);
       setDeletingMenu(null);
-      showToast("Menu deleted successfully!", "success");
+      toast.success("Menu deleted successfully!");
       const updated = await menuService.getMenus(selectedPackageForMenus.id);
       setPackageMenus(updated);
       if (updated.length > 0) {
@@ -941,7 +951,7 @@ export default function AdminPackagesPage() {
       }
     } catch (err: unknown) {
       console.error("[AdminPackagesPage] Delete menu error:", err);
-      showToast(err instanceof Error ? err.message : "Failed to delete menu.", "error");
+      toast.error(err instanceof Error ? err.message : "Failed to delete menu.");
     } finally {
       setIsDeletingMenu(false);
     }
@@ -950,30 +960,6 @@ export default function AdminPackagesPage() {
 
   return (
     <div className={cn('flex', 'flex-col', 'h-[calc(100vh-6rem)]', 'min-h-0', 'space-y-3', 'font-poppins', 'text-slate-900', 'overflow-hidden', 'relative')}>
-      {/* ─── SYSTEM TOAST NOTIFICATION OVERLAY ─── */}
-      {toastMessage && (
-        <div
-          className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-semibold animate-in slide-in-from-top-3 fade-in duration-200 ${toastMessage.type === "success"
-              ? "bg-[#36D068] text-white border-[#2ca752]"
-              : "bg-red-600 text-white border-red-700"
-            }`}
-        >
-          {toastMessage.type === "success" ? (
-            <CheckCircle2 className={cn('w-4', 'h-4', 'shrink-0', 'text-white')} />
-          ) : (
-            <AlertCircle className={cn('w-4', 'h-4', 'shrink-0', 'text-white')} />
-          )}
-          <span>{toastMessage.text}</span>
-          <button
-            type="button"
-            onClick={() => setToastMessage(null)}
-            className={cn('ml-2', 'p-0.5', 'hover:bg-white/20', 'rounded-lg', 'cursor-pointer')}
-          >
-            <X className={cn('w-3.5', 'h-3.5')} />
-          </button>
-        </div>
-      )}
-
       {/* Top Header Banner */}
       <div className={cn('flex', 'flex-col', 'sm:flex-row', 'sm:items-center', 'justify-between', 'gap-4', 'bg-white', 'border', 'border-slate-200/80', 'p-6', 'rounded-3xl', 'shadow-sm', 'shrink-0')}>
         <div>
@@ -1116,16 +1102,15 @@ export default function AdminPackagesPage() {
                           await Promise.all(
                             reorderedList.map((m) =>
                               menuService.updateMenu(m.id, {
-                                package_id: selectedPackageForMenus.id,
                                 name: m.name,
                                 sequence: m.sequence,
                               })
                             )
                           );
-                          showToast("Menu positions reordered successfully!", "success");
+                          toast.success("Menu positions reordered successfully!");
                         } catch (err) {
                           console.error("[AdminPackagesPage] Error updating menu sequence:", err);
-                          showToast(formatUserFriendlyError(err, { fallback: "Failed to update menu position." }), "error");
+                          toast.error(formatUserFriendlyError(err, { fallback: "Failed to update menu position." }));
                         }
                       }}
                       onClick={() => selectMenuToEdit(menu)}
@@ -1215,8 +1200,9 @@ export default function AdminPackagesPage() {
                       <input
                         type="number"
                         min={1}
+                        max={3}
                         value={menuFormSequence}
-                        onChange={(e) => setMenuFormSequence(Math.max(1, parseInt(e.target.value) || 1))}
+                        onChange={(e) => setMenuFormSequence(Math.min(3, Math.max(1, parseInt(e.target.value) || 1)))}
                         className="w-16 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-center text-slate-900 focus:outline-none focus:border-[#36D068]"
                         title="Sequence position number (1, 2, 3)"
                       />
@@ -1324,8 +1310,60 @@ export default function AdminPackagesPage() {
                             {/* 1. Main Meal (Mandatory) */}
                             {renderSlotDropZone("meal_id", "Main Meal", true, "border-emerald-200 bg-emerald-50/30")}
 
-                            {/* 2. Optional Meal */}
-                            {renderSlotDropZone("optional_meal_id", "Optional Meal", false, "border-blue-200 bg-blue-50/30")}
+                            {/* 2. Optional Meals (one or more) */}
+                            <div
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => handleDropOptionalMeal(d.key, e)}
+                              className={`border-2 rounded-xl p-2 transition-all min-h-[60px] flex flex-col gap-1 ${daySlots.optional_meal_ids.length > 0
+                                ? "bg-white border-solid border-[#36D068] shadow-3xs"
+                                : "border-dashed border-blue-200 bg-blue-50/30 hover:border-[#36D068]"
+                                }`}
+                            >
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-600">
+                                  Optional Meals
+                                </span>
+                                {daySlots.optional_meal_ids.length > 0 && (
+                                  <span className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-1.5 rounded-full">
+                                    {daySlots.optional_meal_ids.length}
+                                  </span>
+                                )}
+                              </div>
+
+                              {daySlots.optional_meal_ids.map((optId) => {
+                                const optMeal = mealsMap.get(optId);
+                                return (
+                                  <div
+                                    key={optId}
+                                    className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-lg border border-slate-200/60 min-w-0"
+                                  >
+                                    <div className="w-5 h-5 rounded-md bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center text-slate-400">
+                                      {optMeal?.image_url ? (
+                                        /* eslint-disable-next-line @next/next/no-img-element */
+                                        <img src={optMeal.image_url} alt={optMeal.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <UtensilsCrossed className="w-3 h-3" />
+                                      )}
+                                    </div>
+                                    <span className="text-[10px] font-bold text-slate-900 truncate leading-tight flex-1">
+                                      {optMeal?.name || "Unknown meal"}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveOptionalMeal(d.key, optId)}
+                                      className="text-slate-400 hover:text-red-600 p-0.5 cursor-pointer shrink-0"
+                                      title="Remove optional meal"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+
+                              <div className="py-1 px-1.5 bg-slate-50/60 border border-dashed border-slate-200/80 rounded-md text-[9px] text-slate-400 font-medium text-center select-none">
+                                <span>{daySlots.optional_meal_ids.length > 0 ? "+ Drag another meal" : "+ Drag meals here"}</span>
+                              </div>
+                            </div>
 
                             {/* Emergency Meal Toggle Button */}
                             <button
@@ -1340,7 +1378,6 @@ export default function AdminPackagesPage() {
                             {isEmergencyShown && (
                               <div className={cn('space-y-2', 'pt-1', 'border-t', 'border-slate-200/60', 'animate-in', 'fade-in', 'duration-150')}>
                                 {renderSlotDropZone("emergency_meal_change_id", "Emerg. Main", false, "border-amber-200 bg-amber-50/30")}
-                                {renderSlotDropZone("emergency_optional_meal_change_id", "Emerg. Opt.", false, "border-purple-200 bg-purple-50/30")}
                               </div>
                             )}
                           </div>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * DELETE /api/v1/deliveries/[id]
@@ -48,7 +49,7 @@ export async function DELETE(
 
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/v1/deliveries/[id] DELETE] Error:", err);
+    logBffError("[BFF /api/v1/deliveries/[id] DELETE]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error un-marking delivery." } },
       { status: 500 }

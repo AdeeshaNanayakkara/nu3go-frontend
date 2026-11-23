@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
+import { useEffect, useRef, useState } from "react";
+import { useGoogleOAuth, type CredentialResponse } from "@react-oauth/google";
 import { useAuthStore } from "@/store/auth.store";
 import { authService } from "@/services/api/auth.service";
 
@@ -21,6 +20,29 @@ function getSafeRedirectUrl(url: string | null | undefined, fallback: string): s
     return url;
   }
   return fallback;
+}
+
+interface GsiId {
+  initialize(config: { client_id: string; callback: (r: CredentialResponse) => void }): void;
+  renderButton(el: HTMLElement, options: Record<string, unknown>): void;
+}
+
+const getGsi = (): GsiId | undefined =>
+  (window as unknown as { google?: { accounts?: { id?: GsiId } } }).google?.accounts?.id;
+
+// GIS must be initialised once per page load: React StrictMode / remounts would otherwise
+// call initialize() repeatedly. The single callback forwards to whichever button is mounted.
+let gsiInitializedFor: string | null = null;
+let activeCredentialHandler: ((r: CredentialResponse) => void) | null = null;
+
+function ensureGsiInitialized(clientId: string): boolean {
+  const gsi = getGsi();
+  if (!gsi) return false;
+  if (gsiInitializedFor !== clientId) {
+    gsi.initialize({ client_id: clientId, callback: (r) => activeCredentialHandler?.(r) });
+    gsiInitializedFor = clientId;
+  }
+  return true;
 }
 
 /**
@@ -56,20 +78,29 @@ function getSafeRedirectUrl(url: string | null | undefined, fallback: string): s
  *   - GoogleOAuthProvider wrapping the app (via AppProviders)
  *   - Google Cloud Console: production domain in Authorized JavaScript Origins
  */
-export function GoogleSignInButton({
-  label = "Sign in with Google",
+export function GoogleSignInButton(props: GoogleSignInButtonProps) {
+  if (!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
+    return (
+      <p className="text-amber-600 text-xs font-medium text-center w-full">
+        Google Sign-In is not configured (missing NEXT_PUBLIC_GOOGLE_CLIENT_ID).
+      </p>
+    );
+  }
+  return <GoogleSignInButtonInner {...props} />;
+}
+
+function GoogleSignInButtonInner({
   callbackUrl = null,
   preventAdminLogin = false,
   onAdminDetected,
 }: GoogleSignInButtonProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const setUser = useAuthStore((s) => s.setUser);
+  const { clientId, scriptLoadedSuccessfully } = useGoogleOAuth();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const buttonRef = useRef<HTMLDivElement>(null);
 
   const effectiveCallback =
     callbackUrl ||
@@ -104,8 +135,9 @@ export function GoogleSignInButton({
 
       setUser(user);
       if (isAdmin) {
-        const target = effectiveCallback && effectiveCallback.startsWith("/admin") ? effectiveCallback : "/admin";
-        window.location.replace(target);
+        const target = getSafeRedirectUrl(effectiveCallback, "/admin");
+        const safeTarget = target.startsWith("/admin") ? target : "/admin";
+        window.location.replace(safeTarget);
         return;
       }
 
@@ -118,17 +150,36 @@ export function GoogleSignInButton({
     }
   };
 
-  const handleError = () => {
-    setError("Google sign-in failed. Please try again.");
-  };
+  const handleSuccessRef = useRef(handleSuccess);
+  handleSuccessRef.current = handleSuccess;
 
-  if (!clientId) {
-    return (
-      <p className="text-amber-600 text-xs font-medium text-center w-full">
-        Google Sign-In is not configured (missing NEXT_PUBLIC_GOOGLE_CLIENT_ID).
-      </p>
-    );
-  }
+  useEffect(() => {
+    if (!scriptLoadedSuccessfully || isLoading || !buttonRef.current) return;
+    if (!ensureGsiInitialized(clientId)) return;
+
+    const handler = (r: CredentialResponse) => {
+      if (!r?.credential) {
+        setError("Google sign-in failed. Please try again.");
+        return;
+      }
+      void handleSuccessRef.current(r);
+    };
+    activeCredentialHandler = handler;
+
+    getGsi()?.renderButton(buttonRef.current, {
+      type: "standard",
+      theme: "outline",
+      size: "large",
+      text: "signin_with",
+      shape: "rectangular",
+      logo_alignment: "center",
+      width: 350,
+    });
+
+    return () => {
+      if (activeCredentialHandler === handler) activeCredentialHandler = null;
+    };
+  }, [scriptLoadedSuccessfully, isLoading, clientId]);
 
   return (
     <div className="w-full flex flex-col items-center gap-2">
@@ -153,17 +204,7 @@ export function GoogleSignInButton({
          * descendant selectors in globals.css to adjust border-radius / size.
          */
         <div className="gsi-btn-frame flex justify-center w-full">
-          <GoogleLogin
-            onSuccess={handleSuccess}
-            onError={handleError}
-            text="signin_with"
-            shape="rectangular"
-            theme="outline"
-            size="large"
-            logo_alignment="center"
-            width="350"
-            containerProps={{ className: "gsi-btn-container w-full flex justify-center" }}
-          />
+          <div ref={buttonRef} className="gsi-btn-container w-full flex justify-center" />
         </div>
       )}
 

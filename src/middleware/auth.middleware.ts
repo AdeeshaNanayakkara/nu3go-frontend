@@ -1,62 +1,66 @@
 /**
  * Auth middleware utilities.
  * Token verification and session extraction logic.
- * Used by the root middleware.ts file.
+ * Used by the root middleware (proxy.ts).
  *
- * NOTE: This runs on the Edge Runtime — no Node.js-specific APIs allowed.
+ * NOTE: This runs on the Edge Runtime — only Web Crypto / jose APIs allowed.
  */
 
+import { jwtVerify, type JWTPayload } from "jose";
 import { APP_CONFIG } from "@/constants/config";
 import type { NextRequest } from "next/server";
 
-/**
- * Extract the access token from the request cookies.
- */
+let cachedSecret: Uint8Array | null = null;
+
+function getSecret(): Uint8Array | null {
+  if (cachedSecret) return cachedSecret;
+  const raw = process.env.JWT_SECRET;
+  if (!raw) return null;
+  cachedSecret = new TextEncoder().encode(raw);
+  return cachedSecret;
+}
+
 export function getTokenFromRequest(request: NextRequest): string | undefined {
   return request.cookies.get(APP_CONFIG.COOKIES.ACCESS_TOKEN)?.value;
 }
 
-/**
- * Extract the refresh token from the request cookies.
- */
 export function getRefreshTokenFromRequest(request: NextRequest): string | undefined {
   return request.cookies.get(APP_CONFIG.COOKIES.REFRESH_TOKEN)?.value;
 }
 
 /**
- * Check whether a JWT token's `exp` claim is in the past.
- *
- * WARNING: Does NOT verify the signature — only used for routing decisions
- * in middleware. Full verification happens on the backend.
+ * Verify a JWT token's signature AND expiry using `jose`.
+ * Returns the decoded payload on success, null on any failure.
  */
-export function isTokenExpired(token: string): boolean {
+async function verifyToken(token: string): Promise<JWTPayload | null> {
+  const secret = getSecret();
+  if (!secret) {
+    // No JWT_SECRET configured — fall back to decode-only (dev convenience)
+    return decodeTokenPayload(token) as JWTPayload | null;
+  }
   try {
-    const payload = decodeTokenPayload(token);
-    if (!payload?.exp) return false; // No expiry claim → treat as non-expiring
-    return Date.now() / 1000 > (payload.exp as number);
+    const { payload } = await jwtVerify(token, secret);
+    return payload;
   } catch {
-    return true;
+    return null;
   }
 }
 
 /**
- * Returns true if the request has a structurally valid, non-expired access token.
+ * Returns true if the request has a signature-verified, non-expired access token.
+ * Falls back to decode-only when JWT_SECRET is not set (dev mode).
  */
-export function hasValidToken(request: NextRequest): boolean {
+export async function hasValidToken(request: NextRequest): Promise<boolean> {
   const token = getTokenFromRequest(request);
   if (!token) return false;
 
-  // Basic JWT structure check (3 dot-separated base64 segments)
   const parts = token.split(".");
   if (parts.length !== 3) return false;
 
-  return !isTokenExpired(token);
+  const payload = await verifyToken(token);
+  return payload !== null;
 }
 
-/**
- * Returns true if the request has a refresh token cookie (any non-empty value).
- * Used to decide whether a token refresh attempt is worth making.
- */
 export function hasRefreshToken(request: NextRequest): boolean {
   const token = getRefreshTokenFromRequest(request);
   return !!token && token.length > 0;
@@ -64,9 +68,8 @@ export function hasRefreshToken(request: NextRequest): boolean {
 
 /**
  * Decode JWT payload without verification.
- *
- * WARNING: This does NOT verify the signature. Use only in middleware
- * for routing decisions. Full verification happens on the backend.
+ * Used ONLY after hasValidToken() has already verified the signature,
+ * or as a dev fallback when JWT_SECRET is unset.
  */
 export function decodeTokenPayload(
   token: string,
@@ -77,5 +80,18 @@ export function decodeTokenPayload(
     return JSON.parse(decoded);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Check whether a JWT token's `exp` claim is in the past.
+ */
+export function isTokenExpired(token: string): boolean {
+  try {
+    const payload = decodeTokenPayload(token);
+    if (!payload?.exp) return false;
+    return Date.now() / 1000 > (payload.exp as number);
+  } catch {
+    return true;
   }
 }

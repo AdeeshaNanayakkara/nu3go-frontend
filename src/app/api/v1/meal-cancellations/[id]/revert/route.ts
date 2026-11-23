@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * POST /api/v1/meal-cancellations/[id]/revert — Admin: Revert a meal cancellation
@@ -32,7 +33,7 @@ export async function POST(
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/v1/meal-cancellations/[id]/revert POST] Error:", err);
+    logBffError("[BFF /api/v1/meal-cancellations/[id]/revert POST]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error reverting meal cancellation." } },
       { status: 500 }

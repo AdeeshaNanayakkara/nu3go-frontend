@@ -48,9 +48,21 @@ import {
   decodeTokenPayload,
 } from "@/middleware/auth.middleware";
 import { getRouteType, hasRoleAccess } from "@/middleware/rbac.middleware";
+import { ensureCsrfCookie, validateCsrfToken } from "@/middleware/csrf.middleware";
+import { checkRateLimit } from "@/lib/api/rate-limit";
 import { APP_CONFIG } from "@/constants/config";
 import { ROUTES } from "@/constants/routes";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
+
+// ─── Redirect Safety ─────────────────────────────────────────────────────────
+
+function isSafeRedirectPath(url: string): boolean {
+  return url.startsWith("/") && !url.startsWith("//") && !url.startsWith("/\\");
+}
+
+function safeCallbackUrl(pathname: string): string {
+  return isSafeRedirectPath(pathname) ? pathname : "/";
+}
 
 // ─── Edge-Compatible Token Refresh ─────────────────────────────────────────
 
@@ -169,7 +181,7 @@ function buildExpiredSessionRedirect(
   const loginUrl = new URL(loginPath, request.url);
   loginUrl.searchParams.set("reason", "session_expired");
   if (includeCallback) {
-    loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
+    loginUrl.searchParams.set("callbackUrl", safeCallbackUrl(request.nextUrl.pathname));
   }
 
   const response = NextResponse.redirect(loginUrl);
@@ -213,19 +225,39 @@ export async function proxy(
     return NextResponse.next();
   }
 
-  // ── Skip: API routes (BFF handles auth internally) ──
+  // ── API routes — rate-limit auth + enforce CSRF on state-changing methods ──
   if (routeType === "api") {
+    const method = request.method.toUpperCase();
+    const isAuthEndpoint =
+      pathname.startsWith("/api/auth/login") ||
+      pathname.startsWith("/api/auth/register") ||
+      pathname.startsWith("/api/auth/google") ||
+      pathname.startsWith("/api/auth/forgot-password") ||
+      pathname.startsWith("/api/auth/reset-password") ||
+      pathname.startsWith("/api/auth/verify");
+    const isMutating = method !== "GET" && method !== "HEAD" && method !== "OPTIONS";
+
+    if (isMutating && isAuthEndpoint) {
+      const rateLimited = checkRateLimit(request, `auth:${pathname}`, 10, 60_000);
+      if (rateLimited) return rateLimited;
+    }
+
+    if (isMutating && !isAuthEndpoint) {
+      const csrfError = validateCsrfToken(request);
+      if (csrfError) return csrfError;
+    }
+
     return NextResponse.next();
   }
 
   // ── Public routes — always accessible ──
   if (routeType === "public") {
-    return NextResponse.next();
+    return ensureCsrfCookie(request, NextResponse.next());
   }
 
   // ── Auth routes (login, register) — redirect if already authenticated ──
   if (routeType === "auth") {
-    if (hasValidToken(request)) {
+    if (await hasValidToken(request)) {
       const token = request.cookies.get(APP_CONFIG.COOKIES.ACCESS_TOKEN)?.value;
       const payload = decodeTokenPayload(token || "");
       const role = payload?.role as string | undefined;
@@ -233,25 +265,23 @@ export async function proxy(
         role?.toUpperCase() === "ADMIN" ? ROUTES.ADMIN_DASHBOARD : ROUTES.HOME;
       return NextResponse.redirect(new URL(destination, request.url));
     }
-    return NextResponse.next();
+    return ensureCsrfCookie(request, NextResponse.next());
   }
 
   // ── Protected routes (user + admin) ──
-  // Step 1: Check if access token is valid (exists + not expired)
-  if (hasValidToken(request)) {
-    // Token is fine — just run RBAC check
+  // Step 1: Check if access token is valid (signature verified + not expired)
+  if (await hasValidToken(request)) {
     const token = request.cookies.get(APP_CONFIG.COOKIES.ACCESS_TOKEN)!.value;
     const payload = decodeTokenPayload(token);
     const role = payload?.role as string | undefined;
 
     if (!hasRoleAccess(role, routeType)) {
-      // Wrong role — redirect to their correct dashboard
       const destination =
         role?.toUpperCase() === "ADMIN" ? ROUTES.ADMIN_DASHBOARD : ROUTES.DASHBOARD;
       return NextResponse.redirect(new URL(destination, request.url));
     }
 
-    return applyNoCacheHeaders(NextResponse.next());
+    return ensureCsrfCookie(request, applyNoCacheHeaders(NextResponse.next()));
   }
 
   // Step 2: Access token is missing or expired — attempt refresh if we have a refresh token
@@ -273,7 +303,7 @@ export async function proxy(
         return NextResponse.redirect(new URL(destination, request.url));
       }
 
-      return applyNoCacheHeaders(refreshedResponse);
+      return ensureCsrfCookie(request, applyNoCacheHeaders(refreshedResponse));
     }
 
     // Refresh failed (token revoked, backend down, etc.) — force re-login
@@ -283,7 +313,7 @@ export async function proxy(
   // Step 3: No tokens at all — redirect to appropriate login portal
   const targetLoginPath = routeType === "admin" ? ROUTES.ADMIN_LOGIN : ROUTES.LOGIN;
   const loginUrl = new URL(targetLoginPath, request.url);
-  loginUrl.searchParams.set("callbackUrl", pathname);
+  loginUrl.searchParams.set("callbackUrl", safeCallbackUrl(pathname));
   return NextResponse.redirect(loginUrl);
 }
 

@@ -1,46 +1,22 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
+import { registerSchema } from "@/schemas/auth.schema";
+import { parseBody } from "@/lib/api/validate";
+import { logBffError } from "@/lib/api/safe-log";
 
-/**
- * POST /api/auth/register
- *
- * BFF proxy:
- *  1. Forwards { email, password, role? } to backend POST /auth/register
- *  2. Registration creates account and backend sends OTP to email for verification
- *  3. Returns the user object — client must then verify OTP at /auth/verify
- */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { first_name, last_name, email, phone, address, city, password, role } = body;
+    const parsed = parseBody(body, registerSchema);
+    if ("error" in parsed) return parsed.error;
 
-    if (!first_name || !last_name || !email || !phone || !address || !city || !password) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: { message: "All fields (first name, last name, email, phone, address, city, password) are required." },
-        },
-        { status: 400 }
-      );
-    }
-
-    // Build backend payload — role is optional (defaults to CUSTOMER)
-    const payload: Record<string, string> = {
-      first_name,
-      last_name,
-      email,
-      phone,
-      address,
-      city,
-      password,
-    };
-    if (role) payload.role = role;
+    const { first_name, last_name, email, phone, address, city, password } = parsed.data;
 
     const backendRes = await fetch(BACKEND_ENDPOINTS.AUTH.REGISTER, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ first_name, last_name, email, phone, address, city, password }),
     });
 
     const data = await backendRes.json();
@@ -59,10 +35,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: data.data, // UserRes — contains id, email, role, is_verified
+      data: data.data,
     });
   } catch (err) {
-    console.error("[BFF /api/auth/register] Error:", err);
+    logBffError("[BFF /api/auth/register]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error. Please try again later." } },
       { status: 500 }

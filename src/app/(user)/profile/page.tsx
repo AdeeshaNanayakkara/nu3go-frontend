@@ -3,6 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { userService, type BillingProfileRes } from "@/services/api/user.service";
+import { toast } from "@/lib/toast";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { ProfileMobileView, type ProfileValues } from "@/components/profile/profile-mobile-view";
 import {
   User,
   Mail,
@@ -21,13 +24,32 @@ import {
 } from "lucide-react";
 
 export default function UserProfilePage() {
-  const { user, setUser } = useAuthStore();
+  const { user, setUser, logout } = useAuthStore();
+  const isMobile = useIsMobile();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
+
+  // Last values loaded from / saved to the server — used to detect unsaved edits
+  const [saved, setSaved] = useState<ProfileValues>({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    address: "",
+    city: "",
+  });
+
+  const applyProfile = useCallback((v: ProfileValues) => {
+    setFirstName(v.firstName);
+    setLastName(v.lastName);
+    setPhone(v.phone);
+    setAddress(v.address);
+    setCity(v.city);
+    setSaved(v);
+  }, []);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -41,16 +63,23 @@ export default function UserProfilePage() {
     try {
       const data: BillingProfileRes | null = await userService.getBillingProfile();
       if (data) {
-        setFirstName(data.first_name || "");
-        setLastName(data.last_name || "");
-        setPhone(data.phone || "");
-        setAddress(data.address || "");
-        setCity(data.city || "");
+        applyProfile({
+          firstName: data.first_name || "",
+          lastName: data.last_name || "",
+          phone: data.phone || "",
+          address: data.address || "",
+          city: data.city || "",
+        });
       } else if (user?.email) {
         // Fallback name guessing if profile has not been populated yet
         const parts = user.email.split("@")[0].split(".");
-        setFirstName(parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : "Nu3Go");
-        setLastName(parts[1] ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1) : "Customer");
+        applyProfile({
+          firstName: parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : "Nu3Go",
+          lastName: parts[1] ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1) : "Customer",
+          phone: "",
+          address: "",
+          city: "",
+        });
       }
     } catch (err) {
       console.error("Failed to load user profile:", err);
@@ -58,7 +87,7 @@ export default function UserProfilePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, applyProfile]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -67,30 +96,35 @@ export default function UserProfilePage() {
     return () => clearTimeout(timer);
   }, [fetchProfile]);
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveProfile = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
 
+    const fail = (msg: string) => {
+      setErrorMsg(msg);
+      toast.error(msg);
+    };
+
     // Validation matching backend /api/v1/me/profile schema
     if (!firstName.trim()) {
-      setErrorMsg("First name is required.");
+      fail("First name is required.");
       return;
     }
     if (!lastName.trim()) {
-      setErrorMsg("Last name is required.");
+      fail("Last name is required.");
       return;
     }
     if (!phone.trim() || phone.trim().length < 7) {
-      setErrorMsg("Please enter a valid phone number (at least 7 digits).");
+      fail("Please enter a valid phone number (at least 7 digits).");
       return;
     }
     if (!address.trim() || address.trim().length < 3) {
-      setErrorMsg("Street address is required (at least 3 characters).");
+      fail("Street address is required (at least 3 characters).");
       return;
     }
     if (!city.trim() || city.trim().length < 2) {
-      setErrorMsg("City is required (at least 2 characters).");
+      fail("City is required (at least 2 characters).");
       return;
     }
 
@@ -105,13 +139,13 @@ export default function UserProfilePage() {
         city: city.trim(),
       });
 
-      if (updated) {
-        if (updated.first_name) setFirstName(updated.first_name);
-        if (updated.last_name) setLastName(updated.last_name);
-        if (updated.phone) setPhone(updated.phone);
-        if (updated.address) setAddress(updated.address);
-        if (updated.city) setCity(updated.city);
-      }
+      applyProfile({
+        firstName: updated?.first_name || firstName.trim(),
+        lastName: updated?.last_name || lastName.trim(),
+        phone: updated?.phone || phone.trim(),
+        address: updated?.address || address.trim(),
+        city: updated?.city || city.trim(),
+      });
 
       if (user) {
         setUser({
@@ -120,8 +154,7 @@ export default function UserProfilePage() {
         });
       }
 
-      setSuccessMsg("Profile details updated successfully via PUT /api/v1/me/profile!");
-      setTimeout(() => setSuccessMsg(null), 4000);
+      toast.success("Profile details updated successfully!");
     } catch (err: unknown) {
       console.error("Failed to update profile:", err);
       const msg =
@@ -131,6 +164,7 @@ export default function UserProfilePage() {
           ? err.message
           : "Failed to update profile. Please try again.";
       setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setIsSaving(false);
     }
@@ -218,6 +252,43 @@ export default function UserProfilePage() {
   // Circular gauge circumference for r=38
   const strokeCircumference = 238.76;
   const strokeOffset = strokeCircumference - (strokeCircumference * completionPercentage) / 100;
+
+  if (isMobile === null) {
+    return <div className="h-64 animate-pulse rounded-3xl bg-slate-200/60" aria-busy="true" />;
+  }
+
+  if (isMobile) {
+    const values: ProfileValues = { firstName, lastName, phone, address, city };
+    const setters: Record<keyof ProfileValues, (v: string) => void> = {
+      firstName: setFirstName,
+      lastName: setLastName,
+      phone: setPhone,
+      address: setAddress,
+      city: setCity,
+    };
+    const isDirty = (Object.keys(values) as (keyof ProfileValues)[]).some(
+      (k) => values[k].trim() !== saved[k].trim(),
+    );
+
+    return (
+      <ProfileMobileView
+        email={user?.email || ""}
+        values={values}
+        onChange={(field, value) => setters[field](value)}
+        isDirty={isDirty}
+        isLoading={isLoading}
+        isSaving={isSaving}
+        errorMsg={errorMsg}
+        completion={{ percentage: completionPercentage, completed: completedCount, total: totalCount }}
+        onSave={() => handleSaveProfile()}
+        onRefresh={fetchProfile}
+        onLogout={async () => {
+          await logout();
+          window.location.replace("/");
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300 max-w-4xl font-poppins">

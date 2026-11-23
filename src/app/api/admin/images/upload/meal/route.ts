@@ -2,15 +2,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
-/**
- * POST /api/admin/images/upload/meal
- *
- * BFF proxy:
- *  1. Receives multipart/form-data containing the `image` file
- *  2. Forwards the form data to backend POST /api/v1/images/upload/meal with Authorization header
- *  3. Returns uploaded image URL payload ({ data: { url: string } })
- */
+const MAX_SIZE = APP_CONFIG.MAX_FILE_SIZE;
+const ALLOWED_TYPES = APP_CONFIG.ACCEPTED_IMAGE_TYPES as readonly string[];
+
 export async function POST(request: NextRequest) {
   try {
     const accessToken = request.cookies.get(APP_CONFIG.COOKIES.ACCESS_TOKEN)?.value;
@@ -23,6 +19,28 @@ export async function POST(request: NextRequest) {
     }
 
     const formData = await request.formData();
+    const file = formData.get("image");
+
+    if (!file || !(file instanceof Blob)) {
+      return NextResponse.json(
+        { success: false, error: { message: "No image file provided." } },
+        { status: 400 },
+      );
+    }
+
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json(
+        { success: false, error: { message: `File exceeds the ${MAX_SIZE / 1024 / 1024}MB limit.` } },
+        { status: 400 },
+      );
+    }
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        { success: false, error: { message: `File type "${file.type}" is not allowed. Accepted: ${ALLOWED_TYPES.join(", ")}.` } },
+        { status: 400 },
+      );
+    }
 
     const backendRes = await fetch(BACKEND_ENDPOINTS.IMAGES.UPLOAD_MEAL, {
       method: "POST",
@@ -35,7 +53,7 @@ export async function POST(request: NextRequest) {
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/admin/images/upload/meal] Error:", err);
+    logBffError("[BFF /api/admin/images/upload/meal]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error uploading image." } },
       { status: 500 }

@@ -2,29 +2,18 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { loginSchema } from "@/schemas/auth.schema";
+import { parseBody } from "@/lib/api/validate";
+import { logBffError } from "@/lib/api/safe-log";
 
-/**
- * POST /api/auth/login
- *
- * BFF (Backend-for-Frontend) proxy:
- *  1. Forwards { email, password } to the real backend POST /auth/login
- *  2. Extracts access_token, refresh_token, and user from the response
- *  3. Stores tokens in HttpOnly, Secure cookies (never exposed to JS)
- *  4. Returns user object to the client (no tokens in JSON body)
- */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password } = body;
+    const parsed = parseBody(body, loginSchema);
+    if ("error" in parsed) return parsed.error;
 
-    if (!email || !password) {
-      return NextResponse.json(
-        { success: false, error: { message: "Email and password are required." } },
-        { status: 400 }
-      );
-    }
+    const { email, password } = parsed.data;
 
-    // Forward to the real backend
     const backendRes = await fetch(BACKEND_ENDPOINTS.AUTH.LOGIN, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -54,7 +43,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build response — return user info but NOT tokens in JSON
     const response = NextResponse.json({
       success: true,
       data: { user },
@@ -62,13 +50,12 @@ export async function POST(request: NextRequest) {
 
     const isProduction = process.env.NODE_ENV === "production";
 
-    // Set HttpOnly cookies for secure token storage
     response.cookies.set(APP_CONFIG.COOKIES.ACCESS_TOKEN, access_token, {
       httpOnly: true,
       secure: isProduction,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60, // 1 hour
+      maxAge: 60 * 60,
     });
 
     if (refresh_token) {
@@ -77,13 +64,13 @@ export async function POST(request: NextRequest) {
         secure: isProduction,
         sameSite: "lax",
         path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 7 days
+        maxAge: 60 * 60 * 24 * 7,
       });
     }
 
     return response;
   } catch (err) {
-    console.error("[BFF /api/auth/login] Error:", err);
+    logBffError("[BFF /api/auth/login]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error. Please try again later." } },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * DELETE /api/admin/discounts/[id]/packages/[packageId] — Unassign a package from a discount
@@ -35,7 +36,7 @@ export async function DELETE(
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/admin/discounts/[id]/packages/[packageId] DELETE] Error:", err);
+    logBffError("[BFF /api/admin/discounts/[id]/packages/[packageId] DELETE]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error unassigning package from discount." } },
       { status: 500 }

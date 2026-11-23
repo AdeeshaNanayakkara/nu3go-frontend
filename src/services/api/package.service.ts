@@ -14,6 +14,7 @@ export interface PublicAssignedPlan {
   type?: "FIXED" | "CUSTOM" | string;
   billing_cycle?: string | null;
   duration_limit: number;
+  max_days?: number;
   price: number;
   return_price?: number;
   active_discount?: ActiveDiscount | null;

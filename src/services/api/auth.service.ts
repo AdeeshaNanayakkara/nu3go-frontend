@@ -36,6 +36,8 @@ export interface AuthServiceResponse<T> {
   error?: { message: string };
 }
 
+import { csrfHeaders } from "@/lib/auth/csrf";
+
 export const authService = {
   /**
    * Login via BFF → backend POST /auth/login
@@ -157,7 +159,11 @@ export const authService = {
    * Also clears HttpOnly cookies.
    */
   async logout(): Promise<void> {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+      headers: csrfHeaders(),
+    });
   },
 
   /**

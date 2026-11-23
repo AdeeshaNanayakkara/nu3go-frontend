@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * POST /api/v1/meal-cancellations — Cancel a meal delivery for a specific date and subscription
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/v1/meal-cancellations POST] Error:", err);
+    logBffError("[BFF /api/v1/meal-cancellations POST]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error cancelling meal." } },
       { status: 500 }
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/v1/meal-cancellations GET] Error:", err);
+    logBffError("[BFF /api/v1/meal-cancellations GET]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error fetching meal cancellations." } },
       { status: 500 }

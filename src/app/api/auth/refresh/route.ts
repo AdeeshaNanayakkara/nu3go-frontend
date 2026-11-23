@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * POST /api/auth/refresh
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (err) {
-    console.error("[BFF /api/auth/refresh] Error:", err);
+    logBffError("[BFF /api/auth/refresh]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error during token refresh." } },
       { status: 500 }

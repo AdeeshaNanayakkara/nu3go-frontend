@@ -2,9 +2,26 @@
  * Backend API base URL and endpoints.
  * All backend routes (including auth) live under the /api/v1 base path.
  */
-export const BACKEND_BASE = (
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://13.201.222.82:80"
-).replace(/\/+$/, "");
+const _rawBackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+if (!_rawBackendUrl && process.env.NODE_ENV === "production") {
+  throw new Error("NEXT_PUBLIC_BACKEND_URL is required in production.");
+}
+export const BACKEND_BASE = (_rawBackendUrl || "http://localhost:3001").replace(
+  /\/+$/,
+  "",
+);
+
+if (
+  process.env.NODE_ENV === "production" &&
+  _rawBackendUrl &&
+  _rawBackendUrl.startsWith("http://")
+) {
+  console.warn(
+    "[SECURITY] NEXT_PUBLIC_BACKEND_URL uses plain HTTP. " +
+      "BFF-to-backend traffic (including tokens) is unencrypted. " +
+      "Use HTTPS in production or ensure both services share a private network.",
+  );
+}
 
 export const API_V1 = `${BACKEND_BASE}/api/v1`;
 export const SWAGGER_DOC_URL = `${BACKEND_BASE}/swagger/index.html#/`;
@@ -128,6 +145,8 @@ export const BACKEND_ENDPOINTS = {
     PAYMENTS: (id: string) => `${API_V1}/subscriptions/${id}/payments`,
     BILLING_HISTORY: (id: string) => `${API_V1}/subscriptions/${id}/billing-history`,
     RETRY_BILLING: (id: string) => `${API_V1}/subscriptions/${id}/retry-billing`,
+    DATES: (id: string) => `${API_V1}/subscriptions/${id}/dates`,
+    DATE_DETAIL: (id: string, date: string) => `${API_V1}/subscriptions/${id}/dates/${date}`,
   },
   MEAL_CANCELLATIONS: {
     CREATE: `${API_V1}/meal-cancellations`,
@@ -153,6 +172,17 @@ export const BACKEND_ENDPOINTS = {
     LIST: `${API_V1}/deliveries`,
     MARK: `${API_V1}/deliveries`,
     UNDO: (id: string) => `${API_V1}/deliveries/${id}`,
+    MEAL_SUMMARY: `${API_V1}/deliveries/meal-summary`,
+  },
+  HOLIDAYS: {
+    LIST: `${API_V1}/holidays`,
+    CREATE: `${API_V1}/holidays`,
+    DETAIL: (id: string) => `${API_V1}/holidays/${id}`,
+    UPDATE: (id: string) => `${API_V1}/holidays/${id}`,
+    DELETE: (id: string) => `${API_V1}/holidays/${id}`,
+    PUBLISH: `${API_V1}/holidays/publications`,
+    IMPACT: `${API_V1}/holidays/impact`,
+    CALENDAR: `${API_V1}/holidays/calendar`,
   },
   ANALYTICS: {
     CUSTOMERS_ENGAGEMENT: `${API_V1}/analytics/customers/engagement`,

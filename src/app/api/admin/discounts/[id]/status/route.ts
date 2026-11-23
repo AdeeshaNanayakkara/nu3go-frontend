@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * PATCH /api/admin/discounts/[id]/status — Toggle active status of a discount
@@ -38,7 +39,7 @@ export async function PATCH(
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/admin/discounts/[id]/status PATCH] Error:", err);
+    logBffError("[BFF /api/admin/discounts/[id]/status PATCH]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error updating discount status." } },
       { status: 500 }

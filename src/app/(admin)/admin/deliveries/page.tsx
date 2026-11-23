@@ -26,19 +26,28 @@ import {
   TrendingUp,
   UtensilsCrossed,
   Layers,
+  ChefHat,
+  Phone,
+  FileText,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   deliveryService,
   type DeliveryListItem,
   type DeliveryPaginationMeta,
+  formatDeliveryType,
+  getCustomerPhone,
 } from "@/services/api/delivery.service";
 import { formatUserFriendlyError } from "@/utils/response-handler";
+import { toast } from "@/lib/toast";
 import { DeliveryPdfModal } from "@/components/admin/delivery-pdf-modal";
+import { exportDeliveriesToExcel } from "@/utils/export-deliveries-excel";
 import { DeliveryOverviewSummary } from "@/components/admin/delivery-overview-summary";
 import { DeliveryForecastView } from "@/components/admin/delivery-forecast-view";
 import { DeliveryTrendView } from "@/components/admin/delivery-trend-view";
 import { DeliveryBreakdownView } from "@/components/admin/delivery-breakdown-view";
 import { DeliveryOptionalMealsView } from "@/components/admin/delivery-optional-meals-view";
+import { DeliveryMealBreakdownView } from "@/components/admin/delivery-meal-breakdown-view";
 
 function formatYMD(d: Date): string {
   const y = d.getFullYear();
@@ -92,6 +101,8 @@ function AdminDeliveriesContent() {
       ? "breakdown"
       : viewQuery === "optional-meals"
       ? "optional-meals"
+      : viewQuery === "meal-breakdown"
+      ? "meal-breakdown"
       : viewQuery === "deliveries"
       ? "deliveries"
       : "overview";
@@ -134,18 +145,6 @@ function AdminDeliveriesContent() {
   // PDF Export Modal State
   const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
 
-  // System Toast / Alert Feedback
-  const [toastMessage, setToastMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-
-  const showToast = useCallback((text: string, type: "success" | "error" = "success") => {
-    setToastMessage({ type, text });
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 4500);
-  }, []);
 
   // Fetch Deliveries
   const fetchDeliveries = useCallback(async () => {
@@ -222,18 +221,17 @@ function AdminDeliveriesContent() {
       });
 
       if (res.marked && res.marked.includes(item.subscription_id)) {
-        showToast(`Delivery for ${item.customer_email} marked as Delivered!`, "success");
+        toast.success(`Delivery for ${item.customer_email} marked as Delivered!`);
       } else if (res.already_marked && res.already_marked.includes(item.subscription_id)) {
-        showToast(`Delivery for ${item.customer_email} was already marked as delivered.`, "success");
+        toast.success(`Delivery for ${item.customer_email} was already marked as delivered.`);
       } else {
-        showToast(`Delivery marked as completed.`, "success");
+        toast.success(`Delivery marked as completed.`);
       }
       fetchDeliveries();
     } catch (err: unknown) {
       console.warn("[AdminDeliveriesPage] Error marking delivery:", err);
-      showToast(
-        formatUserFriendlyError(err, { fallback: "Failed to mark delivery. Please try again." }),
-        "error"
+      toast.error(
+        formatUserFriendlyError(err, { fallback: "Failed to mark delivery. Please try again." })
       );
     } finally {
       setProcessingSubId(null);
@@ -251,14 +249,13 @@ function AdminDeliveriesContent() {
       });
 
       const count = res.marked?.length || selectedSubscriptionIds.length;
-      showToast(`Successfully marked ${count} deliveries as delivered!`, "success");
+      toast.success(`Successfully marked ${count} deliveries as delivered!`);
       setSelectedSubscriptionIds([]);
       fetchDeliveries();
     } catch (err: unknown) {
       console.warn("[AdminDeliveriesPage] Error marking batch deliveries:", err);
-      showToast(
-        formatUserFriendlyError(err, { fallback: "Failed to mark selected deliveries. Please try again." }),
-        "error"
+      toast.error(
+        formatUserFriendlyError(err, { fallback: "Failed to mark selected deliveries. Please try again." })
       );
     } finally {
       setIsBatchMarking(false);
@@ -271,17 +268,15 @@ function AdminDeliveriesContent() {
     setIsUndoing(true);
     try {
       await deliveryService.undoDelivery(undoModalItem.delivery_id);
-      showToast(
-        `Delivery status undone for ${undoModalItem.customer_email}. Returned to Pending.`,
-        "success"
+      toast.success(
+        `Delivery status undone for ${undoModalItem.customer_email}. Returned to Pending.`
       );
       setUndoModalItem(null);
       fetchDeliveries();
     } catch (err: unknown) {
       console.warn("[AdminDeliveriesPage] Error undoing delivery:", err);
-      showToast(
-        formatUserFriendlyError(err, { fallback: "Failed to undo delivery status. Please try again." }),
-        "error"
+      toast.error(
+        formatUserFriendlyError(err, { fallback: "Failed to undo delivery status. Please try again." })
       );
     } finally {
       setIsUndoing(false);
@@ -305,11 +300,13 @@ function AdminDeliveriesContent() {
         const q = searchQuery.toLowerCase();
         const emailMatch = item.customer_email?.toLowerCase().includes(q);
         const nameMatch = (item.customer_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`)?.toLowerCase().includes(q);
-        const phoneMatch = (item.customer_phone || item.mobile || item.phone || item.mobile_number)?.toLowerCase().includes(q);
+        const phoneMatch = (item.customer_phone || item.mobile || item.phone || item.mobile_number || item.user_phone)?.toLowerCase().includes(q);
+        const noteMatch = item.delivery_note?.toLowerCase().includes(q);
+        const typeMatch = item.delivery_type?.toLowerCase().includes(q);
         const addrMatch = item.location_address?.toLowerCase().includes(q);
         const subIdMatch = item.subscription_id?.toLowerCase().includes(q);
         const locIdMatch = item.location_id?.toLowerCase().includes(q);
-        if (!emailMatch && !nameMatch && !phoneMatch && !addrMatch && !subIdMatch && !locIdMatch) {
+        if (!emailMatch && !nameMatch && !phoneMatch && !noteMatch && !typeMatch && !addrMatch && !subIdMatch && !locIdMatch) {
           return false;
         }
       }
@@ -354,29 +351,6 @@ function AdminDeliveriesContent() {
 
   return (
     <div className="space-y-6">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-white font-medium text-sm transition-all animate-in slide-in-from-bottom-2 duration-200 ${
-            toastMessage.type === "success" ? "bg-[#36D068]" : "bg-rose-600"
-          }`}
-        >
-          {toastMessage.type === "success" ? (
-            <CheckCircle2 className="w-5 h-5 shrink-0 text-white" />
-          ) : (
-            <AlertCircle className="w-5 h-5 shrink-0 text-white" />
-          )}
-          <span>{toastMessage.text}</span>
-          <button
-            type="button"
-            onClick={() => setToastMessage(null)}
-            className="ml-2 p-1 hover:bg-white/20 rounded-lg cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
       {/* ─── Header Banner ─── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200/80 p-6 rounded-3xl shadow-sm">
         <div>
@@ -395,6 +369,8 @@ function AdminDeliveriesContent() {
                 ? "Delivery Volume Breakdown"
                 : activeView === "optional-meals"
                 ? "Optional Meal Popularity"
+                : activeView === "meal-breakdown"
+                ? "Meal Preparation Counts"
                 : "Daily Operations"}
             </span>
           </div>
@@ -424,6 +400,11 @@ function AdminDeliveriesContent() {
                 <UtensilsCrossed className="w-7 h-7 text-[#36D068]" />
                 <span>Optional Meal Popularity</span>
               </>
+            ) : activeView === "meal-breakdown" ? (
+              <>
+                <ChefHat className="w-7 h-7 text-[#36D068]" />
+                <span>Meal Breakdown</span>
+              </>
             ) : (
               <>
                 <Truck className="w-7 h-7 text-[#36D068]" />
@@ -442,12 +423,25 @@ function AdminDeliveriesContent() {
               ? "Delivery volume, completion rates, missed meals, and cancellations split by plan type, package, or weekday."
               : activeView === "optional-meals"
               ? "Most requested optional meals for delivery dates, customer recipe swap preferences, and popularity ranking."
+              : activeView === "meal-breakdown"
+              ? "Meal preparation counts per delivery date — menu, optional swaps, and emergency changes. Use for kitchen planning and ingredient ordering."
               : "Live schedule of expected meal deliveries per date. Mark completed deliveries, batch-mark multiple orders, or undo delivery status."}
           </p>
         </div>
 
         {activeView === "deliveries" && (
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => exportDeliveriesToExcel(filteredDeliveries, selectedDate)}
+              disabled={filteredDeliveries.length === 0}
+              className="px-4 py-2.5 rounded-xl bg-white hover:bg-emerald-50/70 text-slate-700 hover:text-emerald-800 font-semibold text-sm transition-all flex items-center gap-2 border border-slate-200/90 hover:border-emerald-300 shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Export Deliveries to Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              <span>Export Excel</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setIsPdfModalOpen(true)}
@@ -479,6 +473,7 @@ function AdminDeliveriesContent() {
           { id: "trend", label: "Trend", icon: TrendingUp },
           { id: "breakdown", label: "Breakdown", icon: Layers },
           { id: "optional-meals", label: "Optional Meals", icon: UtensilsCrossed },
+          { id: "meal-breakdown", label: "Meal Breakdown", icon: ChefHat },
           { id: "deliveries", label: "Deliveries", icon: Truck },
         ].map((tab) => {
           const TabIcon = tab.icon;
@@ -839,7 +834,10 @@ function AdminDeliveriesContent() {
                     </button>
                   </th>
                   <th className="py-3 px-4">Customer</th>
+                  <th className="py-3 px-4">Phone Number</th>
                   <th className="py-3 px-4">Delivery Address</th>
+                  <th className="py-3 px-4 text-center">Delivery Type</th>
+                  <th className="py-3 px-4">Delivery Note</th>
                   <th className="py-3 px-4 text-center">Plan Type</th>
                   <th className="py-3 px-4 text-center">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
@@ -893,6 +891,23 @@ function AdminDeliveriesContent() {
                         </div>
                       </td>
 
+                      {/* Phone Number */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {getCustomerPhone(item) !== "—" ? (
+                          <div className="flex items-center gap-1.5 text-slate-700">
+                            <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <a
+                              href={`tel:${getCustomerPhone(item)}`}
+                              className="font-mono text-xs font-semibold hover:text-[#36D068] hover:underline"
+                            >
+                              {getCustomerPhone(item)}
+                            </a>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs font-mono">—</span>
+                        )}
+                      </td>
+
                       {/* Delivery Address */}
                       <td className="py-3.5 px-4 max-w-xs">
                         <div className="flex items-start gap-1.5 text-slate-700">
@@ -901,6 +916,32 @@ function AdminDeliveriesContent() {
                             {item.location_address || "No delivery address specified"}
                           </span>
                         </div>
+                      </td>
+
+                      {/* Delivery Type */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        {item.delivery_type ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                            <Truck className="w-3 h-3 text-slate-500" />
+                            <span>{formatDeliveryType(item.delivery_type)}</span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
+                      </td>
+
+                      {/* Delivery Note */}
+                      <td className="py-3.5 px-4 max-w-[200px]">
+                        {item.delivery_note?.trim() ? (
+                          <div className="flex items-start gap-1.5 bg-amber-50/70 border border-amber-200/80 rounded-lg p-1.5 text-amber-900">
+                            <FileText className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
+                            <p className="text-[11px] leading-snug line-clamp-2" title={item.delivery_note}>
+                              {item.delivery_note}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs italic">—</span>
+                        )}
                       </td>
 
                       {/* Plan Type */}
@@ -1033,6 +1074,12 @@ function AdminDeliveriesContent() {
         />
       ) : activeView === "optional-meals" ? (
         <DeliveryOptionalMealsView
+          onSwitchToDeliveriesTab={() => {
+            router.push("/admin/deliveries?view=deliveries");
+          }}
+        />
+      ) : activeView === "meal-breakdown" ? (
+        <DeliveryMealBreakdownView
           onSwitchToDeliveriesTab={() => {
             router.push("/admin/deliveries?view=deliveries");
           }}

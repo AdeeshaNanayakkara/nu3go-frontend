@@ -1503,6 +1503,82 @@
                 }
             }
         },
+        "/api/v1/deliveries/meal-summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Counts the meals to prepare for each delivery date in the range (max 31 days), using the deliverable meal per subscription: the customer's optional meal request, else the emergency change, else the scheduled menu meal. Cancelled meals are excluded; already-delivered rows use the meal recorded at delivery. totals aggregates the whole range.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Deliveries"
+                ],
+                "summary": "Admin: Meal preparation counts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "First delivery date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Last delivery date (YYYY-MM-DD), defaults to from",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_delivery.MealSummaryRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/deliveries/{id}": {
             "delete": {
                 "security": [
@@ -2019,7 +2095,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Customers can cancel a specific meal delivery",
+                "description": "Customers can cancel a specific meal delivery. CUSTOM plans: before the cutoff (default 17:00 the day before) the date is released back to the day balance with no wallet refund (outcome DATE_RELEASED); after it the FIXED plan refund tiers apply (outcome CANCELLED). Delivered dates cannot be cancelled.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2665,6 +2741,277 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/menus/packages/{package_id}/schedule": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Pages through the package's weekly menu assignments, newest week first (includes future weeks).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Menus"
+                ],
+                "summary": "Menu rotation history",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Package ID",
+                        "name": "package_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_menu.ListScheduleRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/menus/packages/{package_id}/schedule/current": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the menu in effect for this week and next week for the package. explicit=false means the week inherits an earlier assignment.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Menus"
+                ],
+                "summary": "This week's and next week's menu",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Package ID",
+                        "name": "package_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_menu.ScheduleOverviewRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/menus/packages/{package_id}/schedule/{week_start}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Assigns a menu to the package for the week starting week_start (a Monday). The assignment carries forward to later weeks until another is set. Past weeks cannot be changed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Menus"
+                ],
+                "summary": "Set a package's menu for a week",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Package ID",
+                        "name": "package_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Week start Monday (YYYY-MM-DD)",
+                        "name": "week_start",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Menu",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_menu.SetWeekMenuReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_menu.MenuScheduleRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes the assignment for a future week, so it inherits the previous week's menu again. The current and past weeks cannot be removed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Menus"
+                ],
+                "summary": "Remove a future week's menu assignment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Package ID",
+                        "name": "package_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Week start Monday (YYYY-MM-DD)",
+                        "name": "week_start",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
                         }
@@ -4625,7 +4972,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Initiates a subscription and returns PayHere checkout parameters",
+                "description": "Initiates a subscription and returns PayHere checkout parameters. FIXED plans require location_id. CUSTOM plans require days_count (duration_limit..max_days); dates in locations are optional and can be scheduled later.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4674,6 +5021,55 @@
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/subscriptions/delivery-type-options": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the selectable delivery (hand-over) types with display labels and descriptions.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "List delivery types",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/internal_domain_subscription.DeliveryTypeOptionRes"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
                         }
@@ -4996,6 +5392,753 @@
                 }
             }
         },
+        "/api/v1/subscriptions/{id}/dates": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Schedules delivery dates using the subscription's remaining purchased days. Each date must be before its cutoff (CUSTOM_SCHEDULE_CUTOFF_*) and within the validity period.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Schedule delivery dates (CUSTOM plan)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subscription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dates to schedule",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_subscription.AddDatesReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_subscription.SubscriptionRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/subscriptions/{id}/dates/{date}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes a scheduled date before its cutoff; the day returns to the remaining balance (no wallet refund). After the cutoff use meal cancellation instead.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Unschedule a date (CUSTOM plan)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subscription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Scheduled date (YYYY-MM-DD)",
+                        "name": "date",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_subscription.SubscriptionRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Moves a scheduled delivery date and/or changes its delivery location. Both the current and the new date must be before their cutoff. Past and delivered dates cannot be changed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Move a scheduled date or change its location (CUSTOM plan)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subscription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Scheduled date (YYYY-MM-DD)",
+                        "name": "date",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Changes",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_subscription.UpdateDateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_subscription.SubscriptionRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/subscriptions/{id}/day-purchases": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the extra-day purchases of a subscription, newest first",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "List day top-ups (CUSTOM plan)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subscription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_subscription.ListDayPurchasesRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Buys extra days at the per-day price saved at checkout, up to the plan's max_days. Wallet credit is applied first; otherwise post checkout_params to PayHere's one-time checkout.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Buy extra delivery days (CUSTOM plan)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subscription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Days to buy",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_subscription.PurchaseDaysReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_subscription.DayPurchaseCheckoutRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/subscriptions/{id}/delivery-notes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the subscription's per-date delivery notes from today onwards.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "List delivery notes",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subscription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/internal_domain_subscription.DeliveryNoteRes"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/subscriptions/{id}/delivery-notes/{date}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates or replaces the free-text rider note for one delivery date (FIXED or CUSTOM). The date must have a scheduled delivery and be before its cutoff.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Set a delivery note for a date",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subscription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Delivery date (YYYY-MM-DD)",
+                        "name": "date",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Note",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_subscription.UpsertDeliveryNoteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_subscription.DeliveryNoteRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes the rider note for one delivery date before its cutoff.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Remove a delivery note for a date",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subscription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Delivery date (YYYY-MM-DD)",
+                        "name": "date",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/subscriptions/{id}/delivery-type": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Changes the subscription's standing delivery type. Allowed any time unless the subscription is cancelled or expired. Past deliveries keep the type recorded when they were delivered.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Change delivery type",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subscription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Delivery type",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_subscription.UpdateDeliveryTypeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_subscription.SubscriptionRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/subscriptions/{id}/invoices": {
             "get": {
                 "security": [
@@ -5247,6 +6390,158 @@
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/subscriptions/{id}/menu-schedule": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the menu scheduled for the subscription's package this week and next week, with the meal for each day (emergency changes applied) and the optional meal on offer.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "This week's and next week's menu",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subscription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/nu3go_internal_domain_menu.WeekPlansRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/subscriptions/{id}/menu-schedule/history": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Pages through the weekly menu rotation of the subscription's package, newest week first (includes planned future weeks).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Menu rotation history",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subscription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/nu3go_internal_domain_menu.ListScheduleRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
                         }
@@ -7275,6 +8570,724 @@
                 }
             }
         },
+        "/holidays": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists draft and published holidays ordered by date.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "List holidays",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "DRAFT or PUBLISHED",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "From date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "To date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_holiday.ListHolidaysRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates one or more draft holidays (e.g. a full year calendar). Drafts have no effect until published.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "Create draft holidays",
+                "parameters": [
+                    {
+                        "description": "Holidays to create",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_holiday.CreateHolidaysReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/internal_domain_holiday.HolidayRes"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/holidays/calendar": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists published holidays (no-delivery days) between two dates. Available to any authenticated user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "Holiday calendar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "From date (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "To date (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/internal_domain_holiday.CalendarDayRes"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/holidays/impact": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the numeric effect of holidays without changing anything: wallet credits for FIXED plans, released CUSTOM days, cancelled optional meals and emails to send. Drafts are projected; published holidays show actual results.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "Preview holiday impact",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Comma-separated holiday IDs",
+                        "name": "ids",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_holiday.ImpactRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/holidays/publications": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Publishes draft holidays permanently. FIXED subscriptions are credited, CUSTOM days are released, and affected customers are emailed. Published holidays cannot be edited or deleted.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "Publish holidays",
+                "parameters": [
+                    {
+                        "description": "Holidays to publish",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_holiday.PublishHolidaysReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_holiday.ImpactRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/holidays/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a holiday with its impact (projected for drafts, actual for published).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "Get a holiday",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Holiday ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_holiday.HolidayDetailRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes a draft holiday. Published holidays return 409.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "Delete a draft holiday",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Holiday ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Partially updates a draft holiday. Published holidays return 409.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "Update a draft holiday",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Holiday ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_holiday.UpdateHolidayReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_holiday.HolidayRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/holidays/{id}/adjustments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists the subscriptions a published holiday compensated, with the action taken.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "holidays"
+                ],
+                "summary": "List holiday adjustments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Holiday ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_holiday.ListAdjustmentsRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/images": {
             "delete": {
                 "security": [
@@ -8440,6 +10453,663 @@
                 }
             }
         },
+        "/public/reviews": {
+            "get": {
+                "description": "Public listing of admin-approved reviews, newest first.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "List published reviews",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter by rating (1-5)",
+                        "name": "rating",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_review.ListPublicReviewsRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/public/reviews/summary": {
+            "get": {
+                "description": "Public aggregate of published reviews: total, average rating and per-star distribution.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Review summary",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_review.ReviewSummaryRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/reviews": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists all reviews for moderation, filterable by publication status, rating and author.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Admin: list reviews",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Filter by publication status",
+                        "name": "is_published",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by rating (1-5)",
+                        "name": "rating",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by author user ID",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_review.ListReviewsRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Subscribed customers (with an ACTIVE or EXPIRED subscription) submit one review of the business. It stays hidden until an admin publishes it.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Submit a review",
+                "parameters": [
+                    {
+                        "description": "Review content",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_review.CreateReviewReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_review.ReviewRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/reviews/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the authenticated customer's own review, including its moderation status.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Get my review",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_review.ReviewRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/reviews/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves any review by ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Admin: get a review",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Review ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_review.ReviewRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces the customer's own review. The review is unpublished until an admin approves it again.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Update my review",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Review ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Review content",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_review.UpdateReviewReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_review.ReviewRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Customers may delete their own review; admins may delete any review.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Delete a review",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Review ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/reviews/{id}/visibility": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Controls whether a review is displayed publicly.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Admin: publish or hide a review",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Review ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Visibility",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_domain_review.SetVisibilityReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_domain_review.ReviewRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/nu3go_internal_shared_apperr.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/zones": {
             "get": {
                 "security": [
@@ -9043,8 +11713,11 @@
                 "meal": {
                     "$ref": "#/definitions/internal_domain_catalog.CatalogMealRef"
                 },
-                "optional_meal": {
-                    "$ref": "#/definitions/internal_domain_catalog.CatalogMealRef"
+                "optional_meals": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_catalog.CatalogMealRef"
+                    }
                 }
             }
         },
@@ -9127,6 +11800,9 @@
                     "$ref": "#/definitions/nu3go_internal_domain_subscriptionplan.BillingCycle"
                 },
                 "duration_limit": {
+                    "type": "integer"
+                },
+                "max_days": {
                     "type": "integer"
                 },
                 "name": {
@@ -9513,6 +12189,34 @@
                 }
             }
         },
+        "internal_domain_delivery.DayMealSummaryRes": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-11-10"
+                },
+                "meals": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_delivery.MealCountRes"
+                    }
+                },
+                "total_deliveries": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "unassigned": {
+                    "description": "Unassigned counts deliveries with no resolvable meal (no menu scheduled\nfor the package, or a weekend CUSTOM date).",
+                    "type": "integer",
+                    "example": 0
+                },
+                "weekday": {
+                    "type": "string",
+                    "example": "TUESDAY"
+                }
+            }
+        },
         "internal_domain_delivery.DeliveryListItemRes": {
             "type": "object",
             "properties": {
@@ -9528,11 +12232,34 @@
                 "delivery_id": {
                     "type": "string"
                 },
+                "delivery_note": {
+                    "type": "string"
+                },
+                "delivery_type": {
+                    "description": "DeliveryType/DeliveryNote are the snapshot for delivered rows and the\ncustomer's current instructions for rows not yet delivered.",
+                    "type": "string"
+                },
                 "location_address": {
                     "type": "string"
                 },
                 "location_id": {
                     "type": "string"
+                },
+                "meal_id": {
+                    "description": "Meal is the snapshot for delivered rows, otherwise resolved from the\npackage's weekly menu schedule (optional request \u003e emergency change \u003e menu).",
+                    "type": "string"
+                },
+                "meal_name": {
+                    "type": "string",
+                    "example": "Chicken Fried Rice"
+                },
+                "meal_source": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_domain_delivery.MealSource"
+                        }
+                    ],
+                    "example": "MENU"
                 },
                 "plan_type": {
                     "type": "string"
@@ -9602,6 +12329,81 @@
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "internal_domain_delivery.MealCountRes": {
+            "type": "object",
+            "properties": {
+                "emergency": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "meal_id": {
+                    "type": "string"
+                },
+                "meal_name": {
+                    "type": "string",
+                    "example": "Chicken Fried Rice"
+                },
+                "menu": {
+                    "type": "integer",
+                    "example": 37
+                },
+                "optional": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
+                }
+            }
+        },
+        "internal_domain_delivery.MealSource": {
+            "type": "string",
+            "enum": [
+                "OPTIONAL",
+                "EMERGENCY",
+                "MENU"
+            ],
+            "x-enum-varnames": [
+                "MealSourceOptional",
+                "MealSourceEmergency",
+                "MealSourceMenu"
+            ]
+        },
+        "internal_domain_delivery.MealSummaryRes": {
+            "type": "object",
+            "properties": {
+                "days": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_delivery.DayMealSummaryRes"
+                    }
+                },
+                "from": {
+                    "type": "string",
+                    "example": "2026-11-10"
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-11-14"
+                },
+                "total_deliveries": {
+                    "type": "integer",
+                    "example": 210
+                },
+                "totals": {
+                    "description": "Totals aggregates every day in the range, e.g. for ingredient ordering.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_delivery.MealCountRes"
+                    }
+                },
+                "unassigned": {
+                    "type": "integer",
+                    "example": 0
                 }
             }
         },
@@ -10107,6 +12909,412 @@
                 }
             }
         },
+        "internal_domain_holiday.AdjustmentRes": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "example": "FIXED_CREDITED"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "credit_amount": {
+                    "type": "number",
+                    "example": 450
+                },
+                "id": {
+                    "type": "string"
+                },
+                "note_removed": {
+                    "type": "boolean"
+                },
+                "notified_at": {
+                    "type": "string"
+                },
+                "optional_meals_cancelled": {
+                    "type": "integer"
+                },
+                "past_cutoff": {
+                    "type": "boolean"
+                },
+                "plan_type": {
+                    "type": "string",
+                    "example": "FIXED"
+                },
+                "subscription_id": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "wallet_transaction_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_holiday.CalendarDayRes": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2027-01-14"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Thai Pongal"
+                }
+            }
+        },
+        "internal_domain_holiday.CancelledImpact": {
+            "type": "object",
+            "properties": {
+                "subscriptions": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "top_up_total": {
+                    "type": "number",
+                    "example": 450
+                }
+            }
+        },
+        "internal_domain_holiday.CreateHolidaysReq": {
+            "type": "object",
+            "required": [
+                "holidays"
+            ],
+            "properties": {
+                "holidays": {
+                    "type": "array",
+                    "maxItems": 366,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_holiday.HolidayInput"
+                    }
+                }
+            }
+        },
+        "internal_domain_holiday.CustomImpact": {
+            "type": "object",
+            "properties": {
+                "credit_total": {
+                    "type": "number",
+                    "example": 450
+                },
+                "customers": {
+                    "type": "integer",
+                    "example": 40
+                },
+                "days_credited": {
+                    "description": "DaysCredited counts days that could not be released (holiday is today) and were credited instead.",
+                    "type": "integer",
+                    "example": 1
+                },
+                "days_released": {
+                    "type": "integer",
+                    "example": 41
+                },
+                "past_cutoff_overrides": {
+                    "description": "PastCutoffOverrides counts days released although customers could no longer change them.",
+                    "type": "integer",
+                    "example": 10
+                },
+                "subscriptions": {
+                    "type": "integer",
+                    "example": 42
+                }
+            }
+        },
+        "internal_domain_holiday.FixedImpact": {
+            "type": "object",
+            "properties": {
+                "credit_total": {
+                    "type": "number",
+                    "example": 54000
+                },
+                "customers": {
+                    "type": "integer",
+                    "example": 118
+                },
+                "subscriptions": {
+                    "type": "integer",
+                    "example": 120
+                }
+            }
+        },
+        "internal_domain_holiday.HolidayDetailRes": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by_id": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string",
+                    "example": "2027-01-14"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0192f3b0-0000-7000-8000-000000000001"
+                },
+                "impact": {
+                    "$ref": "#/definitions/internal_domain_holiday.HolidayImpact"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Thai Pongal"
+                },
+                "processing_status": {
+                    "type": "string",
+                    "example": "PENDING"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "published_by_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "DRAFT"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "weekday": {
+                    "type": "string",
+                    "example": "THURSDAY"
+                }
+            }
+        },
+        "internal_domain_holiday.HolidayImpact": {
+            "type": "object",
+            "properties": {
+                "already_cancelled": {
+                    "$ref": "#/definitions/internal_domain_holiday.CancelledImpact"
+                },
+                "already_processed": {
+                    "description": "AlreadyProcessed counts subscriptions compensated earlier (published holidays only).",
+                    "type": "integer",
+                    "example": 0
+                },
+                "custom": {
+                    "$ref": "#/definitions/internal_domain_holiday.CustomImpact"
+                },
+                "date": {
+                    "type": "string",
+                    "example": "2027-01-14"
+                },
+                "delivery_notes_removed": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "fixed": {
+                    "$ref": "#/definitions/internal_domain_holiday.FixedImpact"
+                },
+                "holiday_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Thai Pongal"
+                },
+                "optional_meal_requests_cancelled": {
+                    "type": "integer",
+                    "example": 7
+                },
+                "skipped_delivered": {
+                    "type": "integer",
+                    "example": 0
+                }
+            }
+        },
+        "internal_domain_holiday.HolidayInput": {
+            "type": "object",
+            "required": [
+                "date",
+                "name"
+            ],
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2027-01-14"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Public holiday — kitchen closed"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "minLength": 2,
+                    "example": "Thai Pongal"
+                }
+            }
+        },
+        "internal_domain_holiday.HolidayRes": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by_id": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string",
+                    "example": "2027-01-14"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0192f3b0-0000-7000-8000-000000000001"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Thai Pongal"
+                },
+                "processing_status": {
+                    "type": "string",
+                    "example": "PENDING"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "published_by_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "DRAFT"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "weekday": {
+                    "type": "string",
+                    "example": "THURSDAY"
+                }
+            }
+        },
+        "internal_domain_holiday.ImpactRes": {
+            "type": "object",
+            "properties": {
+                "holidays": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_holiday.HolidayImpact"
+                    }
+                },
+                "totals": {
+                    "$ref": "#/definitions/internal_domain_holiday.ImpactTotals"
+                }
+            }
+        },
+        "internal_domain_holiday.ImpactTotals": {
+            "type": "object",
+            "properties": {
+                "customers": {
+                    "type": "integer",
+                    "example": 158
+                },
+                "days_released": {
+                    "type": "integer",
+                    "example": 41
+                },
+                "emails_to_send": {
+                    "type": "integer",
+                    "example": 158
+                },
+                "subscriptions": {
+                    "type": "integer",
+                    "example": 162
+                },
+                "wallet_credit_total": {
+                    "type": "number",
+                    "example": 54450
+                }
+            }
+        },
+        "internal_domain_holiday.ListAdjustmentsRes": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_holiday.AdjustmentRes"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/nu3go_internal_shared_pagination.OffsetMeta"
+                }
+            }
+        },
+        "internal_domain_holiday.ListHolidaysRes": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_holiday.HolidayRes"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/nu3go_internal_shared_pagination.OffsetMeta"
+                }
+            }
+        },
+        "internal_domain_holiday.PublishHolidaysReq": {
+            "type": "object",
+            "required": [
+                "holiday_ids"
+            ],
+            "properties": {
+                "holiday_ids": {
+                    "type": "array",
+                    "maxItems": 366,
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "0192f3b0-0000-7000-8000-000000000001"
+                    ]
+                }
+            }
+        },
+        "internal_domain_holiday.UpdateHolidayReq": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2027-01-15"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Public holiday"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "minLength": 2,
+                    "example": "Thai Pongal"
+                }
+            }
+        },
         "internal_domain_image.UploadRes": {
             "type": "object",
             "properties": {
@@ -10425,6 +13633,17 @@
                 }
             }
         },
+        "internal_domain_mealcancellation.CancelOutcome": {
+            "type": "string",
+            "enum": [
+                "CANCELLED",
+                "DATE_RELEASED"
+            ],
+            "x-enum-varnames": [
+                "OutcomeCancelled",
+                "OutcomeDateReleased"
+            ]
+        },
         "internal_domain_mealcancellation.ListCancellationsRes": {
             "type": "object",
             "properties": {
@@ -10454,6 +13673,15 @@
                 "id": {
                     "type": "string"
                 },
+                "outcome": {
+                    "description": "Outcome is CANCELLED (a cancellation record with a refund tier) or\nDATE_RELEASED (CUSTOM plan date removed before its cutoff; the day\nreturns to the balance, no record and no wallet refund, id is empty).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_domain_mealcancellation.CancelOutcome"
+                        }
+                    ],
+                    "example": "CANCELLED"
+                },
                 "reason": {
                     "type": "string"
                 },
@@ -10462,6 +13690,10 @@
                 },
                 "refund_tier": {
                     "type": "string"
+                },
+                "remaining_days": {
+                    "description": "RemainingDays is the CUSTOM plan's unscheduled day balance after a release.",
+                    "type": "integer"
                 },
                 "reverted_at": {
                     "type": "string"
@@ -10633,6 +13865,10 @@
                     "type": "boolean",
                     "example": true
                 },
+                "max_days": {
+                    "type": "integer",
+                    "example": 20
+                },
                 "name": {
                     "type": "string",
                     "example": "Fixed Weekly Plan"
@@ -10742,6 +13978,20 @@
                 }
             }
         },
+        "internal_domain_menu.ListScheduleRes": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_menu.MenuScheduleRes"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/nu3go_internal_shared_pagination.OffsetMeta"
+                }
+            }
+        },
         "internal_domain_menu.MealRes": {
             "type": "object",
             "properties": {
@@ -10795,9 +14045,13 @@
                     "type": "string",
                     "example": "uuid"
                 },
-                "optional_meal_id": {
-                    "type": "string",
-                    "example": "uuid"
+                "optional_meal_ids": {
+                    "description": "OptionalMealIDs are the alternatives customers may request, in display order.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -10817,8 +14071,11 @@
                     "description": "Preloaded from Meal",
                     "type": "string"
                 },
-                "optional_meal_id": {
-                    "type": "string"
+                "optional_meals": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_menu.OptionalMealRes"
+                    }
                 }
             }
         },
@@ -10851,6 +14108,82 @@
                 }
             }
         },
+        "internal_domain_menu.MenuScheduleRes": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "menu_id": {
+                    "type": "string"
+                },
+                "menu_name": {
+                    "type": "string",
+                    "example": "Standard Week 2"
+                },
+                "package_id": {
+                    "type": "string"
+                },
+                "sequence": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "set_by_admin_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "week_start": {
+                    "type": "string",
+                    "example": "2026-11-09"
+                }
+            }
+        },
+        "internal_domain_menu.OptionalMealRes": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Garden Salad"
+                }
+            }
+        },
+        "internal_domain_menu.ScheduleOverviewRes": {
+            "type": "object",
+            "properties": {
+                "next_week": {
+                    "$ref": "#/definitions/internal_domain_menu.WeekMenuRes"
+                },
+                "package_id": {
+                    "type": "string"
+                },
+                "this_week": {
+                    "$ref": "#/definitions/internal_domain_menu.WeekMenuRes"
+                }
+            }
+        },
+        "internal_domain_menu.SetWeekMenuReq": {
+            "type": "object",
+            "required": [
+                "menu_id"
+            ],
+            "properties": {
+                "menu_id": {
+                    "type": "string",
+                    "example": "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"
+                }
+            }
+        },
         "internal_domain_menu.UpdateMenuReq": {
             "type": "object",
             "properties": {
@@ -10871,6 +14204,21 @@
                     "maximum": 3,
                     "minimum": 1,
                     "example": 2
+                }
+            }
+        },
+        "internal_domain_menu.WeekMenuRes": {
+            "type": "object",
+            "properties": {
+                "explicit": {
+                    "type": "boolean"
+                },
+                "menu": {
+                    "$ref": "#/definitions/internal_domain_menu.MenuScheduleRes"
+                },
+                "week_start": {
+                    "type": "string",
+                    "example": "2026-11-09"
                 }
             }
         },
@@ -11012,6 +14360,183 @@
             "x-enum-varnames": [
                 "ProviderPayhere"
             ]
+        },
+        "internal_domain_review.CreateReviewReq": {
+            "type": "object",
+            "required": [
+                "comment",
+                "rating"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "minLength": 10,
+                    "example": "The meals are fresh and the delivery is always punctual."
+                },
+                "rating": {
+                    "type": "integer",
+                    "maximum": 5,
+                    "minimum": 1,
+                    "example": 5
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "example": "Healthy and on time"
+                }
+            }
+        },
+        "internal_domain_review.ListPublicReviewsRes": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_review.PublicReviewRes"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/nu3go_internal_shared_pagination.OffsetMeta"
+                }
+            }
+        },
+        "internal_domain_review.ListReviewsRes": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_review.ReviewRes"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/nu3go_internal_shared_pagination.OffsetMeta"
+                }
+            }
+        },
+        "internal_domain_review.PublicReviewRes": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "rating": {
+                    "type": "integer"
+                },
+                "reviewer_name": {
+                    "type": "string",
+                    "example": "Nimal P."
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_review.ReviewRes": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_published": {
+                    "type": "boolean"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "published_by_user_id": {
+                    "type": "string"
+                },
+                "rating": {
+                    "type": "integer"
+                },
+                "reviewer_email": {
+                    "type": "string"
+                },
+                "reviewer_name": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_domain_review.ReviewSummaryRes": {
+            "type": "object",
+            "properties": {
+                "average_rating": {
+                    "type": "number",
+                    "example": 4.6
+                },
+                "distribution": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "total_reviews": {
+                    "type": "integer",
+                    "example": 42
+                }
+            }
+        },
+        "internal_domain_review.SetVisibilityReq": {
+            "type": "object",
+            "required": [
+                "is_published"
+            ],
+            "properties": {
+                "is_published": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "internal_domain_review.UpdateReviewReq": {
+            "type": "object",
+            "required": [
+                "comment",
+                "rating"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "minLength": 10,
+                    "example": "Still great, though one delivery was late this month."
+                },
+                "rating": {
+                    "type": "integer",
+                    "maximum": 5,
+                    "minimum": 1,
+                    "example": 4
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "example": "Great meals"
+                }
+            }
         },
         "internal_domain_salesanalytics.AtRiskRes": {
             "type": "object",
@@ -11432,6 +14957,30 @@
                 }
             }
         },
+        "internal_domain_subscription.AddDatesReq": {
+            "type": "object",
+            "required": [
+                "dates",
+                "location_id"
+            ],
+            "properties": {
+                "dates": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "2026-11-12",
+                        "2026-11-13"
+                    ]
+                },
+                "location_id": {
+                    "type": "string",
+                    "example": "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"
+                }
+            }
+        },
         "internal_domain_subscription.CheckoutRes": {
             "type": "object",
             "properties": {
@@ -11475,6 +15024,28 @@
                     "description": "Frontend cancel URL",
                     "type": "string"
                 },
+                "days_count": {
+                    "description": "DaysCount is the number of delivery days to buy (CUSTOM plans only):\nbetween the plan's duration_limit and max_days. Dates are optional and\ncan be scheduled later.",
+                    "type": "integer",
+                    "example": 8
+                },
+                "delivery_type": {
+                    "description": "DeliveryType is the rider hand-over instruction; defaults to CALL_AND_HANDOVER.",
+                    "enum": [
+                        "CALL_AND_HANDOVER",
+                        "LEAVE_AT_GUARDROOM",
+                        "LEAVE_AT_GUARDROOM_AND_NOTIFY",
+                        "HANG_AT_DESIGNATED_LOCATION",
+                        "LEAVE_AT_DESIGNATED_LOCATION",
+                        "CALL_FOR_COLLECTION"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_domain_subscription.DeliveryType"
+                        }
+                    ],
+                    "example": "CALL_AND_HANDOVER"
+                },
                 "discount_id": {
                     "description": "Optional: one discount per first checkout",
                     "type": "string"
@@ -11507,6 +15078,151 @@
                 }
             }
         },
+        "internal_domain_subscription.DayPurchaseCheckoutRes": {
+            "type": "object",
+            "properties": {
+                "checkout_params": {
+                    "$ref": "#/definitions/nu3go_pkg_payhere.CheckoutParams"
+                },
+                "days": {
+                    "type": "integer"
+                },
+                "fully_covered_by_wallet": {
+                    "type": "boolean"
+                },
+                "grand_total_payable": {
+                    "type": "number"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "purchase_id": {
+                    "type": "string"
+                },
+                "subtotal": {
+                    "type": "number"
+                },
+                "unit_price": {
+                    "type": "number"
+                },
+                "wallet_credit_applied": {
+                    "type": "number"
+                }
+            }
+        },
+        "internal_domain_subscription.DayPurchaseRes": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "days": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "invoice_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/internal_domain_subscription.DayPurchaseStatus"
+                },
+                "unit_price": {
+                    "type": "number"
+                }
+            }
+        },
+        "internal_domain_subscription.DayPurchaseStatus": {
+            "type": "string",
+            "enum": [
+                "PENDING",
+                "PAID",
+                "CANCELLED"
+            ],
+            "x-enum-varnames": [
+                "DayPurchasePending",
+                "DayPurchasePaid",
+                "DayPurchaseCancelled"
+            ]
+        },
+        "internal_domain_subscription.DeliveryNoteRes": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-11-12"
+                },
+                "editable_until": {
+                    "description": "EditableUntil is the cutoff instant for changing this note.",
+                    "type": "string"
+                },
+                "locked": {
+                    "description": "Locked is true once the note can no longer be changed.",
+                    "type": "boolean"
+                },
+                "note": {
+                    "type": "string",
+                    "example": "Blue gate, second floor"
+                }
+            }
+        },
+        "internal_domain_subscription.DeliveryType": {
+            "type": "string",
+            "enum": [
+                "CALL_AND_HANDOVER",
+                "LEAVE_AT_GUARDROOM",
+                "LEAVE_AT_GUARDROOM_AND_NOTIFY",
+                "HANG_AT_DESIGNATED_LOCATION",
+                "LEAVE_AT_DESIGNATED_LOCATION",
+                "CALL_FOR_COLLECTION",
+                "CALL_AND_HANDOVER"
+            ],
+            "x-enum-varnames": [
+                "DeliveryTypeCallAndHandover",
+                "DeliveryTypeLeaveAtGuardroom",
+                "DeliveryTypeLeaveAtGuardroomAndNotify",
+                "DeliveryTypeHangAtDesignatedLocation",
+                "DeliveryTypeLeaveAtDesignatedLocation",
+                "DeliveryTypeCallForCollection",
+                "DefaultDeliveryType"
+            ]
+        },
+        "internal_domain_subscription.DeliveryTypeOptionRes": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Call the recipient and hand over the item directly."
+                },
+                "label": {
+                    "type": "string",
+                    "example": "Call and Hand Over"
+                },
+                "value": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_domain_subscription.DeliveryType"
+                        }
+                    ],
+                    "example": "CALL_AND_HANDOVER"
+                }
+            }
+        },
+        "internal_domain_subscription.ListDayPurchasesRes": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_domain_subscription.DayPurchaseRes"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/nu3go_internal_shared_pagination.OffsetMeta"
+                }
+            }
+        },
         "internal_domain_subscription.ListSubscriptionsRes": {
             "type": "object",
             "properties": {
@@ -11518,6 +15234,28 @@
                 },
                 "pagination": {
                     "$ref": "#/definitions/nu3go_internal_shared_pagination.OffsetMeta"
+                }
+            }
+        },
+        "internal_domain_subscription.PurchaseDaysReq": {
+            "type": "object",
+            "required": [
+                "days"
+            ],
+            "properties": {
+                "cancel_url": {
+                    "type": "string"
+                },
+                "days": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "return_url": {
+                    "type": "string"
+                },
+                "use_wallet_credit": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
@@ -11545,11 +15283,19 @@
                 "date": {
                     "type": "string"
                 },
+                "editable_until": {
+                    "description": "EditableUntil is the cutoff instant for changing this date.",
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
                 "location_id": {
                     "type": "string"
+                },
+                "locked": {
+                    "description": "Locked is true once the date can no longer be moved or released.",
+                    "type": "boolean"
                 }
             }
         },
@@ -11564,6 +15310,9 @@
                 },
                 "created_at": {
                     "type": "string"
+                },
+                "delivery_type": {
+                    "$ref": "#/definitions/internal_domain_subscription.DeliveryType"
                 },
                 "id": {
                     "type": "string"
@@ -11580,6 +15329,19 @@
                 "package_id": {
                     "type": "string"
                 },
+                "purchased_days": {
+                    "description": "CUSTOM plan day balance.",
+                    "type": "integer"
+                },
+                "remaining_days": {
+                    "type": "integer"
+                },
+                "return_price": {
+                    "type": "number"
+                },
+                "scheduled_days": {
+                    "type": "integer"
+                },
                 "started_at": {
                     "type": "string"
                 },
@@ -11588,6 +15350,10 @@
                 },
                 "subscription_plan_id": {
                     "type": "string"
+                },
+                "unused_days_refund": {
+                    "description": "UnusedDaysRefund is the wallet credit the customer receives at expiry\nfor days still unscheduled (remaining_days x return_price).",
+                    "type": "number"
                 },
                 "user_id": {
                     "type": "string"
@@ -11613,6 +15379,57 @@
                 "StatusExpired",
                 "StatusCancelled"
             ]
+        },
+        "internal_domain_subscription.UpdateDateReq": {
+            "type": "object",
+            "properties": {
+                "location_id": {
+                    "type": "string",
+                    "example": "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"
+                },
+                "new_date": {
+                    "type": "string",
+                    "example": "2026-11-14"
+                }
+            }
+        },
+        "internal_domain_subscription.UpdateDeliveryTypeReq": {
+            "type": "object",
+            "required": [
+                "delivery_type"
+            ],
+            "properties": {
+                "delivery_type": {
+                    "enum": [
+                        "CALL_AND_HANDOVER",
+                        "LEAVE_AT_GUARDROOM",
+                        "LEAVE_AT_GUARDROOM_AND_NOTIFY",
+                        "HANG_AT_DESIGNATED_LOCATION",
+                        "LEAVE_AT_DESIGNATED_LOCATION",
+                        "CALL_FOR_COLLECTION"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_domain_subscription.DeliveryType"
+                        }
+                    ],
+                    "example": "LEAVE_AT_GUARDROOM"
+                }
+            }
+        },
+        "internal_domain_subscription.UpsertDeliveryNoteReq": {
+            "type": "object",
+            "required": [
+                "note"
+            ],
+            "properties": {
+                "note": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "example": "Blue gate, second floor"
+                }
+            }
         },
         "internal_domain_subscriptionplan.BillingCycle": {
             "type": "string",
@@ -11660,6 +15477,10 @@
                 "is_active": {
                     "type": "boolean",
                     "example": true
+                },
+                "max_days": {
+                    "type": "integer",
+                    "example": 20
                 },
                 "name": {
                     "type": "string",
@@ -11719,6 +15540,10 @@
                 "is_active": {
                     "type": "boolean",
                     "example": true
+                },
+                "max_days": {
+                    "type": "integer",
+                    "example": 20
                 },
                 "name": {
                     "type": "string",
@@ -11785,6 +15610,10 @@
                 "is_active": {
                     "type": "boolean",
                     "example": true
+                },
+                "max_days": {
+                    "type": "integer",
+                    "example": 20
                 },
                 "name": {
                     "type": "string",
@@ -11996,6 +15825,9 @@
                 "description": {
                     "type": "string"
                 },
+                "holiday_id": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -12190,6 +16022,144 @@
                 "WeekDayThursday",
                 "WeekDayFriday"
             ]
+        },
+        "nu3go_internal_domain_menu.DayMealRes": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-11-09"
+                },
+                "day": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/nu3go_internal_domain_meal.WeekDay"
+                        }
+                    ],
+                    "example": "MONDAY"
+                },
+                "is_emergency_change": {
+                    "type": "boolean"
+                },
+                "meal_id": {
+                    "type": "string"
+                },
+                "meal_name": {
+                    "type": "string",
+                    "example": "Chicken Fried Rice"
+                },
+                "optional_meals": {
+                    "description": "OptionalMeals are the alternatives the customer may request for this day.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/nu3go_internal_domain_menu.OptionalMealRes"
+                    }
+                }
+            }
+        },
+        "nu3go_internal_domain_menu.ListScheduleRes": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/nu3go_internal_domain_menu.MenuScheduleRes"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/nu3go_internal_shared_pagination.OffsetMeta"
+                }
+            }
+        },
+        "nu3go_internal_domain_menu.MenuScheduleRes": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "menu_id": {
+                    "type": "string"
+                },
+                "menu_name": {
+                    "type": "string",
+                    "example": "Standard Week 2"
+                },
+                "package_id": {
+                    "type": "string"
+                },
+                "sequence": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "set_by_admin_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "week_start": {
+                    "type": "string",
+                    "example": "2026-11-09"
+                }
+            }
+        },
+        "nu3go_internal_domain_menu.OptionalMealRes": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Garden Salad"
+                }
+            }
+        },
+        "nu3go_internal_domain_menu.WeekPlanRes": {
+            "type": "object",
+            "properties": {
+                "days": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/nu3go_internal_domain_menu.DayMealRes"
+                    }
+                },
+                "menu_id": {
+                    "type": "string"
+                },
+                "menu_name": {
+                    "type": "string",
+                    "example": "Standard Week 2"
+                },
+                "sequence": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "week_start": {
+                    "type": "string",
+                    "example": "2026-11-09"
+                }
+            }
+        },
+        "nu3go_internal_domain_menu.WeekPlansRes": {
+            "type": "object",
+            "properties": {
+                "next_week": {
+                    "$ref": "#/definitions/nu3go_internal_domain_menu.WeekPlanRes"
+                },
+                "package_id": {
+                    "type": "string"
+                },
+                "this_week": {
+                    "$ref": "#/definitions/nu3go_internal_domain_menu.WeekPlanRes"
+                }
+            }
         },
         "nu3go_internal_domain_payment.BillingHistoryRes": {
             "type": "object",
@@ -12465,6 +16435,65 @@
                 },
                 "total_rows": {
                     "type": "integer"
+                }
+            }
+        },
+        "nu3go_pkg_payhere.CheckoutParams": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "amount": {
+                    "type": "string"
+                },
+                "cancel_url": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "duration": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "merchant_id": {
+                    "type": "string"
+                },
+                "notify_url": {
+                    "type": "string"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "recurrence": {
+                    "type": "string"
+                },
+                "return_url": {
+                    "type": "string"
                 }
             }
         },

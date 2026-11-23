@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * GET /api/admin/zones — List all available zones
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/admin/zones GET] Error:", err);
+    logBffError("[BFF /api/admin/zones GET]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error fetching zones." } },
       { status: 500 }
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/admin/zones POST] Error:", err);
+    logBffError("[BFF /api/admin/zones POST]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error creating zone." } },
       { status: 500 }

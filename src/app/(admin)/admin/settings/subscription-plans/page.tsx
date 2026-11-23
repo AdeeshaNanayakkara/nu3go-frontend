@@ -45,6 +45,7 @@ export default function AdminSubscriptionPlansPage() {
   const [formType, setFormType] = useState<SubscriptionPlanType>("FIXED");
   const [formBillingCycle, setFormBillingCycle] = useState<BillingCycle>("MONTHLY");
   const [formDurationLimit, setFormDurationLimit] = useState<string>("4");
+  const [formMaxDays, setFormMaxDays] = useState<string>("");
   const [formIsActive, setFormIsActive] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -106,6 +107,7 @@ export default function AdminSubscriptionPlansPage() {
     setFormType("FIXED");
     setFormBillingCycle("MONTHLY");
     setFormDurationLimit("");
+    setFormMaxDays("");
     setFormIsActive(true); // Create as Active by default
     setModalError(null);
     setIsModalOpen(true);
@@ -123,6 +125,11 @@ export default function AdminSubscriptionPlansPage() {
         ? String(plan.duration_limit)
         : ""
     );
+    setFormMaxDays(
+      planType === "CUSTOM" && plan.max_days !== undefined && plan.max_days !== null
+        ? String(plan.max_days)
+        : ""
+    );
     setFormIsActive(plan.is_active);
     setModalError(null);
     setIsModalOpen(true);
@@ -137,10 +144,21 @@ export default function AdminSubscriptionPlansPage() {
     }
 
     if (formType === "CUSTOM") {
-      const durationVal = parseInt(formDurationLimit.trim(), 10);
-      if (!formDurationLimit.trim() || isNaN(durationVal) || durationVal <= 0) {
-        setModalError("Please enter a valid duration limit (> 0) for Custom Plans.");
+      const minDaysVal = parseInt(formDurationLimit.trim(), 10);
+      if (!formDurationLimit.trim() || isNaN(minDaysVal) || minDaysVal <= 0) {
+        setModalError("Please enter a valid Min Days (> 0) for Custom Plans.");
         return;
+      }
+      if (formMaxDays.trim()) {
+        const maxDaysVal = parseInt(formMaxDays.trim(), 10);
+        if (isNaN(maxDaysVal) || maxDaysVal <= 0) {
+          setModalError("Please enter a valid Max Days (> 0) for Custom Plans.");
+          return;
+        }
+        if (maxDaysVal < minDaysVal) {
+          setModalError("Max Days must be greater than or equal to Min Days.");
+          return;
+        }
       }
     }
 
@@ -152,6 +170,11 @@ export default function AdminSubscriptionPlansPage() {
         ? parseInt(formDurationLimit.trim(), 10)
         : undefined;
 
+    const parsedMaxDays =
+      formType === "CUSTOM" && formMaxDays.trim()
+        ? parseInt(formMaxDays.trim(), 10)
+        : undefined;
+
     try {
       if (editingPlan) {
         // Update existing Subscription Plan
@@ -160,6 +183,7 @@ export default function AdminSubscriptionPlansPage() {
           type: formType,
           billing_cycle: formBillingCycle,
           duration_limit: parsedDuration,
+          max_days: parsedMaxDays,
           is_active: formIsActive,
         });
       } else {
@@ -169,6 +193,7 @@ export default function AdminSubscriptionPlansPage() {
           type: formType,
           billing_cycle: formBillingCycle,
           duration_limit: parsedDuration,
+          max_days: parsedMaxDays,
           is_active: formIsActive,
         });
       }
@@ -393,7 +418,7 @@ export default function AdminSubscriptionPlansPage() {
                   <th className="py-3.5 px-4 rounded-l-xl">Plan Name</th>
                   <th className="py-3.5 px-4">Plan Type</th>
                   <th className="py-3.5 px-4">Billing Cycle</th>
-                  <th className="py-3.5 px-4">Duration Limit</th>
+                  <th className="py-3.5 px-4">Min Days / Max Days</th>
                   <th className="py-3.5 px-4">Created Date</th>
                   <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 px-4 rounded-r-xl text-right">Actions</th>
@@ -450,14 +475,21 @@ export default function AdminSubscriptionPlansPage() {
                         </span>
                       </td>
 
-                      {/* Duration Limit */}
+                      {/* Min Days / Max Days */}
                       <td className="py-3.5 px-4 text-xs font-medium">
                         {plan.type === "CUSTOM" ? (
-                          <span className="text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md font-semibold">
-                            {plan.duration_limit !== undefined && plan.duration_limit !== null
-                              ? `${plan.duration_limit} Days/Units`
-                              : "Custom Limit"}
-                          </span>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md font-semibold">
+                              Min: {plan.duration_limit !== undefined && plan.duration_limit !== null
+                                ? `${plan.duration_limit}d`
+                                : "—"}
+                            </span>
+                            <span className="text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md font-semibold">
+                              Max: {plan.max_days !== undefined && plan.max_days !== null
+                                ? `${plan.max_days}d`
+                                : "—"}
+                            </span>
+                          </div>
                         ) : (
                           <span className="text-slate-400 font-normal italic">
                             Fixed (N/A)
@@ -531,7 +563,7 @@ export default function AdminSubscriptionPlansPage() {
       {/* ─── ADD / EDIT SUBSCRIPTION PLAN MODAL ─── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
@@ -597,6 +629,7 @@ export default function AdminSubscriptionPlansPage() {
                     onClick={() => {
                       setFormType("FIXED");
                       setFormDurationLimit("");
+                      setFormMaxDays("");
                     }}
                     className={`h-11 px-4 rounded-xl border text-sm font-semibold flex items-center justify-center transition-all cursor-pointer ${
                       formType === "FIXED"
@@ -647,27 +680,51 @@ export default function AdminSubscriptionPlansPage() {
                 </p>
               </div>
 
-              {/* Duration Limit — ONLY ASKED IF CUSTOM PLAN TYPE */}
+              {/* Min Days / Max Days — ONLY SHOWN IF CUSTOM PLAN TYPE */}
               {formType === "CUSTOM" ? (
-                <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-100 space-y-2 animate-in fade-in duration-200">
-                  <label className="block text-xs font-bold text-purple-900 uppercase tracking-wider">
-                    Duration Limit (Days / Units) <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Calendar className="w-4 h-4 text-purple-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="number"
-                      min="1"
-                      required
-                      value={formDurationLimit}
-                      onChange={(e) => setFormDurationLimit(e.target.value)}
-                      placeholder="e.g. 14, 20, 30 days"
-                      className="w-full h-11 pl-10 pr-4 rounded-xl border border-purple-200 bg-white text-slate-900 placeholder:text-purple-300 text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
-                    />
+                <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-100 space-y-3 animate-in fade-in duration-200">
+                  {/* Min Days */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-purple-900 uppercase tracking-wider">
+                      Min Days <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Calendar className="w-4 h-4 text-purple-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        value={formDurationLimit}
+                        onChange={(e) => setFormDurationLimit(e.target.value)}
+                        placeholder="e.g. 7, 14 days"
+                        className="w-full h-11 pl-10 pr-4 rounded-xl border border-purple-200 bg-white text-slate-900 placeholder:text-purple-300 text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                      />
+                    </div>
+                    <p className="text-[11px] text-purple-700">
+                      Minimum number of days a customer can select (maps to <code className="font-mono">duration_limit</code> in the API).
+                    </p>
                   </div>
-                  <p className="text-[11px] text-purple-700">
-                    Custom plans require specifying a duration limit (e.g. 14, 20, or 30 days) for customer meal selection schedules.
-                  </p>
+
+                  {/* Max Days */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-indigo-900 uppercase tracking-wider">
+                      Max Days
+                    </label>
+                    <div className="relative">
+                      <Calendar className="w-4 h-4 text-indigo-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="number"
+                        min="1"
+                        value={formMaxDays}
+                        onChange={(e) => setFormMaxDays(e.target.value)}
+                        placeholder="e.g. 20, 30 days"
+                        className="w-full h-11 pl-10 pr-4 rounded-xl border border-indigo-200 bg-white text-slate-900 placeholder:text-indigo-300 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                      />
+                    </div>
+                    <p className="text-[11px] text-indigo-700">
+                      Maximum number of days a customer can select. Must be ≥ Min Days.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-500 flex items-center gap-2">

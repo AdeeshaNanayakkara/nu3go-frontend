@@ -1,11 +1,7 @@
 "use client";
 
-/**
- * Toast notification provider.
- * Uses shadcn/ui Toaster when installed.
- *
- * TODO: Replace with shadcn/ui <Toaster /> component once installed.
- */
+import { Toaster } from "sonner";
+import { APP_CONFIG } from "@/constants/config";
 
 interface ToastProviderProps {
   children: React.ReactNode;
@@ -15,7 +11,20 @@ export function ToastProvider({ children }: ToastProviderProps) {
   return (
     <>
       {children}
-      {/* <Toaster /> — add shadcn/ui Toaster here */}
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        duration={APP_CONFIG.TOAST_DURATION_MS}
+        toastOptions={{
+          style: {
+            fontFamily: "Poppins, sans-serif",
+            fontSize: "13px",
+            fontWeight: "600",
+            borderRadius: "16px",
+          },
+        }}
+      />
     </>
   );
 }

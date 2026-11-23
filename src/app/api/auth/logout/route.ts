@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * POST /api/auth/logout
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
       });
     } catch (err) {
       // Non-fatal — we still clear cookies even if backend call fails
-      console.error("[BFF /api/auth/logout] Backend error:", err);
+      logBffError("[BFF /api/auth/logout]", err);
     }
   }
 

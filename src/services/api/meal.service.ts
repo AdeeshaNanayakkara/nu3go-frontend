@@ -1,6 +1,7 @@
 import { apiClient } from "@/services/api/client";
 import type { PaginationMeta } from "@/services/api/admin.service";
 import { compressImagePreserveDimensions } from "@/utils/image-compression";
+import { csrfHeaders } from "@/lib/auth/csrf";
 
 export interface MealItem {
   id: string;
@@ -145,6 +146,8 @@ export const mealService = {
 
     const res = await fetch("/api/admin/images/upload/meal", {
       method: "POST",
+      credentials: "include",
+      headers: csrfHeaders(),
       body: formData,
     });
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 const PROFILE_COOKIE_KEY = "nu3go-profile-cache";
 
@@ -113,7 +114,7 @@ export async function GET(request: NextRequest) {
       data: fallbackProfile,
     });
   } catch (err) {
-    console.error("[BFF /api/v1/me/profile GET] Error:", err);
+    logBffError("[BFF /api/v1/me/profile GET]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error fetching user profile." } },
       { status: 500 }
@@ -210,10 +211,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(errData, { status: backendRes.status });
     }
 
-    // Backend returned 404 (route not yet deployed on 13.201.222.82) or unreachable:
+    // Backend returned 404 (route not yet deployed) or unreachable:
     // Gracefully handle locally and persist to session cookie
     console.info(
-      "[BFF /api/v1/me/profile PUT] Backend returned 404 (not yet deployed on remote host). Saving profile locally."
+      "[BFF /api/v1/me/profile PUT] Backend returned 404. Saving profile locally."
     );
 
     const savedProfile = {
@@ -239,7 +240,7 @@ export async function PUT(request: NextRequest) {
 
     return response;
   } catch (err) {
-    console.error("[BFF /api/v1/me/profile PUT] Error:", err);
+    logBffError("[BFF /api/v1/me/profile PUT]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error updating user profile." } },
       { status: 500 }

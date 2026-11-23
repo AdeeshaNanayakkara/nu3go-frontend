@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * GET /api/faqs — Public endpoint to fetch all active FAQs
@@ -19,7 +20,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, data: [] });
   } catch (err) {
-    console.error("[BFF /api/faqs GET] Error:", err);
+    logBffError("[BFF /api/faqs GET]", err);
     return NextResponse.json({ success: true, data: [] });
   }
 }

@@ -33,6 +33,14 @@ export interface SubscriptionLocationInput {
   dates?: string[];
 }
 
+export type DeliveryType =
+  | "CALL_AND_HANDOVER"
+  | "LEAVE_AT_GUARDROOM"
+  | "LEAVE_AT_GUARDROOM_AND_NOTIFY"
+  | "HANG_AT_DESIGNATED_LOCATION"
+  | "LEAVE_AT_DESIGNATED_LOCATION"
+  | "CALL_FOR_COLLECTION";
+
 export interface CreateSubscriptionReq {
   package_id: string;
   subscription_plan_id: string;
@@ -45,6 +53,16 @@ export interface CreateSubscriptionReq {
   cancel_url?: string;
   locations?: SubscriptionLocationInput[];
   use_wallet_credit?: boolean;
+  days_count?: number;
+  delivery_type?: DeliveryType;
+}
+
+export interface SubscriptionScheduledDate {
+  id: string;
+  location_id: string;
+  date: string;
+  locked?: boolean;
+  editable_until?: string;
 }
 
 export interface SubscriptionResItem {
@@ -58,12 +76,31 @@ export interface SubscriptionResItem {
   plan?: { id: string; name: string };
   status: "PENDING" | "ACTIVE" | "PAYMENT_FAILED" | "EXPIRED" | "CANCELLED" | string;
   auto_renew: boolean;
-  locations?: { id: string; location_id: string; date?: string }[];
+  delivery_type?: DeliveryType;
+  locations?: SubscriptionScheduledDate[];
   started_at?: string;
   valid_until?: string;
   next_billing_date?: string;
   cancelled_at?: string;
   created_at?: string;
+  /** CUSTOM plan day balance (total days purchased, incl. extra day top-ups). */
+  purchased_days?: number;
+  /** CUSTOM plan: days not yet scheduled on the calendar. */
+  remaining_days?: number;
+  /** CUSTOM plan: days already scheduled with a date + location. */
+  scheduled_days?: number;
+  return_price?: number;
+  unused_days_refund?: number;
+}
+
+export interface AddSubscriptionDatesReq {
+  dates: string[];
+  location_id: string;
+}
+
+export interface UpdateSubscriptionDateReq {
+  new_date?: string;
+  location_id?: string;
 }
 
 export const subscriptionService = {
@@ -151,6 +188,60 @@ export const subscriptionService = {
   async cancelAutoRenewal(id: string): Promise<void> {
     await apiClient.post(`/api/v1/subscriptions/${id}/cancel-renewal`);
   },
+
+  /**
+   * CUSTOM plan: Schedule delivery dates against a saved location, drawing down
+   * the subscription's remaining (unscheduled) day balance.
+   * POST /api/v1/subscriptions/{id}/dates
+   */
+  async addSubscriptionDates(id: string, dates: string[], locationId: string): Promise<SubscriptionResItem | null> {
+    try {
+      const response = await apiClient.post<any>(`/api/v1/subscriptions/${id}/dates`, {
+        dates,
+        location_id: locationId,
+      } as AddSubscriptionDatesReq);
+      const body = response.data;
+      if (body && body.data) return body.data as SubscriptionResItem;
+      return (body as SubscriptionResItem) ?? null;
+    } catch (err: any) {
+      throw new Error(err?.message || err?.error?.message || "Failed to schedule delivery dates.");
+    }
+  },
+
+  /**
+   * CUSTOM plan: Unschedule a date before its cutoff; the day returns to the
+   * remaining balance (no wallet refund).
+   * DELETE /api/v1/subscriptions/{id}/dates/{date}
+   */
+  async removeSubscriptionDate(id: string, date: string): Promise<SubscriptionResItem | null> {
+    try {
+      const response = await apiClient.delete<any>(`/api/v1/subscriptions/${id}/dates/${date}`);
+      const body = response.data;
+      if (body && body.data) return body.data as SubscriptionResItem;
+      return (body as SubscriptionResItem) ?? null;
+    } catch (err: any) {
+      throw new Error(err?.message || err?.error?.message || "Failed to remove scheduled date.");
+    }
+  },
+
+  /**
+   * CUSTOM plan: Move a scheduled date and/or change its delivery location.
+   * PATCH /api/v1/subscriptions/{id}/dates/{date}
+   */
+  async updateSubscriptionDate(
+    id: string,
+    date: string,
+    payload: UpdateSubscriptionDateReq
+  ): Promise<SubscriptionResItem | null> {
+    try {
+      const response = await apiClient.patch<any>(`/api/v1/subscriptions/${id}/dates/${date}`, payload);
+      const body = response.data;
+      if (body && body.data) return body.data as SubscriptionResItem;
+      return (body as SubscriptionResItem) ?? null;
+    } catch (err: any) {
+      throw new Error(err?.message || err?.error?.message || "Failed to update scheduled date.");
+    }
+  },
 };
 
 
@@ -159,6 +250,20 @@ export const subscriptionService = {
  */
 export function triggerPayHereCheckout(checkoutParams: PreapprovalParams) {
   if (typeof window === "undefined") return;
+
+  // PayHere rejects the request ("Unauthorized payment request") when the amount
+  // doesn't match the hash. Strip thousands separators and force 2 decimals so
+  // values like "1,244.00" are submitted as "1244.00".
+  if (checkoutParams.amount !== undefined && checkoutParams.amount !== null) {
+    const numericAmount = parseFloat(String(checkoutParams.amount).replace(/[,\s]/g, ""));
+    if (!Number.isNaN(numericAmount)) {
+      checkoutParams = { ...checkoutParams, amount: numericAmount.toFixed(2) };
+    }
+  }
+
+  // Debug aid: inspect exactly what is handed to PayHere (no secrets involved —
+  // these same values are visible in the submitted form).
+  console.debug("[PayHere] checkout params:", checkoutParams);
 
   // Check if PayHere JavaScript SDK is present on window
   const win = window as unknown as {
@@ -195,11 +300,15 @@ export function triggerPayHereCheckout(checkoutParams: PreapprovalParams) {
     return;
   }
 
-  // Preapproval endpoint for subscription card tokenization
+  // Preapproval endpoint for subscription card tokenization.
+  // Honour the backend's sandbox flag: live merchant credentials posted to the
+  // sandbox host (or vice versa) trigger PayHere's "Unauthorized payment request".
+  const payhereHost =
+    checkoutParams.sandbox === false ? "https://www.payhere.lk" : "https://sandbox.payhere.lk";
   const payhereUrl =
     process.env.NEXT_PUBLIC_PAYHERE_PREAPPROVE_URL ||
     process.env.NEXT_PUBLIC_PAYHERE_CHECKOUT_URL ||
-    "https://sandbox.payhere.lk/pay/preapprove";
+    `${payhereHost}/pay/preapprove`;
 
   const form = document.createElement("form");
   form.method = "POST";
@@ -207,6 +316,8 @@ export function triggerPayHereCheckout(checkoutParams: PreapprovalParams) {
   form.target = "_self";
 
   Object.entries(checkoutParams).forEach(([key, val]) => {
+    // "sandbox" is an SDK-only flag, not a PayHere form field
+    if (key === "sandbox") return;
     if (val !== undefined && val !== null) {
       const input = document.createElement("input");
       input.type = "hidden";

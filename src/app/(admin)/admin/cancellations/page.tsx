@@ -26,6 +26,7 @@ import {
   mealCancellationService,
   type MealCancellationRes,
 } from "@/services/api/meal-cancellation.service";
+import { toast } from "@/lib/toast";
 
 function formatDate(dateStr?: string): string {
   if (!dateStr) return "N/A";
@@ -76,7 +77,6 @@ export default function AdminCancellationsPage() {
   const [cancellations, setCancellations] = useState<MealCancellationRes[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Filters
   const [searchSubscriptionId, setSearchSubscriptionId] = useState("");
@@ -163,7 +163,7 @@ export default function AdminCancellationsPage() {
 
     try {
       await mealCancellationService.revertCancellation(revertingItem.id);
-      setSuccessMessage(
+      toast.success(
         `Meal delivery for ${formatDate(revertingItem.delivery_date)} has been restored (cancellation reverted).`
       );
       setRevertingItem(null);
@@ -223,23 +223,6 @@ export default function AdminCancellationsPage() {
           </button>
         </div>
       </div>
-
-      {/* ─── Success Feedback Alert ─── */}
-      {successMessage && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 flex items-center justify-between gap-3 animate-in fade-in duration-200">
-          <div className="flex items-center gap-2.5 text-xs sm:text-sm font-medium">
-            <CheckCircle2 className="w-4 h-4 text-[#15803D] shrink-0" />
-            <span>{successMessage}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSuccessMessage(null)}
-            className="text-emerald-700 hover:text-emerald-900 p-1 rounded-lg hover:bg-emerald-100 cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       {/* ─── Error Alert ─── */}
       {error && (

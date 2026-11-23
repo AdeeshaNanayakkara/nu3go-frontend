@@ -3,6 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/store/auth.store";
+import { toast } from "@/lib/toast";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { DashboardMobileView } from "@/components/dashboard/dashboard-mobile-view";
 import {
   subscriptionService,
   type SubscriptionResItem,
@@ -18,13 +21,16 @@ import {
   AlertTriangle,
   AlertCircle,
   Compass,
+  ChevronLeft,
   Calendar as CalendarIcon,
 } from "lucide-react";
 import { SubscriptionCalendarView } from "@/components/dashboard/subscription-calendar-modal";
+import { SubscriptionCalendar } from "@/components/dashboard/subscription-calendar";
 import { userService, type BillingProfileRes } from "@/services/api/user.service";
 
 export default function CustomerDashboardPage() {
   const { user } = useAuthStore();
+  const isMobile = useIsMobile();
 
   const [subscriptions, setSubscriptions] = useState<SubscriptionResItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
@@ -226,6 +232,15 @@ export default function CustomerDashboardPage() {
 
   const getPlanLabel = (sub: SubscriptionResItem | null) => getPlanDetails(sub).fullLabel;
 
+  const isCustomSub = (sub: SubscriptionResItem | null) => {
+    if (!sub) return false;
+    const catalogPlan = packages
+      .find((p) => p.id === sub.package_id)
+      ?.plans?.find((pl) => pl.plan_id === sub.subscription_plan_id);
+    if (catalogPlan?.type) return catalogPlan.type.toUpperCase() === "CUSTOM";
+    return typeof sub.purchased_days === "number" && sub.purchased_days > 0;
+  };
+
   // Default address
   const defaultAddress =
     locations.find((l) => l.is_default)?.address ||
@@ -239,6 +254,7 @@ export default function CustomerDashboardPage() {
     try {
       if (!enabled) {
         await subscriptionService.cancelAutoRenewal(activeSubscription.id);
+        toast.success("Auto-renewal turned off.");
       }
       await fetchDashboardData();
     } catch (err) {
@@ -251,6 +267,7 @@ export default function CustomerDashboardPage() {
     setIsCancelling(true);
     try {
       await subscriptionService.cancelSubscription(cancelModalSubId);
+      toast.success("Subscription cancelled.");
       setCancelModalSubId(null);
       await fetchDashboardData();
     } catch (err) {
@@ -312,6 +329,107 @@ export default function CustomerDashboardPage() {
       remainingDaysCount: Math.max(0, total - delivered),
     };
   })();
+
+  if (isMobile === null) {
+    return <div className="h-64 animate-pulse rounded-3xl bg-slate-200/60" aria-busy="true" />;
+  }
+
+  if (isMobile) {
+    // Calendar / meal-request view: full-screen style with an app bar and back button
+    if (viewTab === "calendar" && isPlanActive && activeSubscription) {
+      return (
+        <div className="font-poppins space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="sticky top-16 z-10 -mx-4 flex items-center gap-2 border-b border-slate-200/80 bg-[#F7F6F2]/95 px-4 py-2.5 backdrop-blur-xl">
+            <button
+              type="button"
+              onClick={() => setViewTab("card")}
+              aria-label="Back to overview"
+              className="flex h-10 w-10 touch-manipulation items-center justify-center rounded-full bg-white text-slate-700 shadow-xs active:bg-slate-100"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0">
+              <h1 className="truncate font-oswald text-base font-bold uppercase leading-tight tracking-tight text-neutral-900">
+                {isCustomSub(activeSubscription) ? "Delivery calendar" : "Meal requests"}
+              </h1>
+              <p className="truncate text-[11px] text-slate-500">{getPackageName(activeSubscription)}</p>
+            </div>
+          </div>
+
+          {isCustomSub(activeSubscription) ? (
+            <SubscriptionCalendar
+              key={activeSubscription.id}
+              subscription={activeSubscription}
+              locations={locations}
+              onUpdated={(updated) =>
+                setSubscriptions((prev) =>
+                  prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s))
+                )
+              }
+            />
+          ) : (
+            <SubscriptionCalendarView
+              subscription={activeSubscription}
+              packageName={getPackageName(activeSubscription)}
+              planName={getPlanDetails(activeSubscription).name}
+              planDurationLabel={getPlanLabel(activeSubscription)}
+              deliveryAddress={defaultAddress}
+              onBackToOverview={() => setViewTab("card")}
+            />
+          )}
+        </div>
+      );
+    }
+
+    const profileIncompletePercent =
+      billingProfile && !billingProfile.profile_complete
+        ? Math.round(
+            ([
+              Boolean(billingProfile.first_name?.trim()),
+              Boolean(billingProfile.last_name?.trim()),
+              Boolean(user?.email?.trim()),
+              Boolean(billingProfile.phone?.trim() && billingProfile.phone.trim().length >= 7),
+              Boolean(billingProfile.address?.trim() && billingProfile.address.trim().length >= 3),
+              Boolean(billingProfile.city?.trim() && billingProfile.city.trim().length >= 2),
+            ].filter(Boolean).length / 6) * 100
+          )
+        : null;
+
+    return (
+      <DashboardMobileView
+        displayName={displayName}
+        isLoading={isLoading}
+        isPlanActive={Boolean(isPlanActive)}
+        profileIncompletePercent={profileIncompletePercent}
+        tabs={subscriptions.map((sub) => ({
+          id: sub.id,
+          packageName: getPackageName(sub),
+          planName: getPlanDetails(sub).name,
+          isCustom: isCustomSub(sub),
+        }))}
+        selectedIndex={selectedIndex}
+        onSelectTab={setSelectedIndex}
+        subscription={activeSubscription}
+        packageName={getPackageName(activeSubscription)}
+        planName={getPlanDetails(activeSubscription).name}
+        isCustom={isCustomSub(activeSubscription)}
+        totalDays={totalPlanDays}
+        daysDelivered={daysDeliveredCount}
+        remainingDays={remainingDaysCount}
+        deliveryAddress={defaultAddress}
+        walletBalance={walletBalance}
+        invoicesCount={totalInvoicesCount}
+        onToggleAutoRenew={handleToggleAutoRenew}
+        onConfirmCancel={async () => {
+          if (!activeSubscription) return;
+          await subscriptionService.cancelSubscription(activeSubscription.id);
+          toast.success("Subscription cancelled.");
+          await fetchDashboardData();
+        }}
+        onOpenCalendar={() => setViewTab("calendar")}
+      />
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300 font-poppins">
@@ -406,6 +524,15 @@ export default function CustomerDashboardPage() {
                   >
                     <span>{pkgName}</span>
                     <span className="opacity-70 font-normal ml-1">• {planInfo.name}</span>
+                    <span
+                      className={`ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full border ${
+                        isCustomSub(sub)
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-sky-50 text-sky-700 border-sky-200"
+                      }`}
+                    >
+                      {isCustomSub(sub) ? "Custom" : "Fixed"}
+                    </span>
                   </button>
                 );
               })}
@@ -439,14 +566,38 @@ export default function CustomerDashboardPage() {
                 }`}
               >
                 <CalendarIcon className="w-3.5 h-3.5 text-[#15803D]" />
-                <span>Meal Cancellations and Optional Meal Requests</span>
+                <span>
+                  {isCustomSub(activeSubscription)
+                    ? "Delivery Calendar"
+                    : "Meal Cancellations and Optional Meal Requests"}
+                </span>
               </button>
             </div>
           )}
         </div>
 
         {/* Inline View: Calendar OR Plan Card */}
-        {viewTab === "calendar" && isPlanActive ? (
+        {viewTab === "calendar" && isPlanActive && activeSubscription && isCustomSub(activeSubscription) ? (
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setViewTab("card")}
+              className="text-xs font-oswald font-bold uppercase tracking-wider text-[#15803D] hover:underline cursor-pointer"
+            >
+              ← Back to Plan Summary
+            </button>
+            <SubscriptionCalendar
+              key={activeSubscription.id}
+              subscription={activeSubscription}
+              locations={locations}
+              onUpdated={(updated) =>
+                setSubscriptions((prev) =>
+                  prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s))
+                )
+              }
+            />
+          </div>
+        ) : viewTab === "calendar" && isPlanActive ? (
           <SubscriptionCalendarView
             subscription={activeSubscription}
             packageName={getPackageName(activeSubscription)}
@@ -461,7 +612,7 @@ export default function CustomerDashboardPage() {
             packageName={getPackageName(activeSubscription)}
             planName={getPlanDetails(activeSubscription).name}
             planDurationLabel={getPlanLabel(activeSubscription)}
-            planType={getPlanDetails(activeSubscription).type}
+            planType={isCustomSub(activeSubscription) ? "Custom" : "Fixed"}
             billingCycle={getPlanDetails(activeSubscription).billingCycle}
             totalDays={totalPlanDays}
             daysDelivered={daysDeliveredCount}

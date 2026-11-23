@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * GET /api/v1/locations — List customer's saved delivery locations
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/v1/locations GET] Error:", err);
+    logBffError("[BFF /api/v1/locations GET]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error fetching locations." } },
       { status: 500 }
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
     const data = await backendRes.json();
     return NextResponse.json(data, { status: backendRes.status });
   } catch (err) {
-    console.error("[BFF /api/v1/locations POST] Error:", err);
+    logBffError("[BFF /api/v1/locations POST]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error creating location." } },
       { status: 500 }

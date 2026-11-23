@@ -416,17 +416,12 @@ export function CustomerRegisterForm() {
                 onChange={(e) => setAgreeTerms(e.target.checked)}
                 className="w-3.5 h-3.5 accent-[#0B3B17] rounded cursor-pointer shrink-0"
               />
-<<<<<<< HEAD
-              <label htmlFor="agree-terms" className="text-[10.5px] text-slate-600 font-medium leading-tight cursor-pointer">
-                I agree to the Nu3Go Terms of Service and Privacy Policy.
-=======
-              <label htmlFor="agree-terms" className="text-[11px] text-slate-600 font-medium leading-tight cursor-pointer">
+<label htmlFor="agree-terms" className="text-[11px] text-slate-600 font-medium leading-tight cursor-pointer">
                 I agree to the Nu3Go{" "}
                 <Link href="/terms" target="_blank" className="underline hover:text-[#0B3B17]">
                   Terms &amp; Conditions
                 </Link>{" "}
                 and Privacy Policy.
->>>>>>> contactFormSetup
               </label>
             </div>
 

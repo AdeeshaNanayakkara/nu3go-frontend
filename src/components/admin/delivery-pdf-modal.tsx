@@ -8,8 +8,10 @@ import {
   FileText,
   Calendar,
   Filter,
+  FileSpreadsheet,
 } from "lucide-react";
-import { type DeliveryListItem } from "@/services/api/delivery.service";
+import { type DeliveryListItem, formatDeliveryType, getCustomerPhone } from "@/services/api/delivery.service";
+import { exportDeliveriesToExcel } from "@/utils/export-deliveries-excel";
 
 interface DeliveryPdfModalProps {
   isOpen: boolean;
@@ -44,16 +46,7 @@ function getCustomerName(item: DeliveryListItem): string {
   return "N/A";
 }
 
-function getCustomerMobile(item: DeliveryListItem): string {
-  const phone =
-    item.customer_phone ||
-    item.mobile ||
-    item.phone ||
-    item.mobile_number ||
-    item.contact_number;
-  if (phone && phone.trim()) return phone.trim();
-  return "-";
-}
+// getCustomerPhone imported from delivery.service
 
 function formatDateFull(ymd: string): string {
   try {
@@ -108,8 +101,8 @@ export function DeliveryPdfModal({
   <title>Nu3Go Deliveries Manifest - ${deliveryDate}</title>
   <style>
     @page {
-      size: A4 portrait;
-      margin: 12mm 10mm 12mm 10mm;
+      size: A4 landscape;
+      margin: 10mm 10mm 10mm 10mm;
     }
     * {
       box-sizing: border-box;
@@ -263,20 +256,24 @@ export function DeliveryPdfModal({
   <table class="data-table">
     <thead>
       <tr>
-        <th style="width: 32px; text-align: center;">#</th>
-        <th style="width: 220px;">Customer</th>
-        <th style="width: 130px;">Mobile Number</th>
+        <th style="width: 28px; text-align: center;">#</th>
+        <th style="width: 160px;">Customer</th>
+        <th style="width: 110px;">Phone Number</th>
         <th>Delivery Address</th>
+        <th style="width: 120px;">Delivery Type</th>
+        <th style="width: 150px;">Delivery Note</th>
       </tr>
     </thead>
     <tbody>
       ${
         deliveries.length === 0
-          ? `<tr><td colspan="4" style="text-align: center; padding: 24px; color: #64748b;">No delivery records match the selected date and filters.</td></tr>`
+          ? `<tr><td colspan="6" style="text-align: center; padding: 24px; color: #64748b;">No delivery records match the selected date and filters.</td></tr>`
           : deliveries
               .map((item, idx) => {
                 const name = getCustomerName(item);
-                const mobile = getCustomerMobile(item);
+                const phone = getCustomerPhone(item);
+                const deliveryType = formatDeliveryType(item.delivery_type);
+                const deliveryNote = item.delivery_note?.trim() || "—";
                 return `
         <tr>
           <td style="text-align: center; font-weight: 700; color: #64748b;">${idx + 1}</td>
@@ -292,8 +289,8 @@ export function DeliveryPdfModal({
                 : ""
             }
           </td>
-          <td style="font-weight: 600; color: #0f172a; font-size: 10.5px;">
-            ${mobile}
+          <td style="font-weight: 600; color: #0f172a; font-size: 10px; font-family: monospace;">
+            ${phone}
           </td>
           <td>
             <div style="color: #1e293b; font-size: 10.5px; line-height: 1.35;">${
@@ -307,6 +304,12 @@ export function DeliveryPdfModal({
                   )}...</div>`
                 : ""
             }
+          </td>
+          <td>
+            <div style="font-weight: 600; font-size: 10px; color: #334155;">${deliveryType}</div>
+          </td>
+          <td>
+            <div style="font-size: 9.5px; color: ${item.delivery_note?.trim() ? '#0f172a' : '#94a3b8'}; line-height: 1.3;">${deliveryNote}</div>
           </td>
         </tr>
       `;
@@ -374,6 +377,15 @@ export function DeliveryPdfModal({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => exportDeliveriesToExcel(deliveries, deliveryDate)}
+              className="px-3.5 py-2 bg-white hover:bg-emerald-50 text-emerald-800 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 border border-emerald-200 cursor-pointer"
+              title="Export to Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              <span>Export Excel</span>
+            </button>
             <button
               type="button"
               onClick={handlePrintToPdf}
@@ -477,22 +489,24 @@ export function DeliveryPdfModal({
                 <thead>
                   <tr className="bg-slate-100/80 border-b border-slate-200 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
                     <th className="py-2.5 px-3 w-10 text-center">#</th>
-                    <th className="py-2.5 px-3 w-64">Customer</th>
-                    <th className="py-2.5 px-3 w-40">Mobile Number</th>
+                    <th className="py-2.5 px-3 w-44">Customer</th>
+                    <th className="py-2.5 px-3 w-32">Phone Number</th>
                     <th className="py-2.5 px-3">Delivery Address</th>
+                    <th className="py-2.5 px-3 w-36 text-center">Delivery Type</th>
+                    <th className="py-2.5 px-3 w-44">Delivery Note</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-[11px]">
                   {deliveries.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-slate-400">
+                      <td colSpan={6} className="py-8 text-center text-slate-400">
                         No deliveries found matching the current date and filter scope.
                       </td>
                     </tr>
                   ) : (
                     deliveries.map((item, idx) => {
                       const name = getCustomerName(item);
-                      const mobile = getCustomerMobile(item);
+                      const phone = getCustomerPhone(item);
                       return (
                         <tr
                           key={item.subscription_id || idx}
@@ -505,7 +519,7 @@ export function DeliveryPdfModal({
                             <p className="font-bold text-slate-900 leading-tight">
                               {name}
                             </p>
-                            <p className="text-[10px] text-slate-500 mt-0.5">
+                            <p className="text-[10px] text-slate-500 mt-0.5 truncate max-w-[150px]">
                               {item.customer_email || "N/A"}
                             </p>
                             {item.subscription_id && (
@@ -514,8 +528,8 @@ export function DeliveryPdfModal({
                               </p>
                             )}
                           </td>
-                          <td className="py-2.5 px-3 font-semibold text-slate-800 text-xs font-mono">
-                            {mobile}
+                          <td className="py-2.5 px-3 font-semibold text-slate-800 text-xs font-mono whitespace-nowrap">
+                            {phone}
                           </td>
                           <td className="py-2.5 px-3 text-slate-700">
                             <p className="leading-snug">{item.location_address || "No address provided"}</p>
@@ -523,6 +537,20 @@ export function DeliveryPdfModal({
                               <p className="text-[9px] text-slate-400 font-mono mt-0.5">
                                 Loc ID: {item.location_id.slice(0, 8)}...
                               </p>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                            <span className="inline-block text-[10px] font-semibold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
+                              {formatDeliveryType(item.delivery_type)}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-700">
+                            {item.delivery_note?.trim() ? (
+                              <p className="text-[11px] text-slate-800 leading-tight">
+                                {item.delivery_note}
+                              </p>
+                            ) : (
+                              <span className="text-slate-400 text-xs">—</span>
                             )}
                           </td>
                         </tr>

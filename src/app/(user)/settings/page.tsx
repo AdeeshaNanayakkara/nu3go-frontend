@@ -19,6 +19,9 @@ import {
   Loader2,
   Map as MapIcon,
 } from "lucide-react";
+import { toast } from "@/lib/toast";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { BottomSheet } from "@/components/mobile/mobile-ui";
 
 // Client-only dynamic import for OpenStreetMap Leaflet component
 const OpenStreetMapPicker = dynamic(
@@ -50,7 +53,9 @@ export default function SettingsLocationsPage() {
   const [showMap, setShowMap] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
+  const isMobile = useIsMobile();
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchLocations = useCallback(async () => {
     setIsLoading(true);
@@ -156,8 +161,7 @@ export default function SettingsLocationsPage() {
       setLongitude("79.8612");
       setGpsDetected(false);
       setShowAddModal(false);
-      setSuccessMsg("Delivery location added successfully!");
-      setTimeout(() => setSuccessMsg(""), 4000);
+      toast.success("Delivery location added successfully!");
       await fetchLocations();
     } catch (err: any) {
       console.error("Failed to add location:", err);
@@ -170,35 +174,50 @@ export default function SettingsLocationsPage() {
   const handleSetDefault = async (id: string) => {
     try {
       await locationService.setDefaultLocation(id);
-      setSuccessMsg("Default delivery address updated.");
-      setTimeout(() => setSuccessMsg(""), 3500);
+      toast.success("Default delivery address updated.");
       await fetchLocations();
     } catch (err) {
       console.error("Failed to set default location:", err);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this delivery address?")) return;
+  const performDelete = async (id: string) => {
     try {
       await locationService.deleteLocation(id);
-      setSuccessMsg("Delivery address removed.");
-      setTimeout(() => setSuccessMsg(""), 3500);
+      toast.success("Delivery address removed.");
       await fetchLocations();
     } catch (err) {
       console.error("Failed to delete location:", err);
     }
   };
 
+  // Phones get a bottom-sheet confirmation; larger screens keep the native confirm dialog
+  const handleDelete = (id: string) => {
+    if (isMobile) {
+      setDeleteId(id);
+      return;
+    }
+    if (!confirm("Are you sure you want to delete this delivery address?")) return;
+    void performDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
+    await performDelete(deleteId);
+    setIsDeleting(false);
+    setDeleteId(null);
+  };
+
   const parsedLat = parseFloat(latitude) || 6.9271;
   const parsedLng = parseFloat(longitude) || 79.8612;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300 font-poppins">
+    <div className="space-y-5 md:space-y-8 pb-24 md:pb-0 animate-in fade-in duration-300 font-poppins">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-oswald text-3xl sm:text-4xl font-black uppercase text-neutral-900 tracking-tight leading-tight">
+          <h1 className="font-oswald text-2xl sm:text-4xl font-black uppercase text-neutral-900 tracking-tight leading-tight">
             Delivery Locations & Preferences
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 mt-1 font-normal">
@@ -212,22 +231,15 @@ export default function SettingsLocationsPage() {
             setErrorMsg("");
             setShowAddModal(true);
           }}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#36D068] hover:bg-[#2eb85c] text-black font-oswald font-bold text-xs uppercase tracking-wider shadow-md shadow-[#36D068]/20 transition-all active:scale-95 self-start sm:self-center"
+          className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#36D068] hover:bg-[#2eb85c] text-black font-oswald font-bold text-xs uppercase tracking-wider shadow-md shadow-[#36D068]/20 transition-all active:scale-95 self-start sm:self-center"
         >
           <Plus className="w-4 h-4" />
           <span>Add New Address</span>
         </button>
       </div>
 
-      {successMsg && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-[#15803D] text-xs font-bold flex items-center gap-2 shadow-2xs">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>{successMsg}</span>
-        </div>
-      )}
-
       {/* Locations Grid */}
-      <div className="rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-7 shadow-sm space-y-6">
+      <div className="rounded-3xl bg-white border border-slate-200/90 p-4 sm:p-7 shadow-sm space-y-5 md:space-y-6">
         <div className="flex items-center gap-2.5 border-b border-slate-100 pb-4">
           <div className="p-2 rounded-xl bg-emerald-50 text-[#15803D]">
             <MapPin className="w-5 h-5" />
@@ -290,7 +302,7 @@ export default function SettingsLocationsPage() {
                       <button
                         type="button"
                         onClick={() => handleSetDefault(loc.id)}
-                        className="font-oswald text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-[#15803D] transition-colors"
+                        className="h-9 touch-manipulation rounded-full border border-slate-200 bg-white px-3.5 font-oswald text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-[#15803D] active:bg-slate-100 transition-colors"
                       >
                         Set Default
                       </button>
@@ -320,8 +332,9 @@ export default function SettingsLocationsPage() {
                   <button
                     type="button"
                     onClick={() => handleDelete(loc.id)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    className="p-2.5 md:p-1.5 touch-manipulation text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-50 rounded-xl md:rounded-lg transition-colors"
                     title="Remove Location"
+                    aria-label="Remove location"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -333,7 +346,7 @@ export default function SettingsLocationsPage() {
       </div>
 
       {/* Delivery Preferences Box */}
-      <div className="rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-7 shadow-sm space-y-4">
+      <div className="rounded-3xl bg-white border border-slate-200/90 p-4 sm:p-7 shadow-sm space-y-4">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-blue-50 text-blue-700">
             <Clock className="w-5 h-5" />
@@ -354,10 +367,50 @@ export default function SettingsLocationsPage() {
         </div>
       </div>
 
-      {/* Add Location Modal */}
+      {/* Floating add button (phones) */}
+      {!showAddModal && (
+        <button
+          type="button"
+          onClick={() => {
+            setErrorMsg("");
+            setShowAddModal(true);
+          }}
+          className="md:hidden fixed right-4 bottom-[max(env(safe-area-inset-bottom),1rem)] z-30 flex h-14 touch-manipulation items-center gap-2 rounded-full bg-[#36D068] px-5 font-oswald text-sm font-bold uppercase tracking-wider text-slate-950 shadow-lg shadow-[#36D068]/30 active:scale-95"
+        >
+          <Plus className="h-5 w-5" />
+          Add address
+        </button>
+      )}
+
+      {/* Delete confirmation (phones) */}
+      <BottomSheet open={!!deleteId} title="Remove this address?" onClose={() => !isDeleting && setDeleteId(null)}>
+        <p className="mb-5 text-sm leading-relaxed text-slate-500">
+          This delivery address will be removed from your saved locations.
+        </p>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            disabled={isDeleting}
+            onClick={() => setDeleteId(null)}
+            className="h-12 flex-1 touch-manipulation rounded-2xl border border-slate-200 bg-slate-100 text-sm font-bold text-slate-700 active:bg-slate-200"
+          >
+            Keep
+          </button>
+          <button
+            type="button"
+            disabled={isDeleting}
+            onClick={confirmDelete}
+            className="h-12 flex-1 touch-manipulation rounded-2xl bg-rose-600 font-oswald text-sm font-bold uppercase tracking-wider text-white active:bg-rose-700 disabled:opacity-60"
+          >
+            {isDeleting ? "Removing…" : "Remove"}
+          </button>
+        </div>
+      </BottomSheet>
+
+      {/* Add Location Modal (bottom sheet on phones) */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto font-poppins">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 backdrop-blur-sm p-0 md:p-4 animate-in fade-in duration-200 overflow-y-auto font-poppins">
+          <div className="bg-white border border-slate-200 rounded-t-[28px] md:rounded-3xl max-w-lg w-full p-5 pb-[max(env(safe-area-inset-bottom),1.25rem)] sm:p-7 shadow-2xl space-y-5 relative max-h-[92dvh] md:max-h-[90vh] overflow-y-auto custom-scrollbar animate-in slide-in-from-bottom md:slide-in-from-bottom-0 duration-300">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2.5">
@@ -397,7 +450,7 @@ export default function SettingsLocationsPage() {
                   placeholder="e.g., 123 Galle Rd, Colombo 03"
                   value={newAddress}
                   onChange={(e) => setNewAddress(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-neutral-900 text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#36D068] focus:bg-white transition-colors resize-none"
+                  className="w-full px-4 py-3 md:py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-neutral-900 text-base md:text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#36D068] focus:bg-white transition-colors resize-none"
                 />
               </div>
 
@@ -461,7 +514,7 @@ export default function SettingsLocationsPage() {
                       placeholder="6.9120"
                       value={latitude}
                       onChange={(e) => setLatitude(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-neutral-900 text-xs font-mono focus:outline-none focus:border-[#36D068] focus:bg-white transition-colors"
+                      className="w-full px-3 py-2.5 md:py-2 rounded-xl bg-slate-50 border border-slate-200 text-neutral-900 text-base md:text-xs font-mono focus:outline-none focus:border-[#36D068] focus:bg-white transition-colors"
                     />
                   </div>
                   <div className="space-y-1">
@@ -473,7 +526,7 @@ export default function SettingsLocationsPage() {
                       placeholder="79.8612"
                       value={longitude}
                       onChange={(e) => setLongitude(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-neutral-900 text-xs font-mono focus:outline-none focus:border-[#36D068] focus:bg-white transition-colors"
+                      className="w-full px-3 py-2.5 md:py-2 rounded-xl bg-slate-50 border border-slate-200 text-neutral-900 text-base md:text-xs font-mono focus:outline-none focus:border-[#36D068] focus:bg-white transition-colors"
                     />
                   </div>
                 </div>
@@ -484,14 +537,14 @@ export default function SettingsLocationsPage() {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-200 transition-colors"
+                  className="flex-1 py-3.5 md:py-2.5 px-4 rounded-xl touch-manipulation bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-200 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-[#36D068] hover:bg-[#2eb85c] text-black font-oswald font-bold text-xs uppercase tracking-wider shadow-md shadow-[#36D068]/20 transition-all flex items-center justify-center gap-2"
+                  className="flex-1 py-3.5 md:py-2.5 px-4 rounded-xl touch-manipulation bg-[#36D068] hover:bg-[#2eb85c] text-black font-oswald font-bold text-xs uppercase tracking-wider shadow-md shadow-[#36D068]/20 transition-all flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
                     <>

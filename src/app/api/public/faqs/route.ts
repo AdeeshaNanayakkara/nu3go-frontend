@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * GET /api/public/faqs
@@ -23,7 +24,7 @@ export async function GET() {
       { status: res.status }
     );
   } catch (err) {
-    console.error("[BFF /api/public/faqs GET] Error:", err);
+    logBffError("[BFF /api/public/faqs GET]", err);
     return NextResponse.json(
       { success: false, data: [], message: "Internal server error fetching public FAQs" },
       { status: 500 }

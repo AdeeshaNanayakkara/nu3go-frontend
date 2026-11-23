@@ -3,12 +3,20 @@ import { assertApiResponse } from "@/utils/response-handler";
 
 export type MenuDay = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY";
 
+export interface OptionalMealItem {
+  id: string;
+  name?: string;
+  description?: string;
+  image_url?: string;
+}
+
 export interface MenuMealSlot {
   day: MenuDay;
   meal_id: string; // Mandatory main meal
-  optional_meal_id?: string; // Optional meal
+  optional_meal_ids?: string[]; // Alternatives customers may request, in display order
   emergency_meal_change_id?: string; // Backup for main meal
-  emergency_optional_meal_change_id?: string; // Backup for optional meal
+  meal_name?: string; // Read-only, preloaded by the API
+  optional_meals?: OptionalMealItem[]; // Read-only, preloaded by the API
 }
 
 export interface CreateMenuPayload {
@@ -18,8 +26,8 @@ export interface CreateMenuPayload {
   meals: MenuMealSlot[];
 }
 
+// PUT /api/v1/menus/{id}: name (min 2 chars), sequence (1-3), meals (exactly 5 days when provided)
 export interface UpdateMenuPayload {
-  package_id?: string;
   name?: string;
   sequence?: number;
   meals?: MenuMealSlot[];

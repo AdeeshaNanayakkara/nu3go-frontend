@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 interface ContextParams {
   params: Promise<{ id: string }>;
@@ -88,7 +89,7 @@ export async function PUT(request: NextRequest, { params }: ContextParams) {
       { status: lastStatus }
     );
   } catch (err) {
-    console.error("[BFF /api/admin/users/[id]/status] Error:", err);
+    logBffError("[BFF /api/admin/users/[id]/status]", err);
     return NextResponse.json(
       { success: false, error: { message: err instanceof Error ? err.message : "Server error updating user status." } },
       { status: 500 }

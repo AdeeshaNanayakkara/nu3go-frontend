@@ -17,6 +17,49 @@
 
 import type { ApiError, ApiResponse } from "@/services/types/api-response";
 import { refreshAccessToken } from "@/lib/auth/token-refresher";
+import { getCsrfToken } from "@/lib/auth/csrf";
+import { toast } from "@/lib/toast";
+import { formatUserFriendlyError } from "@/utils/response-handler";
+
+const DEFAULT_SUCCESS_MESSAGE: Record<string, string> = {
+  POST: "Created successfully.",
+  PUT: "Updated successfully.",
+  PATCH: "Updated successfully.",
+  DELETE: "Deleted successfully.",
+};
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** Real Error (so `err instanceof Error` works in pages) that also carries ApiError fields. */
+class ApiRequestError extends Error implements ApiError {
+  status: number;
+  errors: ApiError["errors"];
+  details?: string;
+  title?: string;
+
+  constructor(init: { status: number; title: string; details?: string; errors?: ApiError["errors"] }) {
+    const title = capitalize(init.title);
+    super(init.details ? `${title}: ${init.details}` : title);
+    this.name = "ApiRequestError";
+    this.status = init.status;
+    this.errors = init.errors ?? [];
+    this.details = init.details;
+    this.title = title;
+  }
+}
+
+/**
+ * Toast text for a failed request. Backend validation-style errors (400/409/422)
+ * keep their specific title + details; everything else gets a friendly translation.
+ */
+function resolveErrorToast(err: unknown): { title: string; description?: string } {
+  const e = err as Partial<ApiError> | undefined;
+  const title = typeof e?.title === "string" ? e.title : typeof e?.message === "string" ? e.message.trim() : "";
+  if (title && e?.status && [400, 409, 422].includes(e.status) && title.length < 180) {
+    return { title: capitalize(title), description: e.details };
+  }
+  return { title: formatUserFriendlyError(err) };
+}
 
 export type RequestConfig = RequestInit & {
   params?: Record<string, string | number | boolean | undefined>;
@@ -24,6 +67,11 @@ export type RequestConfig = RequestInit & {
   _retry?: boolean;
   /** Skip auto-refresh and redirect on 401 (useful for public/optional requests) */
   skipAuthRedirect?: boolean;
+  /**
+   * Response toast for mutating requests (POST/PUT/PATCH/DELETE). On by default.
+   * `false` disables it; an object overrides the success / error text.
+   */
+  notify?: boolean | { success?: string; error?: string };
 };
 
 class ApiClient {
@@ -47,22 +95,20 @@ class ApiClient {
 
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     if (!response.ok) {
-      const error: ApiError = {
-        status: response.status,
-        message: response.statusText,
-        errors: [],
-      };
+      let title = response.statusText;
+      let details: string | undefined;
+      let errors: ApiError["errors"] = [];
 
       try {
         const body = await response.json();
-        error.message =
-          body?.error?.message || body?.message || response.statusText;
-        error.errors = body.errors || [];
+        title = body?.error?.message || body?.message || response.statusText;
+        details = typeof body?.error?.details === "string" ? body.error.details : undefined;
+        errors = body?.errors || [];
       } catch {
         // Response body is not JSON — use statusText
       }
 
-      throw error;
+      throw new ApiRequestError({ status: response.status, title, details, errors });
     }
 
     // Handle 204 No Content
@@ -88,8 +134,53 @@ class ApiClient {
     body?: unknown,
     config?: RequestConfig,
   ): Promise<ApiResponse<T>> {
-    const { params, _retry = false, skipAuthRedirect = false, ...init } = config || {};
+    const notify = config?.notify;
+    const isMutating = method !== "GET" && method !== "HEAD";
+    // Auth endpoints show their own inline feedback
+    const shouldNotify =
+      typeof window !== "undefined" &&
+      isMutating &&
+      notify !== false &&
+      !endpoint.startsWith("/api/auth/");
+
+    if (!shouldNotify) {
+      return this.execute<T>(method, endpoint, body, config);
+    }
+
+    const custom = typeof notify === "object" ? notify : undefined;
+
+    try {
+      const result = await this.execute<T>(method, endpoint, body, config);
+      const bodyMsg = (result.data as { message?: unknown } | undefined)?.message;
+      const message =
+        custom?.success ??
+        (typeof bodyMsg === "string" && bodyMsg.trim() && bodyMsg.length < 120
+          ? bodyMsg.trim()
+          : DEFAULT_SUCCESS_MESSAGE[method] || "Done.");
+      toast.auto(message, "success");
+      return result;
+    } catch (err) {
+      // 401 after a failed refresh redirects to login — no toast needed
+      if ((err as Partial<ApiError>)?.status !== 401) {
+        const { title, description } = custom?.error
+          ? { title: custom.error, description: undefined }
+          : resolveErrorToast(err);
+        toast.auto(title, "error", description);
+      }
+      throw err;
+    }
+  }
+
+  private async execute<T>(
+    method: string,
+    endpoint: string,
+    body?: unknown,
+    config?: RequestConfig,
+  ): Promise<ApiResponse<T>> {
+    const { params, _retry = false, skipAuthRedirect = false, notify: _notify, ...init } = config || {};
     const url = this.buildUrl(endpoint, params);
+
+    const csrfToken = getCsrfToken();
 
     const response = await fetch(url, {
       ...init,
@@ -97,6 +188,7 @@ class ApiClient {
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
+        ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
         ...init?.headers,
       },
       body: body ? JSON.stringify(body) : undefined,
@@ -117,7 +209,7 @@ class ApiClient {
 
       if (refreshed) {
         // Retry with _retry=true to prevent infinite loops
-        return this.request<T>(method, endpoint, body, {
+        return this.execute<T>(method, endpoint, body, {
           ...config,
           _retry: true,
         });

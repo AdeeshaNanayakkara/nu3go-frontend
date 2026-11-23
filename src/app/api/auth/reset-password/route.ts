@@ -1,26 +1,17 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
+import { resetPasswordSchema } from "@/schemas/auth.schema";
+import { parseBody } from "@/lib/api/validate";
+import { logBffError } from "@/lib/api/safe-log";
 
-/**
- * POST /api/auth/reset-password
- *
- * BFF proxy for resetting password:
- *  1. Receives { email, new_password, otp } from client
- *  2. Forwards to backend POST /api/v1/auth/reset-password
- *  3. Backend validates OTP and updates the password
- */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, new_password, otp } = body;
+    const parsed = parseBody(body, resetPasswordSchema);
+    if ("error" in parsed) return parsed.error;
 
-    if (!email || !new_password || !otp) {
-      return NextResponse.json(
-        { success: false, error: { message: "Email, new password, and OTP are required." } },
-        { status: 400 }
-      );
-    }
+    const { email, new_password, otp } = parsed.data;
 
     const backendRes = await fetch(BACKEND_ENDPOINTS.AUTH.RESET_PASSWORD, {
       method: "POST",
@@ -43,7 +34,7 @@ export async function POST(request: NextRequest) {
       message: data.message || "Password reset successfully.",
     });
   } catch (err) {
-    console.error("[BFF /api/auth/reset-password] Error:", err);
+    logBffError("[BFF /api/auth/reset-password]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error. Please try again later." } },
       { status: 500 }

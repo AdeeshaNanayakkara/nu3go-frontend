@@ -18,6 +18,7 @@ export interface SubscriptionPlan {
   type: SubscriptionPlanType;
   billing_cycle?: BillingCycle;
   duration_limit?: number;
+  max_days?: number;
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
@@ -28,6 +29,7 @@ export interface CreateSubscriptionPlanPayload {
   type: SubscriptionPlanType;
   billing_cycle?: BillingCycle;
   duration_limit?: number;
+  max_days?: number;
   is_active?: boolean;
 }
 
@@ -36,6 +38,7 @@ export interface UpdateSubscriptionPlanPayload {
   type?: SubscriptionPlanType;
   billing_cycle?: BillingCycle;
   duration_limit?: number;
+  max_days?: number;
   is_active?: boolean;
 }
 

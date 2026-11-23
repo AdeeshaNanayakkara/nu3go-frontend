@@ -8,6 +8,7 @@ import {
   type PaginationMeta,
 } from "@/services/api/admin.service";
 import { formatUserFriendlyError } from "@/utils/response-handler";
+import { toast } from "@/lib/toast";
 import {
   Users,
   Search,
@@ -68,18 +69,6 @@ function AdminUsersContent() {
   // User Status Update state
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
-  // System Toast Notification State
-  const [toastMessage, setToastMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-
-  const showToast = useCallback((text: string, type: "success" | "error" = "success") => {
-    setToastMessage({ type, text });
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 4000);
-  }, []);
 
   const handleToggleUserStatus = async (targetUser: AdminUserItem) => {
     const newStatus = targetUser.is_active === false; // Toggle target status
@@ -89,17 +78,15 @@ function AdminUsersContent() {
       setUsers((prev) =>
         prev.map((u) => (u.id === targetUser.id ? { ...u, is_active: newStatus } : u))
       );
-      showToast(
+      toast.success(
         newStatus
           ? `User "${targetUser.email}" activated successfully!`
-          : `User "${targetUser.email}" suspended successfully!`,
-        "success"
+          : `User "${targetUser.email}" suspended successfully!`
       );
     } catch (err: unknown) {
       console.error("[AdminUsersPage] Error updating user status:", err);
-      showToast(
-        formatUserFriendlyError(err, { fallback: "Failed to update user status." }),
-        "error"
+      toast.error(
+        formatUserFriendlyError(err, { fallback: "Failed to update user status." })
       );
     } finally {
       setUpdatingUserId(null);
@@ -171,31 +158,6 @@ function AdminUsersContent() {
 
   return (
     <div className="space-y-8 font-poppins text-slate-900 relative">
-      {/* ─── SYSTEM TOAST NOTIFICATION OVERLAY ─── */}
-      {toastMessage && (
-        <div
-          className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-semibold animate-in slide-in-from-top-3 fade-in duration-200 ${
-            toastMessage.type === "success"
-              ? "bg-[#36D068] text-white border-[#2ca752]"
-              : "bg-red-600 text-white border-red-700"
-          }`}
-        >
-          {toastMessage.type === "success" ? (
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-white" />
-          ) : (
-            <AlertCircle className="w-4 h-4 shrink-0 text-white" />
-          )}
-          <span>{toastMessage.text}</span>
-          <button
-            type="button"
-            onClick={() => setToastMessage(null)}
-            className="ml-2 p-0.5 hover:bg-white/20 rounded-lg cursor-pointer"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200/80 p-6 rounded-3xl shadow-sm">
         <div>

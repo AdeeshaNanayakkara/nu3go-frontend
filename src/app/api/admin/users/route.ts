@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { BACKEND_ENDPOINTS } from "@/services/api/backend";
 import { APP_CONFIG } from "@/constants/config";
+import { logBffError } from "@/lib/api/safe-log";
 
 /**
  * GET /api/admin/users
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (err) {
-    console.error("[BFF /api/admin/users] Error:", err);
+    logBffError("[BFF /api/admin/users]", err);
     return NextResponse.json(
       { success: false, error: { message: "Server error fetching users." } },
       { status: 500 }

@@ -7,6 +7,8 @@ import {
   type SubscriptionResItem,
 } from "@/services/api/subscription.service";
 import { InvoiceReceiptModal } from "@/components/dashboard/invoice-receipt-modal";
+import { PaymentsMobileView } from "@/components/dashboard/payments-mobile-view";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
   Receipt,
   CheckCircle2,
@@ -16,6 +18,7 @@ import {
 } from "lucide-react";
 
 export default function BillingPaymentsPage() {
+  const isMobile = useIsMobile();
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [activeSubscriptions, setActiveSubscriptions] = useState<SubscriptionResItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,6 +72,28 @@ export default function BillingPaymentsPage() {
   const totalSpent = invoices
     .filter((i) => i.status?.toUpperCase() === "PAID")
     .reduce((sum, i) => sum + (Number(i.grand_total) || 0), 0);
+
+  if (isMobile === null) {
+    return <div className="h-64 animate-pulse rounded-3xl bg-slate-200/60" aria-busy="true" />;
+  }
+
+  if (isMobile) {
+    return (
+      <>
+        <PaymentsMobileView
+          invoices={filteredInvoices}
+          totalSpent={totalSpent}
+          totalInvoices={invoices.length}
+          hasActiveSubscriptions={activeSubscriptions.length > 0}
+          isLoading={isLoading}
+          statusFilter={statusFilter}
+          onFilterChange={setStatusFilter}
+          onViewInvoice={setSelectedInvoice}
+        />
+        <InvoiceReceiptModal invoice={selectedInvoice} onClose={() => setSelectedInvoice(null)} />
+      </>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300 font-poppins">
