@@ -8,9 +8,6 @@ import {
   Dumbbell,
   Leaf,
   GraduationCap,
-  ShieldCheck,
-  Scale,
-  ChefHat,
   ArrowRight,
   Zap,
   Repeat,
@@ -35,7 +32,7 @@ export function StoryPhilosophy() {
     if (!containerRef.current) return;
 
     const ctx = gsap.context(() => {
-      // 1. Dynamic Parallax Background Scrub (Moves smoothly on Up & Down scroll)
+      // 1. Dynamic Parallax Background Scrub
       if (bgRef.current) {
         gsap.fromTo(
           bgRef.current,
@@ -53,7 +50,7 @@ export function StoryPhilosophy() {
         );
       }
 
-      // 2. Header Animation (Plays once on first scroll)
+      // 2. Header Animation
       if (headerRef.current) {
         gsap.fromTo(
           headerRef.current.children,
@@ -73,7 +70,7 @@ export function StoryPhilosophy() {
         );
       }
 
-      // 3. Core Features Stagger (Plays once on first scroll)
+      // 3. Core Features Stagger
       if (coreFeaturesRef.current) {
         gsap.fromTo(
           coreFeaturesRef.current.children,
@@ -93,7 +90,7 @@ export function StoryPhilosophy() {
         );
       }
 
-      // 4. Meal Plans Stagger (Plays once on first scroll)
+      // 4. Meal Plans Stagger
       if (plansRef.current) {
         gsap.fromTo(
           plansRef.current.children,
@@ -123,14 +120,14 @@ export function StoryPhilosophy() {
       ref={containerRef}
       className="relative bg-neutral-900 text-white py-20 sm:py-28 lg:py-32 overflow-hidden select-none"
     >
-      {/* ─── Parallax Background (Moving smoothly on Up & Down Scroll) ─── */}
+      {/* ─── Parallax Background ─── */}
       <div
         ref={bgRef}
         className="absolute inset-0 w-full h-[130%] -top-[15%] pointer-events-none will-change-transform"
       >
         <Image
           src="/images/how-to-work.jpg"
-          alt="nu3go Culinary Atmosphere and Wholesome Breakfast Preparation"
+          alt="nu3go Culinary Atmosphere and Wholesome Meal Preparation"
           fill
           quality={95}
           className="object-cover object-center"
@@ -150,7 +147,7 @@ export function StoryPhilosophy() {
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#36D068]/15 border border-[#36D068]/30 mb-4">
             <UtensilsCrossed className="w-3.5 h-3.5 text-[#36D068]" />
             <span className="font-oswald text-xs font-bold tracking-[0.2em] uppercase text-[#36D068]">
-              HOW IT WORKS
+              MECHANISM
             </span>
           </div>
 
@@ -159,115 +156,92 @@ export function StoryPhilosophy() {
           </h2>
 
           <p className="text-white/80 text-base sm:text-lg leading-relaxed font-light">
-            Every weekday morning (Monday to Friday), nu3go delivers nutritional, ready-to-eat breakfasts
-            calibrated to your lifestyle, complete with weekly menu rotations, flexible meal swapping, and 100% free delivery.
+            Every weekday (Monday to Friday), nu3go delivers fresh, healthy and convenient meals calibrated to your lifestyle, complete with rotating menus, flexible meal swapping, and 100% free standard delivery.
           </p>
         </div>
 
         {/* ─── 3 Core Features & Mechanics ─── */}
         <div ref={coreFeaturesRef} className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20 sm:mb-28">
           {/* Feature 1: Rotating Healthy Menu */}
-          <div className="bg-neutral-800/60 backdrop-blur-md p-8 rounded-3xl border border-white/10 hover:border-[#36D068]/40 transition-all duration-300 group">
-            <div className="w-14 h-14 rounded-2xl bg-[#36D068]/15 flex items-center justify-center text-[#36D068] mb-6 group-hover:scale-110 transition-transform">
-              <Repeat className="w-7 h-7" />
+          <div className="bg-neutral-800/60 backdrop-blur-md p-8 rounded-3xl border border-white/10 hover:border-[#36D068]/40 transition-all duration-300 group flex flex-col justify-between">
+            <div>
+              <div className="w-14 h-14 rounded-2xl bg-[#36D068]/15 flex items-center justify-center text-[#36D068] mb-6 group-hover:scale-110 transition-transform">
+                <Repeat className="w-7 h-7" />
+              </div>
+              <span className="text-xs font-bold font-oswald text-[#36D068] tracking-widest uppercase block mb-1">
+                MECHANISM
+              </span>
+              <h3 className="font-oswald text-2xl font-bold uppercase tracking-tight text-white mb-3">
+                ROTATING HEALTHY MENU
+              </h3>
+              <p className="text-white/70 text-sm leading-relaxed font-light mb-4">
+                Enjoy a fresh, constantly changing selection of chef-prepared meals designed to make healthy eating exciting. From protein-rich meals and wholesome favourites to convenient everyday options, our rotating menus bring variety, balance and great taste to your table.
+              </p>
             </div>
-            <span className="text-xs font-bold font-oswald text-[#36D068] tracking-widest uppercase block mb-1">
-              VARIETY &amp; TASTE
-            </span>
-            <h3 className="font-oswald text-2xl font-bold uppercase tracking-tight text-white mb-3">
-              Rotating Healthy Menu
-            </h3>
-            <p className="text-white/70 text-sm leading-relaxed font-light mb-4">
-              Enjoy a varied, constantly changing weekly menu. Savor favorites like <strong>overnight fruit &amp; nut oats</strong>,
-              <strong> high-protein pasta</strong>, <strong>specialized omelets</strong>, artisan sandwiches, and traditional
-              wholesome options like <strong>chapathi wraps</strong> and <strong>healthy stringhopper packs</strong>.
-            </p>
-            <div className="text-xs text-[#36D068] font-oswald uppercase tracking-wider font-semibold">
-              Never boring &bull; Chef-Prepared
+            <div className="text-xs text-[#36D068] font-oswald uppercase tracking-wider font-semibold pt-4 border-t border-white/10">
+              FRESHLY PREPARED • NEVER BORING
             </div>
           </div>
 
-          {/* Feature 2: Flexible Hybrid Routines & Meal Swapping */}
-          <div className="bg-neutral-800/60 backdrop-blur-md p-8 rounded-3xl border border-white/10 hover:border-[#36D068]/40 transition-all duration-300 group">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/15 flex items-center justify-center text-amber-400 mb-6 group-hover:scale-110 transition-transform">
-              <RefreshCw className="w-7 h-7" />
+          {/* Feature 2: Flexible Hybrid Routines & Swaps */}
+          <div className="bg-neutral-800/60 backdrop-blur-md p-8 rounded-3xl border border-white/10 hover:border-[#36D068]/40 transition-all duration-300 group flex flex-col justify-between">
+            <div>
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/15 flex items-center justify-center text-amber-400 mb-6 group-hover:scale-110 transition-transform">
+                <RefreshCw className="w-7 h-7" />
+              </div>
+              <span className="text-xs font-bold font-oswald text-amber-400 tracking-widest uppercase block mb-1">
+                HYBRID-WORK MODEL
+              </span>
+              <h3 className="font-oswald text-2xl font-bold uppercase tracking-tight text-white mb-3">
+                FLEXIBLE ROUTINES &amp; SWAPS
+              </h3>
+              <p className="text-white/70 text-sm leading-relaxed font-light mb-4">
+                Choose weekly , monthly or hybrid meal plans that fit your lifestyle. Whether you&apos;re at home or in the office, enjoy the flexibility to choose different delivery locations and swap scheduled meals with Optional menu options. Healthy eating that works around your routine.
+              </p>
             </div>
-            <span className="text-xs font-bold font-oswald text-amber-400 tracking-widest uppercase block mb-1">
-              HYBRID-WORK MODEL
-            </span>
-            <h3 className="font-oswald text-2xl font-bold uppercase tracking-tight text-white mb-3">
-              Flexible Routines &amp; Swaps
-            </h3>
-            <p className="text-white/70 text-sm leading-relaxed font-light mb-4">
-              Subscriptions run on <strong>weekly or monthly plans</strong>. Designed for modern hybrid work, you can
-              assign different delivery addresses (home vs office) and <strong>swap meals from alternative menu choices</strong> if
-              you aren&apos;t in the mood for the day&apos;s scheduled dish.
-            </p>
-            <div className="text-xs text-amber-400 font-oswald uppercase tracking-wider font-semibold">
-              Weekly &amp; Monthly &bull; Meal Swapping
+            <div className="text-xs text-amber-400 font-oswald uppercase tracking-wider font-semibold pt-4 border-t border-white/10">
+              WEEKLY &amp; MONTHLY PLANS • FLEXIBLE MEAL SWAPPING
             </div>
           </div>
 
           {/* Feature 3: 100% Free Delivery */}
-          <div className="bg-neutral-800/60 backdrop-blur-md p-8 rounded-3xl border border-white/10 hover:border-[#36D068]/40 transition-all duration-300 group">
-            <div className="w-14 h-14 rounded-2xl bg-blue-500/15 flex items-center justify-center text-blue-400 mb-6 group-hover:scale-110 transition-transform">
-              <Truck className="w-7 h-7" />
+          <div className="bg-neutral-800/60 backdrop-blur-md p-8 rounded-3xl border border-white/10 hover:border-[#36D068]/40 transition-all duration-300 group flex flex-col justify-between">
+            <div>
+              <div className="w-14 h-14 rounded-2xl bg-blue-500/15 flex items-center justify-center text-blue-400 mb-6 group-hover:scale-110 transition-transform">
+                <Truck className="w-7 h-7" />
+              </div>
+              <span className="text-xs font-bold font-oswald text-blue-400 tracking-widest uppercase block mb-1">
+                ZERO HIDDEN COSTS
+              </span>
+              <h3 className="font-oswald text-2xl font-bold uppercase tracking-tight text-white mb-3">
+                100% FREE DELIVERY
+              </h3>
+              <p className="text-white/70 text-sm leading-relaxed font-light mb-4">
+                Enjoy the convenience of having freshly prepared meals delivered directly to your home or workplace across our Colombo and Wattala service areas. With 100% free standard delivery, there are no additional delivery charges or hidden delivery fees.
+              </p>
             </div>
-            <span className="text-xs font-bold font-oswald text-blue-400 tracking-widest uppercase block mb-1">
-              ZERO HIDDEN COSTS
-            </span>
-            <h3 className="font-oswald text-2xl font-bold uppercase tracking-tight text-white mb-3">
-              100% Free Delivery
-            </h3>
-            <p className="text-white/70 text-sm leading-relaxed font-light mb-4">
-              We guarantee standard weekday morning delivery by <strong>7:30 AM with 100% free shipping and zero hidden fees</strong>.
-              Operating primarily within the <strong>Colombo and Wattala areas</strong>, your breakfast arrives ready to eat
-              right at your doorstep or office desk before work begins.
-            </p>
-            <div className="text-xs text-blue-400 font-oswald uppercase tracking-wider font-semibold">
-              Colombo &amp; Wattala &bull; Free Shipping
+            <div className="text-xs text-blue-400 font-oswald uppercase tracking-wider font-semibold pt-4 border-t border-white/10">
+              HOME &amp; OFFICE DELIVERY • FREE STANDARD SHIPPING
             </div>
           </div>
         </div>
 
-        {/* ─── The 4 Purpose-Built Nutrition Tiers ─── */}
+        {/* ─── Curated Meal Plans ─── */}
         <div className="relative">
           <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
             <span className="text-xs font-bold font-oswald tracking-[0.25em] text-[#36D068] uppercase block mb-2">
-              CURATED MEAL TIERS
+              CURATED MEAL PLANS
             </span>
             <h3 className="font-oswald text-2xl sm:text-3xl md:text-4xl font-black uppercase text-white tracking-tight">
-              4 Tailored Nutrition Tiers
+              4 MEAL PLANS. DIFFERENT NEEDS. ONE nu3go.
             </h3>
             <p className="text-white/70 text-xs sm:text-sm mt-2 font-light">
-              Tailored nutritional options for gym-goers, busy corporate executives, high-intensity hustlers, and school students.
+              From everyday balanced nutrition to high-protein performance meals and convenient school-day food, nu3go offers meal plans designed around different lifestyles, nutritional needs and daily routines.
             </p>
           </div>
 
           <div ref={plansRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* 1. POWER */}
-            <div className="bg-gradient-to-b from-[#FF0844]/20 to-neutral-900 p-6 rounded-2xl border border-[#FF0844]/30 hover:border-[#FF0844] transition-all duration-300 flex flex-col justify-between">
-              <div>
-                <div className="w-10 h-10 rounded-xl bg-[#FF0844]/20 text-[#FF456E] flex items-center justify-center mb-4">
-                  <Dumbbell className="w-5 h-5" />
-                </div>
-                <h4 className="font-oswald text-xl font-bold uppercase text-white tracking-tight">
-                  POWER PLAN
-                </h4>
-                <p className="text-xs text-[#FFAAA6] font-semibold tracking-wider uppercase mt-0.5 mb-2">
-                  High Protein Athlete Fuel
-                </p>
-                <p className="text-white/70 text-xs leading-relaxed font-light">
-                  40g+ clean protein. Double chicken breast pasta, sourdough egg stacks, and macro oats shakes for muscle recovery and intense training.
-                </p>
-              </div>
-              <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between">
-                <span className="text-[11px] font-bold text-white/60 uppercase tracking-widest font-oswald">Target: Athletes</span>
-                <span className="text-xs font-bold text-[#FF456E]">40g+ Protein</span>
-              </div>
-            </div>
-
-            {/* 2. CLASSIC */}
+            {/* 1. CLASSIC PLAN */}
             <div className="bg-gradient-to-b from-[#36D068]/20 to-neutral-900 p-6 rounded-2xl border border-[#36D068]/30 hover:border-[#36D068] transition-all duration-300 flex flex-col justify-between">
               <div>
                 <div className="w-10 h-10 rounded-xl bg-[#36D068]/20 text-[#36D068] flex items-center justify-center mb-4">
@@ -276,60 +250,84 @@ export function StoryPhilosophy() {
                 <h4 className="font-oswald text-xl font-bold uppercase text-white tracking-tight">
                   CLASSIC PLAN
                 </h4>
-                <p className="text-xs text-[#36D068] font-semibold tracking-wider uppercase mt-0.5 mb-2">
-                  Everyday Balanced Vitality
+                <p className="text-xs text-[#36D068] font-semibold tracking-wider uppercase mt-0.5 mb-2 font-oswald">
+                  HEALTHY MADE AFFORDABLE.
                 </p>
                 <p className="text-white/70 text-xs leading-relaxed font-light">
-                  Clean farm vegetables, wholesome grains, egg pasta bowls, and warm fruit oats. Steady focus for busy professionals with zero energy crash.
+                  Enjoy balanced, wholesome meals made for everyday life. Nutritious, satisfying and affordable choices for busy professionals looking to eat better consistently.
                 </p>
               </div>
               <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between">
                 <span className="text-[11px] font-bold text-white/60 uppercase tracking-widest font-oswald">Target: Professionals</span>
-                <span className="text-xs font-bold text-[#36D068]">20g–26g Protein</span>
+                <span className="text-xs font-bold text-[#36D068]">Balanced Nutrition</span>
               </div>
             </div>
 
-            {/* 3. FOURTIG */}
+            {/* 2. POWER PLAN */}
+            <div className="bg-gradient-to-b from-[#FF0844]/20 to-neutral-900 p-6 rounded-2xl border border-[#FF0844]/30 hover:border-[#FF0844] transition-all duration-300 flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-[#FF0844]/20 text-[#FF456E] flex items-center justify-center mb-4">
+                  <Dumbbell className="w-5 h-5" />
+                </div>
+                <h4 className="font-oswald text-xl font-bold uppercase text-white tracking-tight">
+                  POWER PLAN
+                </h4>
+                <p className="text-xs text-[#FFAAA6] font-semibold tracking-wider uppercase mt-0.5 mb-2 font-oswald">
+                  MORE PROTEIN. MORE POWER.
+                </p>
+                <p className="text-white/70 text-xs leading-relaxed font-light">
+                  Fuel your workouts with protein-rich, satisfying meals designed to support muscle recovery, strength and performance while keeping you energised throughout the day.
+                </p>
+              </div>
+              <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between">
+                <span className="text-[11px] font-bold text-white/60 uppercase tracking-widest font-oswald">Target: Athletes</span>
+                <span className="text-xs font-bold text-[#FF456E]">High Protein</span>
+              </div>
+            </div>
+
+            
+
+            {/* 3. FOURTIG PLAN */}
             <div className="bg-gradient-to-b from-orange-500/20 to-neutral-900 p-6 rounded-2xl border border-orange-500/30 hover:border-orange-400 transition-all duration-300 flex flex-col justify-between">
               <div>
                 <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center mb-4">
                   <Zap className="w-5 h-5" />
                 </div>
                 <h4 className="font-oswald text-xl font-bold uppercase text-white tracking-tight">
-                  fourtiG PLAN
+                  FOURTIG PLAN
                 </h4>
-                <p className="text-xs text-orange-300 font-semibold tracking-wider uppercase mt-0.5 mb-2">
-                  Built for Hustlers
+                <p className="text-xs text-orange-300 font-semibold tracking-wider uppercase mt-0.5 mb-2 font-oswald">
+                  40g of Protein in Every Meal
                 </p>
                 <p className="text-white/70 text-xs leading-relaxed font-light">
-                  40g+ protein with 15 rotational chef meals. Quad-egg sourdough club, double chicken tortillas, and coconut tempered kadala bowls.
+                  Take your nutrition seriously with 40g+ protein, lower-carb meals crafted for high performers who demand more from their food and fitness routines.
                 </p>
               </div>
               <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between">
                 <span className="text-[11px] font-bold text-white/60 uppercase tracking-widest font-oswald">Target: High Performers</span>
-                <span className="text-xs font-bold text-orange-400">40g–48g Protein</span>
+                <span className="text-xs font-bold text-orange-400">40g+ Protein</span>
               </div>
             </div>
 
-            {/* 4. ISKOOL */}
+            {/* 4. iSKOOL PLAN */}
             <div className="bg-gradient-to-b from-blue-500/20 to-neutral-900 p-6 rounded-2xl border border-blue-500/30 hover:border-blue-400 transition-all duration-300 flex flex-col justify-between">
               <div>
                 <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-4">
                   <GraduationCap className="w-5 h-5" />
                 </div>
                 <h4 className="font-oswald text-xl font-bold uppercase text-white tracking-tight">
-                  ISKOOL PLAN
+                  iSKOOL PLAN
                 </h4>
-                <p className="text-xs text-blue-300 font-semibold tracking-wider uppercase mt-0.5 mb-2">
-                  Kids School Breakfast
+                <p className="text-xs text-blue-300 font-semibold tracking-wider uppercase mt-0.5 mb-2 font-oswald">
+                  Made for little champions.
                 </p>
                 <p className="text-white/70 text-xs leading-relaxed font-light">
-                  Chicken, egg &amp; wholesome grains to power students with all-day focus and nutrition. Soft pol rotti, chapathi rolls, and honey oat pots.
+                  Give growing minds and bodies the nourishment they need with wholesome, protein-rich meals designed to keep children fuelled throughout their busy school days.
                 </p>
               </div>
               <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between">
                 <span className="text-[11px] font-bold text-white/60 uppercase tracking-widest font-oswald">Target: Students</span>
-                <span className="text-xs font-bold text-blue-400">25g–32g Protein</span>
+                <span className="text-xs font-bold text-blue-400">Kids Nutrition</span>
               </div>
             </div>
           </div>

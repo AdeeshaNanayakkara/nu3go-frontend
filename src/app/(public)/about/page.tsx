@@ -9,37 +9,37 @@ import { StoryPartnership } from "@/components/about/story-partnership";
 import { StoryCta } from "@/components/about/story-cta";
 
 /**
- * About page — nu3go Story, Mission & Partnerships.
+ * About page — nu3go Story, Mission, Policies & Partnerships.
  */
 export const metadata: Metadata = generatePageMetadata({
-  title: "About Us — nu3go | Building Sri Lanka's #1 Breakfast Subscription Service",
+  title: "About Us — nu3go | Building Sri Lanka's #1 Meal Subscription Service",
   description:
-    "nu3go is building Sri Lanka's #1 breakfast subscription service. Fresh, nutritional, ready-to-eat breakfasts delivered with 100% free delivery across Colombo and Wattala by 7:30 AM every weekday morning.",
+    "nu3go is building Sri Lanka's #1 meal subscription service. Fresh, healthy, and convenient everyday meals delivered with 100% free delivery across Colombo and Wattala, Monday to Friday.",
   path: "/about",
 });
 
 export default function AboutPage() {
   return (
     <div className="w-full bg-[#F7F6F2]">
-      {/* ─── Hero Section (Preserved Exactly As-Is) ─── */}
+      {/* ─── Hero Section: Good Food. Better Days. ─── */}
       <AboutHero />
 
-      {/* ─── Our Purpose: Colombo's Morning Dilemma & Founder's Vision ─── */}
+      {/* ─── Our Purpose: The Workday Meal Struggle & nu3go Promise ─── */}
       <StoryGenesis />
 
-      {/* ─── How It Works: Rotating Menu, Meal Swaps & 100% Free Delivery ─── */}
+      {/* ─── Mechanism: Rotating Healthy Menu, Flexible Routines & Swaps, Curated Meal Plans ─── */}
       <StoryPhilosophy />
 
-      {/* ─── Dawn to Doorstep: 3:30 AM to 7:30 AM Delivery Timeline ─── */}
+      {/* ─── How nu3go Works: From Fresh Ingredients To Your Doorstep ─── */}
       <StoryJourney />
 
-      {/* ─── Kitchen Standards: 5,000+ Sq Ft Kitchen & Zero-Compromise Standards ─── */}
+      {/* ─── Terms & Conditions: Delivery Schedule & Service Policies ─── */}
       <StorySanctuary />
 
       {/* ─── Partnership & Corporate Wellness ─── */}
       <StoryPartnership />
 
-      {/* ─── Epilogue: Breakfast Subscriptions CTA ─── */}
+      {/* ─── Epilogue: Meal Subscriptions CTA ─── */}
       <StoryCta />
     </div>
   );

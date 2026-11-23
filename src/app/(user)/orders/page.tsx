@@ -254,6 +254,85 @@ export default function SubscriptionsOrdersPage() {
                 );
               })}
             </div>
+<<<<<<< HEAD
+=======
+          </div>
+
+          {/* Right Column: Weekly Meal Delivery Schedule Calendar */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-7 shadow-sm space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-emerald-50 text-[#15803D]">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-oswald text-base sm:text-lg font-bold uppercase text-neutral-900 tracking-tight">
+                      Weekly Meal Schedule
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Monday to Friday Morning Breakfast Deliveries
+                    </p>
+                  </div>
+                </div>
+
+                <span className="font-oswald text-xs font-bold uppercase tracking-wider text-[#15803D] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-2xs">
+                  Week 3 of 4
+                </span>
+              </div>
+
+              {/* Schedule Days List */}
+              <div className="space-y-3">
+                {weekSchedule.map((item, idx) => {
+                  const isDelivered = item.status === "Delivered";
+                  return (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-oswald text-xs font-bold uppercase tracking-wider text-neutral-900">{item.day}</span>
+                          <span
+                            className={`font-oswald text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${isDelivered
+                                ? "bg-emerald-100/80 text-[#15803D]"
+                                : "bg-blue-100/80 text-blue-700"
+                              }`}
+                          >
+                            {item.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-700 font-medium">
+                          {item.meal}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 text-xs">
+                        <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 text-slate-600 font-medium">
+                          {item.calories}
+                        </span>
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-[#15803D] font-oswald font-bold uppercase tracking-wide">
+                          {item.protein} Protein
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Delivery Guidelines Box */}
+              <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-xs text-slate-700 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-[#15803D] font-oswald font-bold uppercase tracking-wider text-xs">
+                  <Zap className="w-4 h-4 text-[#36D068]" />
+                  <span>Doorstep Delivery Schedule</span>
+                </div>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  Morning deliveries occur between 7:00 AM and 8:30 AM daily. Any delivery address changes or skip requests must be confirmed before 6:00 PM the previous day.
+                </p>
+              </div>
+            </div>
+          </div>
+>>>>>>> contactFormSetup
         </div>
       )}
 

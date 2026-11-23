@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Image from "next/image";
-import { Compass, XCircle, CheckCircle2, Quote, Heart, MapPin, Truck } from "lucide-react";
+import { Compass, XCircle, CheckCircle2, Quote, MapPin } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -95,21 +95,21 @@ export function StoryGenesis() {
 
           <h2 className="font-oswald text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black uppercase tracking-tight text-neutral-900 leading-[1.04] mb-5">
             BUILDING SRI LANKA&apos;S <span className="text-[#36D068]">#1</span> <br className="hidden sm:inline" />
-            BREAKFAST SUBSCRIPTION <br className="hidden sm:inline" />
+            MEAL SUBSCRIPTION <br className="hidden sm:inline" />
             SERVICE.
           </h2>
 
           <p className="text-neutral-600 text-base sm:text-lg leading-relaxed font-normal">
             <strong className="text-neutral-900 font-semibold">nu3go</strong> was built with a clear purpose:
-            to solve the weekday morning rush for busy professionals and health-conscious individuals across
-            the <strong className="text-neutral-900 font-semibold">Colombo and Wattala areas</strong>, delivering nutritional,
-            ready-to-eat breakfasts directly to doorsteps or offices by <strong className="text-neutral-900 font-semibold">7:30 AM every weekday morning (Monday to Friday)</strong>.
+            to solve the weekday meal struggle for busy professionals and health-conscious individuals across
+            the <strong className="text-neutral-900 font-semibold">Colombo and Wattala areas</strong>, delivering fresh,
+            healthy and convenient everyday meals directly to doorsteps or offices, <strong className="text-neutral-900 font-semibold">Monday to Friday</strong>.
           </p>
         </div>
 
-        {/* ─── The Contrast: The Morning Dilemma vs nu3go ─── */}
+        {/* ─── The Contrast: The Workday Meal Struggle vs nu3go Promise ─── */}
         <div ref={contrastRef} className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 mb-16 sm:mb-24">
-          {/* Card 1: The Weekday Morning Dilemma */}
+          {/* Card 1: The Workday Meal Struggle */}
           <div className="relative bg-white/90 backdrop-blur-sm p-8 sm:p-10 rounded-3xl border border-red-200/70 shadow-xl shadow-red-500/5 overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-400 to-rose-500" />
             <div className="flex items-center gap-3 mb-6">
@@ -118,36 +118,37 @@ export function StoryGenesis() {
               </div>
               <div>
                 <span className="text-xs font-bold tracking-widest text-red-600 uppercase font-oswald block">
-                  THE WORKDAY MORNING RUSH
+                  THE WORKDAY MEAL STRUGGLE
                 </span>
                 <h3 className="font-oswald text-xl sm:text-2xl font-bold uppercase text-neutral-900">
-                  The Sri Lankan Breakfast Struggle
+                  Eating Well Around a Busy Schedule
                 </h3>
               </div>
             </div>
 
             <p className="text-neutral-600 text-sm sm:text-base leading-relaxed mb-6 font-normal">
-              Between chaotic morning commutes and early office hours, preparing a nutritious breakfast
-              takes time most people simply do not have. The result? Unhealthy compromises every single morning.
+              Between busy workdays, daily commutes and demanding schedules, finding time to prepare
+              nutritious meals isn&apos;t always easy. Many people end up skipping meals or choosing quick, less
+              nutritious alternatives just to get through the day.
             </p>
 
             <ul className="space-y-3.5 text-xs sm:text-sm text-neutral-700">
               <li className="flex items-start gap-2.5">
                 <span className="text-red-500 mt-0.5 font-bold">&#10005;</span>
-                <span>Skipping breakfast entirely or settling for sugary tea and oily bakery short-eats.</span>
+                <span>Skipping meals or settling for sugary drinks, fast food and oily bakery short-eats.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <span className="text-red-500 mt-0.5 font-bold">&#10005;</span>
-                <span>Heavy, unmeasured carbohydrates that cause severe afternoon energy crashes and brain fog.</span>
+                <span>Unbalanced meals that leave you feeling sluggish instead of energised throughout the day.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <span className="text-red-500 mt-0.5 font-bold">&#10005;</span>
-                <span>Wasting precious evening hours cooking bland food in repetitive plastic containers.</span>
+                <span>Limited time for meal preparation, making it difficult to maintain healthy eating habits consistently.</span>
               </li>
             </ul>
           </div>
 
-          {/* Card 2: The nu3go Solution */}
+          {/* Card 2: The nu3go Promise */}
           <div className="relative bg-white/95 backdrop-blur-sm p-8 sm:p-10 rounded-3xl border border-[#36D068]/50 shadow-2xl shadow-emerald-500/10 overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#36D068] to-emerald-600" />
             <div className="flex items-center gap-3 mb-6">
@@ -159,28 +160,29 @@ export function StoryGenesis() {
                   THE nu3go PROMISE
                 </span>
                 <h3 className="font-oswald text-xl sm:text-2xl font-bold uppercase text-neutral-900">
-                  Ready-To-Eat Nutritional Mornings
+                  Fresh, Healthy Meals. Delivered Daily.
                 </h3>
               </div>
             </div>
 
             <p className="text-neutral-600 text-sm sm:text-base leading-relaxed mb-6 font-normal">
-              We deliver fresh, chef-prepared breakfasts directly to your home doorstep or office desk across
-              Colombo &amp; Wattala by 7:30 AM every weekday morning (Monday to Friday)—with 100% free delivery.
+              nu3go makes healthy eating easier with freshly prepared meals delivered straight to your home
+              or workplace across selected areas of Colombo and Wattala. Enjoy convenient, ready-to-eat meals
+              delivered to your doorstep or office, Monday to Friday, with 100% free standard delivery.
             </p>
 
             <ul className="space-y-3.5 text-xs sm:text-sm text-neutral-700">
               <li className="flex items-start gap-2.5">
                 <span className="text-[#36D068] mt-0.5 font-bold">&#10003;</span>
-                <span><strong>Rotating Healthy Menu:</strong> Overnight oats, high-protein pasta, omelets, sandwiches, and traditional chapathi or stringhopper packs.</span>
+                <span><strong>Fresh &amp; Varied Menus:</strong> Enjoy a rotating selection of nutritious meals, from protein-rich options and wholesome favourites to convenient everyday choices.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <span className="text-[#36D068] mt-0.5 font-bold">&#10003;</span>
-                <span><strong>Flexible Hybrid Subscriptions:</strong> Weekly or monthly plans with the freedom to swap meals from alternative choices.</span>
+                <span><strong>Flexible Meal Plans:</strong> Choose weekly or monthly plans with the flexibility to swap meals from our alternative menu selections.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <span className="text-[#36D068] mt-0.5 font-bold">&#10003;</span>
-                <span><strong>100% Free Delivery:</strong> Standard weekday delivery directly to your door with zero hidden fees.</span>
+                <span><strong>Free Weekday Delivery:</strong> Get your meals delivered straight to your doorstep or office desk, with no additional standard delivery charges.</span>
               </li>
             </ul>
           </div>
@@ -221,11 +223,10 @@ export function StoryGenesis() {
             <div className="lg:col-span-8 flex flex-col justify-center">
               <Quote className="w-10 h-10 text-[#36D068]/40 mb-3" />
               <blockquote className="font-oswald text-xl sm:text-2xl md:text-3xl font-light text-white/95 leading-snug tracking-wide italic mb-5">
-                &ldquo;We created nu3go to eliminate morning stress completely. Starting your workday nourished shouldn&apos;t require waking up at 5:00 AM to cook or settling for oily street snacks. Good nutrition should be as effortless as opening your door.&rdquo;
+                &ldquo;nu3go was born from a simple belief: eating healthy should never be compromised by a busy lifestyle. We started by addressing the everyday challenge of finding fresh, nutritious and convenient meals, with a bigger vision of transforming how people eat every day.&rdquo;
               </blockquote>
               <p className="text-neutral-400 text-xs sm:text-sm leading-relaxed max-w-2xl font-light">
-                Today, nu3go powers hundreds of busy professionals, fitness enthusiasts, and families every Monday to Friday
-                with chef-prepared, macro-balanced breakfasts delivered fresh and ready to eat.
+                Our ambition is to build nu3go into a leading everyday food platform, making healthy eating accessible, convenient and part of everyone&apos;s lifestyle — one meal at a time.
               </p>
             </div>
           </div>

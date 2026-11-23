@@ -308,8 +308,7 @@ export function HeroSection() {
           ref={subtitleRef}
           className="mt-5 sm:mt-6 text-white/85 text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed font-normal tracking-wide drop-shadow-sm will-change-transform"
         >
-          Fresh, nutritionally balanced chef-crafted meals delivered directly to your doorstep.
-          Tailored healthy nutrition to power your active lifestyle.
+          Building Sri Lanka's #1 meal subscription service. Enjoy fresh, healthy, calorie counted meals delivered daily to your doorstep with nu3go. <br></br>Subscribe today!
         </p>
 
         {/* Dual Action Buttons */}

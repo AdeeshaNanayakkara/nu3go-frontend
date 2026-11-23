@@ -61,17 +61,20 @@ export default async function PlansPage() {
       <PlanCardsSection />
 
       <Suspense fallback={null}>
-        {/* ─── 3. Dedicated POWER Plan Section (Athletic High-Protein) ─── */}
-        <PlanPower packageData={powerPkg} />
 
         {/* ─── 4. Dedicated CLASSIC Plan Section (Balanced Daily Wellness) ─── */}
         <PlanClassic packageData={classicPkg} />
+        
+        {/* ─── 3. Dedicated POWER Plan Section (Athletic High-Protein) ─── */}
+        <PlanPower packageData={powerPkg} />
+
+        
+        {/* ─── 6. Dedicated FOURTIG Plan Section (40+ Longevity & Vitality) ─── */}
+        <PlanFourtig packageData={fourtigPkg} />
 
         {/* ─── 5. Dedicated ISKOOL Plan Section (Growing Kids & Student Focus) ─── */}
         <PlanIskool packageData={iskoolPkg} />
 
-        {/* ─── 6. Dedicated FOURTIG Plan Section (40+ Longevity & Vitality) ─── */}
-        <PlanFourtig packageData={fourtigPkg} />
       </Suspense>
     </div>
   );

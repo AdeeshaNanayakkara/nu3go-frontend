@@ -231,7 +231,7 @@ export function Footer() {
             <ul className="space-y-2.5 sm:space-y-3">
               {[
                 { label: "Privacy Policy", href: "/privacy" },
-                { label: "Terms of Conditions", href: "/terms" },
+                { label: "Terms & Conditions", href: "/terms" },
                 { label: "Feedback", href: "/contact" },
               ].map((link) => (
                 <li key={link.label}>
